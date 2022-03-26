@@ -2,34 +2,45 @@ package core
 
 import (
 	"fmt"
+	"sort"
 	"time"
+
+	"github.com/juju/errors"
 )
 
 type HostsManager struct {
+	params HostsManagerParams
+
 	has map[string]*HostAgent
 
-	updatesCh chan *HostAgentUpdate
-	reqCh     chan hostsManagerReq
-	respCh    chan hostCmdRes
+	hostUpdatesCh chan *HostAgentUpdate
+	reqCh         chan hostsManagerReq
+	respCh        chan hostCmdRes
+
+	curQueryLogsCtx *manQueryLogsCtx
 }
 
 type HostsManagerParams struct {
 	ConfigHosts []ConfigHost
+
+	UpdatesCh chan<- HostsManagerUpdate
 }
 
 func NewHostsManager(params HostsManagerParams) *HostsManager {
 	hm := &HostsManager{
+		params: params,
+
 		has: make(map[string]*HostAgent, len(params.ConfigHosts)),
 
-		updatesCh: make(chan *HostAgentUpdate, 1024),
-		reqCh:     make(chan hostsManagerReq, 8),
-		respCh:    make(chan hostCmdRes),
+		hostUpdatesCh: make(chan *HostAgentUpdate, 1024),
+		reqCh:         make(chan hostsManagerReq, 8),
+		respCh:        make(chan hostCmdRes),
 	}
 
 	for _, hc := range params.ConfigHosts {
 		ha := NewHostAgent(HostAgentParams{
 			Config:    hc,
-			UpdatesCh: hm.updatesCh,
+			UpdatesCh: hm.hostUpdatesCh,
 		})
 		hm.has[hc.Name] = ha
 	}
@@ -47,11 +58,9 @@ func (hm *HostsManager) run() {
 		}
 	}
 
-	//ticker := time.NewTicker(15 * time.Second)
-
 	for {
 		select {
-		case upd := <-hm.updatesCh:
+		case upd := <-hm.hostUpdatesCh:
 			if upd.State != nil {
 				supd := upd.State
 				delete(agentsByState[supd.OldState], upd.Name)
@@ -71,24 +80,30 @@ func (hm *HostsManager) run() {
 					len(agentsByState[HostAgentStateConnectedIdle]),
 					len(agentsByState[HostAgentStateConnectedBusy]),
 				)
+
+				hm.sendStateUpdate()
 			} else {
 				panic("empty update " + upd.Name)
 			}
 
-			/*
-				case <-ticker.C:
-					for _, ha := range hm.has {
-						ha.EnqueueCmd(hostCmd{
-							queryLogs: &hostCmdQueryLogs{
-								From: time.Now().Add(-1 * time.Hour),
-							},
-						})
-					}
-			*/
-
 		case req := <-hm.reqCh:
 			switch {
 			case req.queryLogs != nil:
+				if hm.curQueryLogsCtx != nil {
+					hm.sendLogRespUpdate(&LogResp{
+						Errs: []error{errors.Errorf("busy with another query")},
+					})
+					continue
+				}
+
+				hm.curQueryLogsCtx = &manQueryLogsCtx{
+					resps: make(map[string]*LogResp, len(hm.has)),
+					errs:  map[string]error{},
+				}
+
+				// sendStateUpdate must be done after setting curQueryLogsCtx.
+				hm.sendStateUpdate()
+
 				for _, ha := range hm.has {
 					ha.EnqueueCmd(hostCmd{
 						respCh: hm.respCh,
@@ -108,14 +123,38 @@ func (hm *HostsManager) run() {
 			}
 
 		case resp := <-hm.respCh:
-			switch v := resp.resp.(type) {
-			case *LogResp:
-				//if resp.hostname == "my-host-01" {
-				fmt.Printf("HEY got resp %+v\n", v.MinuteStats)
-				//}
+
+			switch {
+			case hm.curQueryLogsCtx != nil:
+				if resp.err != nil {
+					hm.curQueryLogsCtx.errs[resp.hostname] = resp.err
+				}
+
+				switch v := resp.resp.(type) {
+				case *LogResp:
+					hm.curQueryLogsCtx.resps[resp.hostname] = v
+
+					// If we collected responses from all nodes, handle them.
+					if len(hm.curQueryLogsCtx.resps) == len(hm.has) {
+						hm.mergeLogRespsAndSend()
+
+						hm.curQueryLogsCtx = nil
+
+						// sendStateUpdate must be done after setting curQueryLogsCtx.
+						hm.sendStateUpdate()
+					}
+
+					//if resp.hostname == "my-host-01" {
+					//fmt.Printf("HEY got resp %+v\n", v.MinuteStats)
+					//}
+
+				default:
+					panic(fmt.Sprintf("unexpected resp type %T", v))
+				}
 
 			default:
-				panic(fmt.Sprintf("unexpected resp type %T", v))
+				// TODO: proper update
+				fmt.Println("dropping update")
 			}
 
 		}
@@ -144,4 +183,83 @@ func (hm *HostsManager) Ping() {
 	hm.reqCh <- hostsManagerReq{
 		ping: true,
 	}
+}
+
+type manQueryLogsCtx struct {
+	// resps is a map from host name to its response. Once all responses have
+	// been collected, we'll start merging them together.
+	resps map[string]*LogResp
+	errs  map[string]error
+}
+
+type HostsManagerUpdate struct {
+	// Exactly one of the fields below must be non-nil
+
+	State   *HostsManagerState
+	LogResp *LogResp
+}
+
+type HostsManagerState struct {
+	HostsByState map[HostAgentState]map[string]struct{}
+
+	// Busy is true when a query is in progress
+	Busy bool
+}
+
+func (hm *HostsManager) sendStateUpdate() {
+	hm.params.UpdatesCh <- HostsManagerUpdate{
+		State: &HostsManagerState{
+			// TODO
+			//HostsByState: hm.
+			Busy: hm.curQueryLogsCtx != nil,
+		},
+	}
+}
+
+func (hm *HostsManager) sendLogRespUpdate(resp *LogResp) {
+	hm.params.UpdatesCh <- HostsManagerUpdate{
+		LogResp: resp,
+	}
+}
+
+func (hm *HostsManager) mergeLogRespsAndSend() {
+	resps := hm.curQueryLogsCtx.resps
+	errs := hm.curQueryLogsCtx.errs
+
+	if len(errs) != 0 {
+		errs2 := make([]error, 0, len(errs))
+		for hostname, err := range errs {
+			errs2 = append(errs2, errors.Annotatef(err, "%s", hostname))
+		}
+
+		sort.Slice(errs2, func(i, j int) bool {
+			return errs2[i].Error() < errs2[j].Error()
+		})
+
+		hm.sendLogRespUpdate(&LogResp{
+			Errs: errs2,
+		})
+	}
+
+	ret := &LogResp{
+		MinuteStats: make(map[int64]MinuteStatsItem),
+	}
+
+	for _, resp := range resps {
+		for k, v := range resp.MinuteStats {
+			ret.MinuteStats[k] = MinuteStatsItem{
+				NumMsgs: ret.MinuteStats[k].NumMsgs + v.NumMsgs,
+			}
+		}
+
+		for _, msg := range resp.Logs {
+			ret.Logs = append(ret.Logs, msg)
+		}
+	}
+
+	sort.SliceStable(ret.Logs, func(i, j int) bool {
+		return ret.Logs[i].Time.Before(ret.Logs[j].Time)
+	})
+
+	hm.sendLogRespUpdate(ret)
 }

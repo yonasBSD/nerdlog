@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/dimonomid/nerdlog/core"
@@ -73,8 +74,51 @@ func main() {
 		})
 	}
 
+	updatesCh := make(chan core.HostsManagerUpdate, 128)
+
+	go func() {
+		for {
+			upd := <-updatesCh
+
+			switch {
+			case upd.State != nil:
+				fmt.Printf("State: %+v\n", upd.State)
+
+			case upd.LogResp != nil:
+				resp := upd.LogResp
+				keys := make([]int64, 0, len(resp.MinuteStats))
+				for k := range resp.MinuteStats {
+					keys = append(keys, k)
+				}
+
+				sort.Slice(keys, func(i, j int) bool {
+					return keys[i] < keys[j]
+				})
+
+				fmt.Println("Log Response:")
+				for _, seconds := range keys {
+					item := resp.MinuteStats[seconds]
+
+					t := time.Unix(seconds, 0)
+					fmt.Printf("%s: %d\n", t, item.NumMsgs)
+				}
+				fmt.Println("------")
+
+				for _, msg := range resp.Logs {
+					fmt.Printf("%s: %s\n", msg.Time, msg.Msg)
+				}
+
+				fmt.Println("------")
+
+			default:
+				panic("empty hosts manager update")
+			}
+		}
+	}()
+
 	hm := core.NewHostsManager(core.HostsManagerParams{
 		ConfigHosts: hosts,
+		UpdatesCh:   updatesCh,
 	})
 
 	for {
