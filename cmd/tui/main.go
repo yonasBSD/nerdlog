@@ -11,6 +11,91 @@ import (
 )
 
 func main() {
+	updatesCh := make(chan core.HostsManagerUpdate, 128)
+
+	go func() {
+		for {
+			upd := <-updatesCh
+
+			switch {
+			case upd.State != nil:
+				busyStr := "idle"
+				if upd.State.Busy {
+					busyStr = "busy"
+				}
+
+				fmt.Printf(
+					"%s || Connected: %d/%d (idle %d, busy %d)\n",
+					busyStr,
+					len(upd.State.HostsByState[core.HostAgentStateConnectedIdle])+len(upd.State.HostsByState[core.HostAgentStateConnectedBusy]),
+					upd.State.NumHosts,
+					len(upd.State.HostsByState[core.HostAgentStateConnectedIdle]),
+					len(upd.State.HostsByState[core.HostAgentStateConnectedBusy]),
+				)
+
+			case upd.LogResp != nil:
+				resp := upd.LogResp
+				keys := make([]int64, 0, len(resp.MinuteStats))
+				for k := range resp.MinuteStats {
+					keys = append(keys, k)
+				}
+
+				sort.Slice(keys, func(i, j int) bool {
+					return keys[i] < keys[j]
+				})
+
+				fmt.Println("Log Response:")
+				for _, seconds := range keys {
+					item := resp.MinuteStats[seconds]
+
+					t := time.Unix(seconds, 0)
+					fmt.Printf("%s: %d\n", t, item.NumMsgs)
+				}
+				fmt.Println("------")
+
+				for _, msg := range resp.Logs {
+					fmt.Printf("%s: %s\n", msg.Time, msg.Msg)
+				}
+
+				fmt.Println("------")
+
+			default:
+				panic("empty hosts manager update")
+			}
+		}
+	}()
+
+	hm := core.NewHostsManager(core.HostsManagerParams{
+		ConfigHosts: makeConfigHosts(),
+		UpdatesCh:   updatesCh,
+	})
+
+	for {
+		reader := bufio.NewReader(os.Stdin)
+		// ReadString will block until the delimiter is entered
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("user read error", err)
+			break
+		}
+
+		_ = input
+
+		if input == "ping\n" {
+			fmt.Println("sending pings...")
+			hm.Ping()
+		} else if input == "query\n" {
+			fmt.Println("querying logs...")
+			hm.QueryLogs(core.QueryLogsParams{
+				From: time.Now().Add(-8 * time.Hour),
+			})
+		} else {
+			fmt.Println("invalid comand")
+		}
+	}
+}
+
+func makeConfigHosts() []core.ConfigHost {
 	hosts := []core.ConfigHost{}
 
 	for i := 0; i < 24; i++ {
@@ -73,88 +158,7 @@ func main() {
 		})
 	}
 
-	updatesCh := make(chan core.HostsManagerUpdate, 128)
-
-	go func() {
-		for {
-			upd := <-updatesCh
-
-			switch {
-			case upd.State != nil:
-				busyStr := "idle"
-				if upd.State.Busy {
-					busyStr = "busy"
-				}
-
-				fmt.Printf(
-					"%s || Connected: %d/%d (idle %d, busy %d)\n",
-					busyStr,
-					len(upd.State.HostsByState[core.HostAgentStateConnectedIdle])+len(upd.State.HostsByState[core.HostAgentStateConnectedBusy]),
-					upd.State.NumHosts,
-					len(upd.State.HostsByState[core.HostAgentStateConnectedIdle]),
-					len(upd.State.HostsByState[core.HostAgentStateConnectedBusy]),
-				)
-
-			case upd.LogResp != nil:
-				resp := upd.LogResp
-				keys := make([]int64, 0, len(resp.MinuteStats))
-				for k := range resp.MinuteStats {
-					keys = append(keys, k)
-				}
-
-				sort.Slice(keys, func(i, j int) bool {
-					return keys[i] < keys[j]
-				})
-
-				fmt.Println("Log Response:")
-				for _, seconds := range keys {
-					item := resp.MinuteStats[seconds]
-
-					t := time.Unix(seconds, 0)
-					fmt.Printf("%s: %d\n", t, item.NumMsgs)
-				}
-				fmt.Println("------")
-
-				for _, msg := range resp.Logs {
-					fmt.Printf("%s: %s\n", msg.Time, msg.Msg)
-				}
-
-				fmt.Println("------")
-
-			default:
-				panic("empty hosts manager update")
-			}
-		}
-	}()
-
-	hm := core.NewHostsManager(core.HostsManagerParams{
-		ConfigHosts: hosts,
-		UpdatesCh:   updatesCh,
-	})
-
-	for {
-		reader := bufio.NewReader(os.Stdin)
-		// ReadString will block until the delimiter is entered
-		input, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("user read error", err)
-			break
-		}
-
-		_ = input
-
-		if input == "ping\n" {
-			fmt.Println("sending pings...")
-			hm.Ping()
-		} else if input == "query\n" {
-			fmt.Println("querying logs...")
-			hm.QueryLogs(core.QueryLogsParams{
-				From: time.Now().Add(-8 * time.Hour),
-			})
-		} else {
-			fmt.Println("invalid comand")
-		}
-	}
+	return hosts
 }
 
 /*
