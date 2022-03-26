@@ -168,6 +168,9 @@ func (ha *HostAgent) sendCmdResp(resp interface{}, err error) {
 }
 
 func (ha *HostAgent) run() {
+	ticker := time.NewTicker(5 * time.Second)
+	var lastUpdTime time.Time
+
 	for {
 		select {
 		case res := <-ha.connectResCh:
@@ -178,6 +181,8 @@ func (ha *HostAgent) run() {
 				ha.changeState(HostAgentStateConnecting)
 				continue
 			}
+
+			lastUpdTime = time.Now()
 
 			ha.conn = res.conn
 			ha.changeState(HostAgentStateConnectedIdle)
@@ -200,6 +205,8 @@ func (ha *HostAgent) run() {
 			}
 
 		case line := <-ha.conn.getStdoutLinesCh():
+			lastUpdTime = time.Now()
+
 			// TODO: depending on state
 			_ = line
 			if ha.params.Config.Name == "my-host-01" {
@@ -270,6 +277,8 @@ func (ha *HostAgent) run() {
 			}
 
 		case line := <-ha.conn.getStderrLinesCh():
+			lastUpdTime = time.Now()
+
 			// TODO maybe save somewhere for debugging
 			if ha.params.Config.Name == "my-host-01" {
 				fmt.Println("rxe:", line)
@@ -281,6 +290,13 @@ func (ha *HostAgent) run() {
 			//if len(data) > 0 && data[len(data)-1] != '\n' {
 			//ha.stdinBuf.Write([]byte("\n"))
 			//}
+
+		case <-ticker.C:
+			if ha.state == HostAgentStateConnectedIdle && time.Since(lastUpdTime) > 40*time.Second {
+				ha.startCmd(hostCmd{
+					ping: &hostCmdPing{},
+				})
+			}
 		}
 	}
 }
