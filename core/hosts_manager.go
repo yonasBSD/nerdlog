@@ -55,7 +55,13 @@ func (hm *HostsManager) run() {
 
 				set[upd.Name] = struct{}{}
 
-				fmt.Printf("Connected: %d/%d\n", len(agentsByState[HostAgentStateConnected]), len(hm.has))
+				fmt.Printf(
+					"Connected: %d/%d (idle %d, busy %d)\n",
+					len(agentsByState[HostAgentStateConnectedIdle])+len(agentsByState[HostAgentStateConnectedBusy]),
+					len(hm.has),
+					len(agentsByState[HostAgentStateConnectedIdle]),
+					len(agentsByState[HostAgentStateConnectedBusy]),
+				)
 			} else {
 				panic("empty update " + upd.Name)
 			}

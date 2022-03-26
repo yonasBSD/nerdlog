@@ -91,30 +91,40 @@ func (ha *HostAgent) SendFoo() {
 type HostAgentState string
 
 const (
-	HostAgentStateDisconnected HostAgentState = "disconnected"
-	HostAgentStateConnecting   HostAgentState = "connecting"
-	HostAgentStateConnected    HostAgentState = "connected"
+	HostAgentStateDisconnected  HostAgentState = "disconnected"
+	HostAgentStateConnecting    HostAgentState = "connecting"
+	HostAgentStateConnectedIdle HostAgentState = "connected_idle"
+	HostAgentStateConnectedBusy HostAgentState = "connected_busy"
 )
 
-func (ha *HostAgent) changeState(state HostAgentState) {
+func isStateConnected(state HostAgentState) bool {
+	return state == HostAgentStateConnectedIdle || state == HostAgentStateConnectedBusy
+}
+
+func (ha *HostAgent) changeState(newState HostAgentState) {
 	oldState := ha.state
 
-	switch oldState {
-	case HostAgentStateConnecting:
-		ha.connectResCh = nil
+	// Properly leave old state
 
-	case HostAgentStateConnected:
+	if isStateConnected(oldState) && !isStateConnected(newState) {
 		ha.conn.sshClient.Close()
 		ha.conn.sshSession.Close()
 		ha.conn.stdinBuf.Close()
 		ha.conn = nil
 	}
 
-	ha.state = state
+	switch oldState {
+	case HostAgentStateConnecting:
+		ha.connectResCh = nil
+	}
+
+	// Enter new state
+
+	ha.state = newState
 	ha.sendUpdate(&HostAgentUpdate{
 		State: &HostAgentUpdateState{
 			OldState: oldState,
-			NewState: state,
+			NewState: newState,
 		},
 	})
 
@@ -137,7 +147,7 @@ func (ha *HostAgent) run() {
 			}
 
 			ha.conn = res.conn
-			ha.changeState(HostAgentStateConnected)
+			ha.changeState(HostAgentStateConnectedIdle)
 
 		case line := <-ha.conn.getStdoutLinesCh():
 			// TODO: depending on state
