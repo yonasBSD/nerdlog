@@ -7,8 +7,7 @@ type Config struct {
 type ConfigHost struct {
 	Name string `yaml:"name"`
 
-	Hostname string `yaml:"hostname"`
-	Port     int    `yaml:"port"`
-	User     string `yaml:"user"`
+	Addr string `yaml:"addr"`
+	User string `yaml:"user"`
 	// TODO: some jumphost config
 }

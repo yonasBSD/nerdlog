@@ -14,63 +14,62 @@ func main() {
 	hosts := []core.ConfigHost{}
 
 	for i := 0; i < 24; i++ {
-		hostname := fmt.Sprintf("my-host-%.2d", i+1)
+		addr := fmt.Sprintf("my-host-%.2d:22", i+1)
 		switch i + 1 {
 		case 1:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 2:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 3:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 4:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 5:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 6:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 7:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 8:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 9:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 10:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 11:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 12:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 13:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 14:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 15:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 16:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 17:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 18:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 19:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 20:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 21:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 22:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 23:
-			hostname = "redacted"
+			addr = "redacted:22"
 		case 24:
-			hostname = "redacted"
+			addr = "redacted:22"
 		}
 
 		hosts = append(hosts, core.ConfigHost{
-			Name:     fmt.Sprintf("my-host-%.2d", i+1),
-			Hostname: hostname,
-			Port:     22,
-			User:     "ubuntu",
+			Name: fmt.Sprintf("my-host-%.2d", i+1),
+			Addr: addr,
+			User: "ubuntu",
 		})
 	}
 

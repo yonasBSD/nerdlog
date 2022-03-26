@@ -425,12 +425,10 @@ func connectToHost(
 		resCh <- res
 	}()
 
-	hostAddr := fmt.Sprintf("%s:%d", config.Hostname, config.Port)
-
 	var sshClient *ssh.Client
 
 	conf := getClientConfig(config.User)
-	//fmt.Printf("hey %+v %q\n", config, hostAddr)
+	//fmt.Printf("hey %+v %q\n", config, config.Addr)
 	//fmt.Println("hey2", conn, conf)
 
 	if true {
@@ -441,13 +439,13 @@ func connectToHost(
 			return res
 		}
 
-		conn, err := dialWithTimeout(jumphost, "tcp", hostAddr, connectionTimeout)
+		conn, err := dialWithTimeout(jumphost, "tcp", config.Addr, connectionTimeout)
 		if err != nil {
 			res.err = errors.Trace(err)
 			return res
 		}
 
-		authConn, chans, reqs, err := ssh.NewClientConn(conn, hostAddr, conf)
+		authConn, chans, reqs, err := ssh.NewClientConn(conn, config.Addr, conf)
 		if err != nil {
 			res.err = errors.Trace(err)
 			return res
@@ -456,7 +454,7 @@ func connectToHost(
 		sshClient = ssh.NewClient(authConn, chans, reqs)
 	} else {
 		var err error
-		sshClient, err = ssh.Dial("tcp", hostAddr, conf)
+		sshClient, err = ssh.Dial("tcp", config.Addr, conf)
 		if err != nil {
 			res.err = errors.Trace(err)
 			return res
