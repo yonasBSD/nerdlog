@@ -51,7 +51,16 @@ func (c *connCtx) getStderrLinesCh() chan string {
 	return c.stderrLinesCh
 }
 
-type HostAgentStateUpdate struct {
+// HostAgentUpdate represents an update from host agent. Name is always
+// populated and it's the host's name, and from all the other fields, exactly
+// one field must be non-nil.
+type HostAgentUpdate struct {
+	Name string
+
+	State *HostAgentUpdateState
+}
+
+type HostAgentUpdateState struct {
 	OldState HostAgentState
 	NewState HostAgentState
 }
@@ -59,7 +68,7 @@ type HostAgentStateUpdate struct {
 type HostAgentParams struct {
 	Config ConfigHost
 
-	StateCh chan<- HostAgentStateUpdate
+	UpdatesCh chan<- *HostAgentUpdate
 }
 
 func NewHostAgent(params HostAgentParams) *HostAgent {
@@ -102,10 +111,12 @@ func (ha *HostAgent) changeState(state HostAgentState) {
 	}
 
 	ha.state = state
-	ha.params.StateCh <- HostAgentStateUpdate{
-		OldState: oldState,
-		NewState: state,
-	}
+	ha.sendUpdate(&HostAgentUpdate{
+		State: &HostAgentUpdateState{
+			OldState: oldState,
+			NewState: state,
+		},
+	})
 
 	switch ha.state {
 	case HostAgentStateConnecting:
@@ -131,7 +142,7 @@ func (ha *HostAgent) run() {
 		case line := <-ha.conn.getStdoutLinesCh():
 			// TODO: depending on state
 			_ = line
-			fmt.Println("rx:", line)
+			//fmt.Println("rx:", line)
 
 		case line := <-ha.conn.getStderrLinesCh():
 			// TODO maybe save somewhere for debugging
@@ -145,6 +156,11 @@ func (ha *HostAgent) run() {
 			//}
 		}
 	}
+}
+
+func (ha *HostAgent) sendUpdate(upd *HostAgentUpdate) {
+	upd.Name = ha.params.Config.Name
+	ha.params.UpdatesCh <- upd
 }
 
 type hostConnectRes struct {

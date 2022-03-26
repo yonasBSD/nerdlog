@@ -5,7 +5,7 @@ import "fmt"
 type HostsManager struct {
 	has map[string]*HostAgent
 
-	stateCh chan hostAgentsStateUpdate
+	updatesCh chan *HostAgentUpdate
 }
 
 type HostsManagerParams struct {
@@ -16,13 +16,13 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 	hm := &HostsManager{
 		has: make(map[string]*HostAgent, len(params.ConfigHosts)),
 
-		stateCh: make(chan hostAgentsStateUpdate, 32),
+		updatesCh: make(chan *HostAgentUpdate, 1024),
 	}
 
 	for _, hc := range params.ConfigHosts {
 		ha := NewHostAgent(HostAgentParams{
-			Config:  hc,
-			StateCh: statesReceiver(hc.Name, hm.stateCh),
+			Config:    hc,
+			UpdatesCh: hm.updatesCh,
 		})
 		hm.has[hc.Name] = ha
 	}
@@ -42,44 +42,23 @@ func (hm *HostsManager) run() {
 
 	for {
 		select {
-		case supd := <-hm.stateCh:
-			delete(agentsByState[supd.oldState], supd.name)
+		case upd := <-hm.updatesCh:
+			if upd.State != nil {
+				supd := upd.State
+				delete(agentsByState[supd.OldState], upd.Name)
 
-			set, ok := agentsByState[supd.newState]
-			if !ok {
-				set = map[string]struct{}{}
-				agentsByState[supd.newState] = set
+				set, ok := agentsByState[supd.NewState]
+				if !ok {
+					set = map[string]struct{}{}
+					agentsByState[supd.NewState] = set
+				}
+
+				set[upd.Name] = struct{}{}
+
+				fmt.Printf("Connected: %d/%d\n", len(agentsByState[HostAgentStateConnected]), len(hm.has))
+			} else {
+				panic("empty update " + upd.Name)
 			}
-
-			set[supd.name] = struct{}{}
-
-			fmt.Printf("Connected: %d/%d\n", len(agentsByState[HostAgentStateConnected]), len(hm.has))
 		}
 	}
-}
-
-type hostAgentsStateUpdate struct {
-	name     string
-	oldState HostAgentState
-	newState HostAgentState
-}
-
-func statesReceiver(
-	name string,
-	ch chan<- hostAgentsStateUpdate,
-) chan<- HostAgentStateUpdate {
-	ret := make(chan HostAgentStateUpdate, 32)
-
-	go func() {
-		for {
-			upd := <-ret
-			ch <- hostAgentsStateUpdate{
-				name:     name,
-				oldState: upd.OldState,
-				newState: upd.NewState,
-			}
-		}
-	}()
-
-	return ret
 }
