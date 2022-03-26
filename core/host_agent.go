@@ -19,6 +19,7 @@ import (
 const connectionTimeout = 5 * time.Second
 
 const queryLogsTimeLayout = "Jan-02-15:04"
+const syslogTimeLayout = "Jan 02 15:04:05"
 
 type HostAgent struct {
 	params HostAgentParams
@@ -207,8 +208,6 @@ func (ha *HostAgent) run() {
 		case line := <-ha.conn.getStdoutLinesCh():
 			lastUpdTime = time.Now()
 
-			// TODO: depending on state
-			_ = line
 			if ha.params.Config.Name == "my-host-01" {
 				fmt.Println("rx:", line)
 			}
@@ -228,6 +227,103 @@ func (ha *HostAgent) run() {
 
 				case ha.curCmdCtx.cmd.queryLogs != nil:
 					// TODO: collect all the info into ha.curCmdCtx.queryLogsCtx
+					resp := ha.curCmdCtx.queryLogsCtx.Resp
+
+					switch {
+					case strings.HasPrefix(line, "mstats:"):
+						parts := strings.Split(strings.TrimPrefix(line, "mstats:"), ",")
+						if len(parts) < 2 {
+							err := errors.Errorf("malformed mstats %q: expected at least 2 parts", line)
+							resp.Errs = append(resp.Errs, err)
+							continue
+						}
+
+						t, err := time.Parse(queryLogsTimeLayout, parts[0])
+						if err != nil {
+							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing mstats"))
+							continue
+						}
+
+						t = inferYear(t)
+
+						n, err := strconv.Atoi(parts[1])
+						if err != nil {
+							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing mstats"))
+							continue
+						}
+
+						resp.MinuteStats[t.Unix()] = MinuteStatsItem{
+							NumMsgs: n,
+						}
+
+					case strings.HasPrefix(line, "msg:"):
+						// msg:Mar 26 17:08:34 localhost myapp[21134]: Mar 26 17:08:34.476329 foo bar foo bar
+						msg := strings.TrimPrefix(line, "msg:")
+
+						// Mar 26 17:08:35 localhost redacted[21
+
+						// Find the index of third space, which would indicate where
+						// timestamp ends
+						ts1Len := 0
+						ns := 0
+						for i, r := range msg {
+							if r != ' ' {
+								continue
+							}
+
+							ns++
+							if ns >= 3 {
+								ts1Len = i
+								break
+							}
+						}
+
+						if ts1Len == 0 {
+							resp.Errs = append(resp.Errs, errors.Errorf("parsing log msg: no time"))
+							continue
+						}
+
+						tsStr := msg[:ts1Len]
+						msg = msg[ts1Len+1:]
+						colonIdx := strings.IndexRune(msg, ':')
+						if colonIdx == -1 {
+							resp.Errs = append(resp.Errs, errors.Errorf("parsing log msg: no systemd colon"))
+							continue
+						}
+
+						msg = msg[colonIdx+1:]
+						msg = strings.TrimSpace(msg)
+
+						// Logs sometimes contain double timestamps: one from systemd and
+						// the next one from the app, so check if the second one exists
+						// indeed.
+						ts2Idx := strings.Index(msg, tsStr)
+						if ts2Idx >= 0 {
+							tmp := strings.IndexRune(msg[ts2Idx+ts1Len:], ' ')
+							if tmp > 0 {
+								ts2Len := ts1Len + tmp
+								tsStr = msg[ts2Idx:ts2Len]
+								msg = msg[ts2Idx+ts2Len+1:]
+							}
+						}
+
+						// Now, tsStr contains the timestamp to parse, and msg contains
+						// everything after that timestamp.
+
+						t, err := time.Parse(syslogTimeLayout, tsStr)
+						if err != nil {
+							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing log msg"))
+							continue
+						}
+
+						t = inferYear(t)
+
+						resp.Logs = append(resp.Logs, LogMsg{
+							Time: t,
+							Msg:  msg,
+							// TODO: Context
+						})
+					}
 				}
 
 				if strings.HasPrefix(line, "command_done:") {
@@ -266,8 +362,18 @@ func (ha *HostAgent) run() {
 						ha.changeState(HostAgentStateConnectedIdle)
 
 					case ha.curCmdCtx.cmd.queryLogs != nil:
-						// TODO
-						ha.sendCmdResp(nil, nil)
+						resp := ha.curCmdCtx.queryLogsCtx.Resp
+
+						var err error
+						if len(resp.Errs) > 0 {
+							if len(resp.Errs) == 1 {
+								err = resp.Errs[0]
+							} else {
+								err = errors.Errorf("%s and %d more errors", resp.Errs[0], len(resp.Errs))
+							}
+						}
+
+						ha.sendCmdResp(resp, err)
 						ha.changeState(HostAgentStateConnectedIdle)
 
 					default:
@@ -324,7 +430,7 @@ func connectToHost(
 	var sshClient *ssh.Client
 
 	conf := getClientConfig(config.User)
-	fmt.Printf("hey %+v %q\n", config, hostAddr)
+	//fmt.Printf("hey %+v %q\n", config, hostAddr)
 	//fmt.Println("hey2", conn, conf)
 
 	if true {
@@ -568,7 +674,11 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		ha.conn.stdinBuf.Write([]byte("whoami\n"))
 
 	case cmdCtx.cmd.queryLogs != nil:
-		cmdCtx.queryLogsCtx = &hostCmdCtxQueryLogs{}
+		cmdCtx.queryLogsCtx = &hostCmdCtxQueryLogs{
+			Resp: &LogResp{
+				MinuteStats: map[int64]MinuteStatsItem{},
+			},
+		}
 
 		parts := []string{
 			"bash /var/tmp/nerdlog_query.sh",
@@ -594,4 +704,54 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 	ha.conn.stdinBuf.Write([]byte(fmt.Sprintf("echo 'command_done:%d'\n", cmdCtx.idx)))
 
 	ha.changeState(HostAgentStateConnectedBusy)
+}
+
+func logError(err error) {
+	// TODO: log them to some file instead
+	fmt.Println("ERROR:", err.Error())
+}
+
+// inferYear infers year from the month of the given timestamp, and the current
+// time. Resulting timestamp (with the year populated) is then returned.
+//
+// Most of the time it just uses the current year, but on the year boundary
+// it can return previous or next year.
+func inferYear(t time.Time) time.Time {
+	now := time.Now()
+
+	// If month of the syslog being parsed is the same as the current month, just
+	// use the current year.
+	if now.Month() == t.Month() {
+		return timeWithYear(t, now.Year())
+	}
+
+	// Month of the syslog is different from the current month, so we need to
+	// have logic for the boundary of the year.
+
+	if t.Month() == time.December && now.Month() == time.January {
+		// We're in January now and we're parsing some logs from December.
+		return timeWithYear(t, now.Year()-1)
+	} else if t.Month() == time.January && now.Month() == time.December {
+		// We're in December now and we're parsing some logs from January.
+		// It's weird to get timestamp from the future, but better to have a case
+		// for that.
+		return timeWithYear(t, now.Year()+1)
+	}
+
+	// For all other cases, still use the current year.
+	return timeWithYear(t, now.Year())
+}
+
+func timeWithYear(t time.Time, year int) time.Time {
+	return time.Date(
+		year,
+		t.Month(),
+		t.Day(),
+
+		t.Hour(),
+		t.Minute(),
+		t.Second(),
+		t.Nanosecond(),
+		t.Location(),
+	)
 }

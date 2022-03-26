@@ -9,8 +9,8 @@ type HostsManager struct {
 	has map[string]*HostAgent
 
 	updatesCh chan *HostAgentUpdate
-
-	reqCh chan hostsManagerReq
+	reqCh     chan hostsManagerReq
+	respCh    chan hostCmdRes
 }
 
 type HostsManagerParams struct {
@@ -23,6 +23,7 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 
 		updatesCh: make(chan *HostAgentUpdate, 1024),
 		reqCh:     make(chan hostsManagerReq, 8),
+		respCh:    make(chan hostCmdRes),
 	}
 
 	for _, hc := range params.ConfigHosts {
@@ -90,6 +91,7 @@ func (hm *HostsManager) run() {
 			case req.queryLogs != nil:
 				for _, ha := range hm.has {
 					ha.EnqueueCmd(hostCmd{
+						respCh: hm.respCh,
 						queryLogs: &hostCmdQueryLogs{
 							from: req.queryLogs.From,
 							to:   req.queryLogs.To,
@@ -104,6 +106,18 @@ func (hm *HostsManager) run() {
 					})
 				}
 			}
+
+		case resp := <-hm.respCh:
+			switch v := resp.resp.(type) {
+			case *LogResp:
+				//if resp.hostname == "my-host-01" {
+				fmt.Printf("HEY got resp %+v\n", v.MinuteStats)
+				//}
+
+			default:
+				panic(fmt.Sprintf("unexpected resp type %T", v))
+			}
+
 		}
 	}
 }

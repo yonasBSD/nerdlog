@@ -49,5 +49,5 @@ type hostCmdQueryLogs struct {
 }
 
 type hostCmdCtxQueryLogs struct {
-	// TODO: collect all the info here
+	Resp *LogResp
 }

@@ -178,7 +178,7 @@ awk_script='
 BEGIN { curline=0; maxlines=100 }
 '$awk_pattern'
 {
-  stats[$1 $2 "-" substr($3,1,5)]++;
+  stats[$1 "-" $2 "-" substr($3,1,5)]++;
 
   '$lines_until_check'
 
@@ -192,7 +192,7 @@ BEGIN { curline=0; maxlines=100 }
 
 END {
   for (x in stats) {
-    print "stats: " x " --> " stats[x]
+    print "mstats:" x "," stats[x]
   }
 
   for (i = 0; i < maxlines; i++) {
@@ -201,7 +201,7 @@ END {
       ln -= maxlines;
     }
 
-    print "line " i "(" ln ")" ": " lastlines[ln];
+    print "msg:" lastlines[ln];
   }
 }
 '
