@@ -23,12 +23,32 @@ type HostAgent struct {
 
 	state HostAgentState
 
+	conn *connCtx
+}
+
+type connCtx struct {
 	sshClient  *ssh.Client
 	sshSession *ssh.Session
 	stdinBuf   io.WriteCloser
 
 	stdoutLinesCh chan string
 	stderrLinesCh chan string
+}
+
+func (c *connCtx) getStdoutLinesCh() chan string {
+	if c == nil {
+		return nil
+	}
+
+	return c.stdoutLinesCh
+}
+
+func (c *connCtx) getStderrLinesCh() chan string {
+	if c == nil {
+		return nil
+	}
+
+	return c.stderrLinesCh
 }
 
 type HostAgentStateUpdate struct {
@@ -47,9 +67,6 @@ func NewHostAgent(params HostAgentParams) *HostAgent {
 		params: params,
 
 		state: HostAgentStateDisconnected,
-
-		stdoutLinesCh: make(chan string, 32),
-		stderrLinesCh: make(chan string, 32),
 	}
 
 	ha.changeState(HostAgentStateConnecting)
@@ -78,14 +95,10 @@ func (ha *HostAgent) changeState(state HostAgentState) {
 		ha.connectResCh = nil
 
 	case HostAgentStateConnected:
-		ha.sshClient.Close()
-		ha.sshClient = nil
-
-		ha.sshSession.Close()
-		ha.sshSession = nil
-
-		ha.stdinBuf.Close()
-		ha.stdinBuf = nil
+		ha.conn.sshClient.Close()
+		ha.conn.sshSession.Close()
+		ha.conn.stdinBuf.Close()
+		ha.conn = nil
 	}
 
 	ha.state = state
@@ -97,9 +110,7 @@ func (ha *HostAgent) changeState(state HostAgentState) {
 	switch ha.state {
 	case HostAgentStateConnecting:
 		ha.connectResCh = make(chan hostConnectRes, 1)
-		// TODO: perhaps create stdoutLinesCh and stderrLinesCh as part of
-		// connectToHost instead.
-		go connectToHost(ha.params.Config, ha.connectResCh, ha.stdoutLinesCh, ha.stderrLinesCh)
+		go connectToHost(ha.params.Config, ha.connectResCh)
 	}
 }
 
@@ -114,17 +125,15 @@ func (ha *HostAgent) run() {
 				continue
 			}
 
-			ha.sshClient = res.sshClient
-			ha.sshSession = res.sshSession
-			ha.stdinBuf = res.stdinBuf
+			ha.conn = res.conn
 			ha.changeState(HostAgentStateConnected)
 
-		case line := <-ha.stdoutLinesCh:
+		case line := <-ha.conn.getStdoutLinesCh():
 			// TODO: depending on state
 			_ = line
-			//fmt.Println("rx:", line)
+			fmt.Println("rx:", line)
 
-		case line := <-ha.stderrLinesCh:
+		case line := <-ha.conn.getStderrLinesCh():
 			// TODO maybe save somewhere for debugging
 			fmt.Println("rxe:", line)
 			_ = line
@@ -139,18 +148,13 @@ func (ha *HostAgent) run() {
 }
 
 type hostConnectRes struct {
-	sshClient  *ssh.Client
-	sshSession *ssh.Session
-	stdinBuf   io.WriteCloser
-
-	err error
+	conn *connCtx
+	err  error
 }
 
 func connectToHost(
 	config ConfigHost,
 	resCh chan<- hostConnectRes,
-	stdoutLinesCh chan string,
-	stderrLinesCh chan string,
 ) (res hostConnectRes) {
 	defer func() {
 		resCh <- res
@@ -223,12 +227,20 @@ func connectToHost(
 	}
 	//fmt.Println("shell ok")
 
+	stdoutLinesCh := make(chan string, 32)
+	stderrLinesCh := make(chan string, 32)
+
 	go getScannerFunc("stdout", stdoutBuf, stdoutLinesCh)()
 	go getScannerFunc("stderr", stderrBuf, stderrLinesCh)()
 
-	res.sshClient = sshClient
-	res.sshSession = sshSession
-	res.stdinBuf = stdinBuf
+	res.conn = &connCtx{
+		sshClient:  sshClient,
+		sshSession: sshSession,
+		stdinBuf:   stdinBuf,
+
+		stdoutLinesCh: stdoutLinesCh,
+		stderrLinesCh: stderrLinesCh,
+	}
 
 	return res
 }
