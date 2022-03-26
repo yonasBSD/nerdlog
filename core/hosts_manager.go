@@ -1,6 +1,9 @@
 package core
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type HostsManager struct {
 	has map[string]*HostAgent
@@ -40,6 +43,8 @@ func (hm *HostsManager) run() {
 		}
 	}
 
+	ticker := time.NewTicker(10 * time.Second)
+
 	for {
 		select {
 		case upd := <-hm.updatesCh:
@@ -65,6 +70,15 @@ func (hm *HostsManager) run() {
 			} else {
 				panic("empty update " + upd.Name)
 			}
+
+		case <-ticker.C:
+			/*
+				for _, ha := range hm.has {
+					ha.EnqueueCmd(hostCmd{
+						ping: &hostCmdPing{},
+					})
+				}
+			*/
 		}
 	}
 }
