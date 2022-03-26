@@ -559,10 +559,10 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 	case cmdCtx.cmd.bootstrap != nil:
 		cmdCtx.bootstrapCtx = &hostCmdCtxBootstrap{}
 
-		ha.conn.stdinBuf.Write([]byte(`cat <<- 'EOF' > /var/tmp/query_logs.sh
+		ha.conn.stdinBuf.Write([]byte(`cat <<- 'EOF' > /var/tmp/nerdlog_query.sh
 #/bin/bash
 
-cachefile=/tmp/query_logs_cache
+cachefile=/tmp/nerdlog_query_cache
 
 logfile1=/var/log/syslog.1
 logfile2=/var/log/syslog
@@ -661,7 +661,7 @@ function get_prevlog_modtime_from_cache() { # {{{
 } # }}}
 
 if [[ "$from" != "" || "$to" != "" ]]; then
-  # Check timestamp in the first line of /tmp/query_logs_cache, and if
+  # Check timestamp in the first line of /tmp/nerdlog_query_cache, and if
   # $logfile1's modification time is newer, then delete whole cache
   logfile1_stored_modtime="$(get_prevlog_modtime_from_cache)"
   logfile1_cur_modtile=$(stat -c %y $logfile1)
@@ -801,7 +801,7 @@ EOF
 		cmdCtx.queryLogsCtx = &hostCmdCtxQueryLogs{}
 
 		parts := []string{
-			"bash /var/tmp/query_logs.sh",
+			"bash /var/tmp/nerdlog_query.sh",
 		}
 
 		if !cmdCtx.cmd.queryLogs.from.IsZero() {

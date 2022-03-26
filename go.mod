@@ -1,4 +1,4 @@
-module github.com/dimonomid/slog
+module github.com/dimonomid/nerdlog
 
 go 1.17
 

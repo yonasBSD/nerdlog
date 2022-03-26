@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/dimonomid/slog/core"
+	"github.com/dimonomid/nerdlog/core"
 )
 
 func main() {
@@ -212,7 +212,7 @@ func main() {
 		_ = input
 
 		for i := 0; i < 1; i++ {
-			cmd := fmt.Sprintf(`time bash /var/tmp/dmitrii_log.sh --from Mar-25-12:00 '/series_ids_string=\|523029\|/ && !/Activity monitor/'
+			cmd := fmt.Sprintf(`time bash /var/tmp/nerdlog_query.sh --from Mar-25-12:00 '/series_ids_string=\|523029\|/ && !/Activity monitor/'
 `)
 			stdinBuf.Write([]byte(cmd))
 		}
