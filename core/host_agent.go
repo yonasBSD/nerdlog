@@ -18,6 +18,8 @@ import (
 
 const connectionTimeout = 5 * time.Second
 
+const queryLogsTimeLayout = "Jan-02-15:04"
+
 type HostAgent struct {
 	params HostAgentParams
 
@@ -31,17 +33,7 @@ type HostAgent struct {
 	cmdQueue   []hostCmd
 	curCmdCtx  *hostCmdCtx
 	nextCmdIdx int
-
-	//connBootstrapStatus tristate
 }
-
-//type tristate int
-//
-//const (
-//tristateNone = iota
-//tristateProgress
-//tristateDone
-//)
 
 type connCtx struct {
 	sshClient  *ssh.Client
@@ -180,6 +172,7 @@ func (ha *HostAgent) run() {
 		select {
 		case res := <-ha.connectResCh:
 			if res.err != nil {
+				fmt.Println("failed to connect:", res.err)
 				// TODO: backoff
 				ha.changeState(HostAgentStateDisconnected)
 				ha.changeState(HostAgentStateConnecting)
@@ -222,6 +215,12 @@ func (ha *HostAgent) run() {
 					} else if line == "bootstrap failed" {
 						ha.curCmdCtx.bootstrapCtx.receivedFailure = true
 					}
+
+				case ha.curCmdCtx.cmd.ping != nil:
+					// Nothing special to do
+
+				case ha.curCmdCtx.cmd.queryLogs != nil:
+					// TODO: collect all the info into ha.curCmdCtx.queryLogsCtx
 				}
 
 				if strings.HasPrefix(line, "command_done:") {
@@ -258,13 +257,23 @@ func (ha *HostAgent) run() {
 					case ha.curCmdCtx.cmd.ping != nil:
 						ha.sendCmdResp(nil, nil)
 						ha.changeState(HostAgentStateConnectedIdle)
+
+					case ha.curCmdCtx.cmd.queryLogs != nil:
+						// TODO
+						ha.sendCmdResp(nil, nil)
+						ha.changeState(HostAgentStateConnectedIdle)
+
+					default:
+						panic(fmt.Sprintf("unhandled cmd %+v", ha.curCmdCtx.cmd))
 					}
 				}
 			}
 
 		case line := <-ha.conn.getStderrLinesCh():
 			// TODO maybe save somewhere for debugging
-			fmt.Println("rxe:", line)
+			if ha.params.Config.Name == "my-host-01" {
+				fmt.Println("rxe:", line)
+			}
 			_ = line
 
 			//case data := <-ha.stdinCh:
@@ -294,31 +303,43 @@ func connectToHost(
 		resCh <- res
 	}()
 
-	jumphost, err := getJumphostClient()
-	if err != nil {
-		res.err = errors.Annotatef(err, "getting jumphost client")
-		return res
-	}
-
 	hostAddr := fmt.Sprintf("%s:%d", config.Hostname, config.Port)
 
-	conn, err := dialWithTimeout(jumphost, "tcp", hostAddr, connectionTimeout)
-	if err != nil {
-		res.err = errors.Trace(err)
-		return res
-	}
+	var sshClient *ssh.Client
 
 	conf := getClientConfig(config.User)
-	//fmt.Printf("hey %+v %q\n", config, hostAddr)
+	fmt.Printf("hey %+v %q\n", config, hostAddr)
 	//fmt.Println("hey2", conn, conf)
 
-	authConn, chans, reqs, err := ssh.NewClientConn(conn, hostAddr, conf)
-	if err != nil {
-		res.err = errors.Trace(err)
-		return res
-	}
+	if true {
+		// Use jumphost
+		jumphost, err := getJumphostClient()
+		if err != nil {
+			res.err = errors.Annotatef(err, "getting jumphost client")
+			return res
+		}
 
-	sshClient := ssh.NewClient(authConn, chans, reqs)
+		conn, err := dialWithTimeout(jumphost, "tcp", hostAddr, connectionTimeout)
+		if err != nil {
+			res.err = errors.Trace(err)
+			return res
+		}
+
+		authConn, chans, reqs, err := ssh.NewClientConn(conn, hostAddr, conf)
+		if err != nil {
+			res.err = errors.Trace(err)
+			return res
+		}
+
+		sshClient = ssh.NewClient(authConn, chans, reqs)
+	} else {
+		var err error
+		sshClient, err = ssh.Dial("tcp", hostAddr, conf)
+		if err != nil {
+			res.err = errors.Trace(err)
+			return res
+		}
+	}
 	//defer client.Close()
 
 	//fmt.Println("sshClient ok", sshClient)
@@ -499,25 +520,6 @@ func getScannerFunc(name string, reader io.Reader, linesCh chan<- string) func()
 
 		fmt.Println("stopped reading stdin")
 	}
-}
-
-type hostCmdCtx struct {
-	cmd hostCmd
-
-	idx int
-
-	bootstrapCtx *hostCmdCtxBootstrap
-	pingCtx      *hostCmdCtxPing
-}
-
-type hostCmdCtxBootstrap struct {
-	receivedSuccess bool
-	receivedFailure bool
-}
-
-type hostCmdCtxPing struct {
-	receivedSuccess bool
-	receivedFailure bool
 }
 
 func (ha *HostAgent) EnqueueCmd(cmd hostCmd) {
@@ -778,6 +780,26 @@ EOF
 		cmdCtx.pingCtx = &hostCmdCtxPing{}
 
 		ha.conn.stdinBuf.Write([]byte("whoami\n"))
+
+	case cmdCtx.cmd.queryLogs != nil:
+		cmdCtx.queryLogsCtx = &hostCmdCtxQueryLogs{}
+
+		parts := []string{
+			"bash /var/tmp/query_logs.sh",
+		}
+
+		if !cmdCtx.cmd.queryLogs.from.IsZero() {
+			parts = append(parts, "--from", cmdCtx.cmd.queryLogs.from.UTC().Format(queryLogsTimeLayout))
+		}
+
+		if !cmdCtx.cmd.queryLogs.to.IsZero() {
+			parts = append(parts, "--to", cmdCtx.cmd.queryLogs.to.UTC().Format(queryLogsTimeLayout))
+		}
+
+		cmd := strings.Join(parts, " ") + "\n"
+		fmt.Println("hey", ha.params.Config.Name, "cmd:", cmd)
+
+		ha.conn.stdinBuf.Write([]byte(cmd))
 
 	default:
 		panic(fmt.Sprintf("invalid command %+v", cmdCtx.cmd))

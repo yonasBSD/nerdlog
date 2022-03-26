@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/dimonomid/slog/core"
@@ -10,11 +12,62 @@ import (
 func main() {
 	hosts := []core.ConfigHost{}
 
-	// TODO: wtf it works with 22 but doesn't with 24
 	for i := 0; i < 24; i++ {
+		hostname := fmt.Sprintf("my-host-%.2d", i+1)
+		switch i + 1 {
+		case 1:
+			hostname = "redacted"
+		case 2:
+			hostname = "redacted"
+		case 3:
+			hostname = "redacted"
+		case 4:
+			hostname = "redacted"
+		case 5:
+			hostname = "redacted"
+		case 6:
+			hostname = "redacted"
+		case 7:
+			hostname = "redacted"
+		case 8:
+			hostname = "redacted"
+		case 9:
+			hostname = "redacted"
+		case 10:
+			hostname = "redacted"
+		case 11:
+			hostname = "redacted"
+		case 12:
+			hostname = "redacted"
+		case 13:
+			hostname = "redacted"
+		case 14:
+			hostname = "redacted"
+		case 15:
+			hostname = "redacted"
+		case 16:
+			hostname = "redacted"
+		case 17:
+			hostname = "redacted"
+		case 18:
+			hostname = "redacted"
+		case 19:
+			hostname = "redacted"
+		case 20:
+			hostname = "redacted"
+		case 21:
+			hostname = "redacted"
+		case 22:
+			hostname = "redacted"
+		case 23:
+			hostname = "redacted"
+		case 24:
+			hostname = "redacted"
+		}
+
 		hosts = append(hosts, core.ConfigHost{
 			Name:     fmt.Sprintf("my-host-%.2d", i+1),
-			Hostname: fmt.Sprintf("my-host-%.2d", i+1),
+			Hostname: hostname,
 			Port:     22,
 			User:     "ubuntu",
 		})
@@ -24,8 +77,29 @@ func main() {
 		ConfigHosts: hosts,
 	})
 
-	_ = hm
-	time.Sleep(1 * time.Minute)
+	for {
+		reader := bufio.NewReader(os.Stdin)
+		// ReadString will block until the delimiter is entered
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("user read error", err)
+			break
+		}
+
+		_ = input
+
+		if input == "ping\n" {
+			fmt.Println("sending pings...")
+			hm.Ping()
+		} else if input == "query\n" {
+			fmt.Println("querying logs...")
+			hm.QueryLogs(core.QueryLogsParams{
+				From: time.Now().Add(-8 * time.Hour),
+			})
+		} else {
+			fmt.Println("invalid comand")
+		}
+	}
 }
 
 /*

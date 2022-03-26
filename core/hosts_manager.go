@@ -9,6 +9,8 @@ type HostsManager struct {
 	has map[string]*HostAgent
 
 	updatesCh chan *HostAgentUpdate
+
+	reqCh chan hostsManagerReq
 }
 
 type HostsManagerParams struct {
@@ -20,6 +22,7 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 		has: make(map[string]*HostAgent, len(params.ConfigHosts)),
 
 		updatesCh: make(chan *HostAgentUpdate, 1024),
+		reqCh:     make(chan hostsManagerReq, 8),
 	}
 
 	for _, hc := range params.ConfigHosts {
@@ -43,7 +46,7 @@ func (hm *HostsManager) run() {
 		}
 	}
 
-	ticker := time.NewTicker(10 * time.Second)
+	//ticker := time.NewTicker(15 * time.Second)
 
 	for {
 		select {
@@ -71,14 +74,60 @@ func (hm *HostsManager) run() {
 				panic("empty update " + upd.Name)
 			}
 
-		case <-ticker.C:
 			/*
+				case <-ticker.C:
+					for _, ha := range hm.has {
+						ha.EnqueueCmd(hostCmd{
+							queryLogs: &hostCmdQueryLogs{
+								From: time.Now().Add(-1 * time.Hour),
+							},
+						})
+					}
+			*/
+
+		case req := <-hm.reqCh:
+			switch {
+			case req.queryLogs != nil:
+				for _, ha := range hm.has {
+					ha.EnqueueCmd(hostCmd{
+						queryLogs: &hostCmdQueryLogs{
+							from: req.queryLogs.From,
+							to:   req.queryLogs.To,
+						},
+					})
+				}
+
+			case req.ping:
 				for _, ha := range hm.has {
 					ha.EnqueueCmd(hostCmd{
 						ping: &hostCmdPing{},
 					})
 				}
-			*/
+			}
 		}
+	}
+}
+
+type hostsManagerReq struct {
+	// Exactly one field must be non-nil
+
+	queryLogs *QueryLogsParams
+	ping      bool
+}
+
+type QueryLogsParams struct {
+	From time.Time
+	To   time.Time
+}
+
+func (hm *HostsManager) QueryLogs(params QueryLogsParams) {
+	hm.reqCh <- hostsManagerReq{
+		queryLogs: &params,
+	}
+}
+
+func (hm *HostsManager) Ping() {
+	hm.reqCh <- hostsManagerReq{
+		ping: true,
 	}
 }
