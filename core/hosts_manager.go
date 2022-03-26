@@ -11,7 +11,8 @@ import (
 type HostsManager struct {
 	params HostsManagerParams
 
-	has map[string]*HostAgent
+	has      map[string]*HostAgent
+	haStates map[string]HostAgentState
 
 	hostUpdatesCh chan *HostAgentUpdate
 	reqCh         chan hostsManagerReq
@@ -30,7 +31,8 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 	hm := &HostsManager{
 		params: params,
 
-		has: make(map[string]*HostAgent, len(params.ConfigHosts)),
+		has:      make(map[string]*HostAgent, len(params.ConfigHosts)),
+		haStates: make(map[string]HostAgentState, len(params.ConfigHosts)),
 
 		hostUpdatesCh: make(chan *HostAgentUpdate, 1024),
 		reqCh:         make(chan hostsManagerReq, 8),
@@ -43,6 +45,7 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 			UpdatesCh: hm.hostUpdatesCh,
 		})
 		hm.has[hc.Name] = ha
+		hm.haStates[hc.Name] = HostAgentStateDisconnected
 	}
 
 	go hm.run()
@@ -62,25 +65,7 @@ func (hm *HostsManager) run() {
 		select {
 		case upd := <-hm.hostUpdatesCh:
 			if upd.State != nil {
-				supd := upd.State
-				delete(agentsByState[supd.OldState], upd.Name)
-
-				set, ok := agentsByState[supd.NewState]
-				if !ok {
-					set = map[string]struct{}{}
-					agentsByState[supd.NewState] = set
-				}
-
-				set[upd.Name] = struct{}{}
-
-				fmt.Printf(
-					"Connected: %d/%d (idle %d, busy %d)\n",
-					len(agentsByState[HostAgentStateConnectedIdle])+len(agentsByState[HostAgentStateConnectedBusy]),
-					len(hm.has),
-					len(agentsByState[HostAgentStateConnectedIdle]),
-					len(agentsByState[HostAgentStateConnectedBusy]),
-				)
-
+				hm.haStates[upd.Name] = upd.State.NewState
 				hm.sendStateUpdate()
 			} else {
 				panic("empty update " + upd.Name)
@@ -200,6 +185,8 @@ type HostsManagerUpdate struct {
 }
 
 type HostsManagerState struct {
+	NumHosts int
+
 	HostsByState map[HostAgentState]map[string]struct{}
 
 	// Busy is true when a query is in progress
@@ -207,11 +194,23 @@ type HostsManagerState struct {
 }
 
 func (hm *HostsManager) sendStateUpdate() {
+	hostsByState := map[HostAgentState]map[string]struct{}{}
+
+	for name, state := range hm.haStates {
+		set, ok := hostsByState[state]
+		if !ok {
+			set = map[string]struct{}{}
+			hostsByState[state] = set
+		}
+
+		set[name] = struct{}{}
+	}
+
 	hm.params.UpdatesCh <- HostsManagerUpdate{
 		State: &HostsManagerState{
-			// TODO
-			//HostsByState: hm.
-			Busy: hm.curQueryLogsCtx != nil,
+			NumHosts:     len(hm.has),
+			HostsByState: hostsByState,
+			Busy:         hm.curQueryLogsCtx != nil,
 		},
 	}
 }

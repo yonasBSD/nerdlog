@@ -208,9 +208,9 @@ func (ha *HostAgent) run() {
 		case line := <-ha.conn.getStdoutLinesCh():
 			lastUpdTime = time.Now()
 
-			if ha.params.Config.Name == "my-host-01" {
-				fmt.Println("rx:", line)
-			}
+			//if ha.params.Config.Name == "my-host-01" {
+			//fmt.Println("rx:", line)
+			//}
 
 			switch ha.state {
 			case HostAgentStateConnectedBusy:

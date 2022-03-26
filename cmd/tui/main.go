@@ -82,7 +82,19 @@ func main() {
 
 			switch {
 			case upd.State != nil:
-				fmt.Printf("State: %+v\n", upd.State)
+				busyStr := "idle"
+				if upd.State.Busy {
+					busyStr = "busy"
+				}
+
+				fmt.Printf(
+					"%s || Connected: %d/%d (idle %d, busy %d)\n",
+					busyStr,
+					len(upd.State.HostsByState[core.HostAgentStateConnectedIdle])+len(upd.State.HostsByState[core.HostAgentStateConnectedBusy]),
+					upd.State.NumHosts,
+					len(upd.State.HostsByState[core.HostAgentStateConnectedIdle]),
+					len(upd.State.HostsByState[core.HostAgentStateConnectedBusy]),
+				)
 
 			case upd.LogResp != nil:
 				resp := upd.LogResp
