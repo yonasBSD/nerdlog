@@ -322,6 +322,9 @@ func (ha *HostAgent) run() {
 							Time: t,
 							Msg:  msg,
 							// TODO: Context
+							Context: map[string]string{
+								"source": ha.params.Config.Name,
+							},
 						})
 					}
 				}
@@ -386,9 +389,9 @@ func (ha *HostAgent) run() {
 			lastUpdTime = time.Now()
 
 			// TODO maybe save somewhere for debugging
-			if ha.params.Config.Name == "my-host-01" {
-				fmt.Println("rxe:", line)
-			}
+			//if ha.params.Config.Name == "my-host-01" {
+			//fmt.Println("rxe:", line)
+			//}
 			_ = line
 
 			//case data := <-ha.stdinCh:
@@ -564,7 +567,7 @@ func getJumphostClient() (*ssh.Client, error) {
 			return nil, errors.Trace(err)
 		}
 
-		fmt.Println("Jumphost ok")
+		//fmt.Println("Jumphost ok")
 		jumphostShared = jumphost
 	}
 
@@ -691,7 +694,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		}
 
 		cmd := strings.Join(parts, " ") + "\n"
-		fmt.Println("hey", ha.params.Config.Name, "cmd:", cmd)
+		//fmt.Println("hey", ha.params.Config.Name, "cmd:", cmd)
 
 		ha.conn.stdinBuf.Write([]byte(cmd))
 

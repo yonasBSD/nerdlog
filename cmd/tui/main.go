@@ -1,15 +1,75 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
-	"sort"
-	"time"
 
 	"github.com/dimonomid/nerdlog/core"
+	"github.com/rivo/tview"
 )
 
+func main() {
+	var hm *core.HostsManager
+
+	app := tview.NewApplication()
+
+	mainView := NewMainView(&MainViewParams{
+		App: app,
+		OnLogQuery: func(params core.QueryLogsParams) {
+			hm.QueryLogs(params)
+		},
+	})
+
+	hm = initHostsManager(mainView)
+
+	fmt.Println("Starting UI ...")
+	if err := app.SetRoot(mainView.GetUIPrimitive(), true).Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		//sc.Close()
+		//tc.Close()
+		os.Exit(1)
+	}
+
+	// We end up here when the user quits the UI
+
+	fmt.Println("")
+	fmt.Println("Closing connections...")
+
+	//sc.Close()
+	//tc.Close()
+
+	fmt.Println("Have a nice day.")
+}
+
+func initHostsManager(mainView *MainView) *core.HostsManager {
+	updatesCh := make(chan core.HostsManagerUpdate, 128)
+
+	go func() {
+		for {
+			upd := <-updatesCh
+
+			switch {
+			case upd.State != nil:
+				mainView.ApplyHMState(upd.State)
+
+			case upd.LogResp != nil:
+				mainView.ApplyLogs(upd.LogResp)
+
+			default:
+				panic("empty hosts manager update")
+			}
+		}
+	}()
+
+	hm := core.NewHostsManager(core.HostsManagerParams{
+		ConfigHosts: makeConfigHosts(),
+		UpdatesCh:   updatesCh,
+	})
+
+	return hm
+}
+
+/*
 func main() {
 	updatesCh := make(chan core.HostsManagerUpdate, 128)
 
@@ -94,6 +154,7 @@ func main() {
 		}
 	}
 }
+*/
 
 func makeConfigHosts() []core.ConfigHost {
 	hosts := []core.ConfigHost{}

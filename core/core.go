@@ -2,6 +2,13 @@ package core
 
 import "time"
 
+type QueryLogsParams struct {
+	From time.Time
+	To   time.Time
+
+	// TODO: filters
+}
+
 type LogResp struct {
 	// MinuteStats is a map from the unix timestamp (in seconds) to the stats for
 	// the minute starting at this timestamp.

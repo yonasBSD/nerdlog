@@ -3,7 +3,6 @@ package core
 import (
 	"fmt"
 	"sort"
-	"time"
 
 	"github.com/juju/errors"
 )
@@ -151,11 +150,6 @@ type hostsManagerReq struct {
 
 	queryLogs *QueryLogsParams
 	ping      bool
-}
-
-type QueryLogsParams struct {
-	From time.Time
-	To   time.Time
 }
 
 func (hm *HostsManager) QueryLogs(params QueryLogsParams) {
