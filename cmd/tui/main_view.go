@@ -101,8 +101,15 @@ func NewMainView(params *MainViewParams) *MainView {
 	})
 	mainFlex.AddItem(mv.histogram, 6, 0, false)
 
-	mv.logsTable = tview.NewTable().SetSelectable(true, false)
+	mv.logsTable = tview.NewTable()
 	mv.updateTableHeader(nil)
+
+	mv.logsTable.SetFocusFunc(func() {
+		mv.logsTable.SetSelectable(true, false)
+	})
+	mv.logsTable.SetBlurFunc(func() {
+		mv.logsTable.SetSelectable(false, false)
+	})
 
 	// TODO: once tableview fixed, use SetFixed(1, 1)
 	// (there's an issue with going to the very top using "g")
@@ -225,6 +232,10 @@ func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 
 		mv.histogram.SetData(histogramData)
 
+		// TODO: when we implement loading _more_ logs for the same query,
+		// we shouldn't clear table or selection
+		mv.logsTable.Clear()
+
 		colNames := mv.updateTableHeader(resp.Logs)
 		// Add all available logs
 		for i, rowIdx := len(resp.Logs)-1, 1; i >= 0; i, rowIdx = i-1, rowIdx+1 {
@@ -232,7 +243,7 @@ func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 
 			mv.logsTable.SetCell(
 				rowIdx, 0,
-				newTableCellHeader(msg.Time.Format(logsTableTimeLayout)),
+				newTableCellLogmsg(msg.Time.Format(logsTableTimeLayout)).SetTextColor(tcell.ColorYellow),
 			)
 
 			mv.logsTable.SetCell(
@@ -250,12 +261,18 @@ func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 			//msg.
 		}
 
+		mv.logsTable.Select(0, 0)
+		mv.logsTable.ScrollToBeginning()
+
 		mv.updateHistogramTimeRange()
 	})
 }
 
 func newTableCellHeader(text string) *tview.TableCell {
-	return tview.NewTableCell(text).SetTextColor(tcell.ColorYellow).SetAlign(tview.AlignLeft)
+	return tview.NewTableCell(text).
+		SetTextColor(tcell.ColorYellow).
+		SetAlign(tview.AlignLeft).
+		SetSelectable(false)
 }
 
 func newTableCellLogmsg(text string) *tview.TableCell {

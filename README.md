@@ -15,7 +15,8 @@
 
 ### Super important
 
-- Config (and have one ready with all our hosts)
-- When logs are being reloaded, clear table first
+- Changing time period
 - On startup, have some state like "connecting" and don't panic if a query is
   made. Also, query 1h right away
+- Only use logs for the fully covered time period (the shortest one from all nodes)
+- Config (and have one ready with all our hosts)
