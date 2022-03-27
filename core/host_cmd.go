@@ -46,6 +46,8 @@ type hostCmdCtxPing struct {
 type hostCmdQueryLogs struct {
 	from time.Time
 	to   time.Time
+
+	query string
 }
 
 type hostCmdCtxQueryLogs struct {

@@ -693,6 +693,10 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 			parts = append(parts, "--to", cmdCtx.cmd.queryLogs.to.UTC().Format(queryLogsTimeLayout))
 		}
 
+		if cmdCtx.cmd.queryLogs.query != "" {
+			parts = append(parts, "'"+cmdCtx.cmd.queryLogs.query+"'")
+		}
+
 		cmd := strings.Join(parts, " ") + "\n"
 		//fmt.Println("hey", ha.params.Config.Name, "cmd:", cmd)
 

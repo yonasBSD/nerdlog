@@ -92,8 +92,9 @@ func (hm *HostsManager) run() {
 					ha.EnqueueCmd(hostCmd{
 						respCh: hm.respCh,
 						queryLogs: &hostCmdQueryLogs{
-							from: req.queryLogs.From,
-							to:   req.queryLogs.To,
+							from:  req.queryLogs.From,
+							to:    req.queryLogs.To,
+							query: req.queryLogs.Query,
 						},
 					})
 				}

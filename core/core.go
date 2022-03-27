@@ -6,7 +6,7 @@ type QueryLogsParams struct {
 	From time.Time
 	To   time.Time
 
-	// TODO: filters
+	Query string
 }
 
 type LogResp struct {

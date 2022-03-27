@@ -28,7 +28,23 @@ type MainView struct {
 	queryInput *tview.InputField
 	cmdInput   *tview.InputField
 
+	histogram *Histogram
+
 	statusLine *tview.TextView
+
+	// from, to represent the selected time range
+	from, to time.Time
+
+	// actualFrom, actualTo is like from and to, but they can't be zero.
+	actualFrom, actualTo time.Time
+
+	curLogResp *core.LogResp
+	// statsFrom and statsTo represent the first and last element present
+	// in curLogResp.MinuteStats. Note that this range might be smaller than
+	// (from, to), because for some minute stats might be missing. statsFrom
+	// and statsTo are only useful for cases when from and/or to are zero (meaning,
+	// time range isn't limited)
+	statsFrom, statsTo time.Time
 
 	//marketViewsByID map[common.MarketID]*MarketView
 	//marketDescrByID map[common.MarketID]MarketDescr
@@ -49,8 +65,12 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.queryInput.SetDoneFunc(func(key tcell.Key) {
 		switch key {
 		case tcell.KeyEnter:
+			// TODO: remove it from here
+			mv.setTimeRange(time.Now().Add(-5*time.Minute), time.Time{})
+
 			mv.params.OnLogQuery(core.QueryLogsParams{
-				From: time.Now().Add(-1 * time.Hour),
+				From:  mv.from,
+				Query: mv.queryInput.GetText(),
 			})
 		case tcell.KeyTab:
 			mv.params.App.SetFocus(mv.logsTable)
@@ -58,6 +78,10 @@ func NewMainView(params *MainViewParams) *MainView {
 	})
 
 	mainFlex.AddItem(mv.queryInput, 1, 0, false)
+
+	mv.histogram = NewHistogram()
+	mv.histogram.SetBinSize(60) // 1 minute
+	mainFlex.AddItem(mv.histogram, 6, 0, false)
 
 	mv.logsTable = tview.NewTable().SetSelectable(true, false)
 	mv.updateTableHeader(nil)
@@ -174,9 +198,16 @@ func (mv *MainView) updateTableHeader(msgs []core.LogMsg) (colNames []string) {
 func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 	mv.params.App.QueueUpdateDraw(func() {
 		// TODO: handle resp.Err, maybe just a dialog
+		mv.curLogResp = resp
+
+		histogramData := make(map[int]int, len(resp.MinuteStats))
+		for k, v := range resp.MinuteStats {
+			histogramData[int(k)] = v.NumMsgs
+		}
+
+		mv.histogram.SetData(histogramData)
 
 		colNames := mv.updateTableHeader(resp.Logs)
-
 		// Add all available logs
 		for i, rowIdx := len(resp.Logs)-1, 1; i >= 0; i, rowIdx = i-1, rowIdx+1 {
 			msg := resp.Logs[i]
@@ -200,6 +231,8 @@ func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 
 			//msg.
 		}
+
+		mv.updateHistogramTimeRange()
 	})
 }
 
@@ -268,3 +301,42 @@ func newTableCellLogmsg(text string) *tview.TableCell {
 	mainFlex.AddItem(mv.bottomForm, 3, 0, false)
 
 */
+
+func (mv *MainView) setTimeRange(from, to time.Time) {
+	mv.from = from
+	mv.to = to
+
+	mv.updateHistogramTimeRange()
+}
+
+func (mv *MainView) updateHistogramTimeRange() {
+	var fromUnix, toUnix int
+
+	mv.actualFrom, mv.actualTo = mv.from, mv.to
+
+	if mv.actualFrom.IsZero() {
+		mv.actualFrom = mv.statsFrom
+	}
+
+	if mv.actualFrom.IsZero() {
+		mv.actualFrom = time.Now()
+	}
+
+	mv.actualFrom = mv.actualFrom.Truncate(1 * time.Minute)
+
+	fromUnix = int(mv.actualFrom.Unix())
+
+	if mv.actualTo.IsZero() {
+		mv.actualTo = mv.statsTo
+	}
+
+	if mv.actualTo.IsZero() {
+		mv.actualTo = time.Now()
+	}
+
+	mv.actualTo = mv.actualTo.Truncate(1 * time.Minute)
+
+	toUnix = int(mv.actualTo.Unix())
+
+	mv.histogram.SetRange(fromUnix, toUnix)
+}
