@@ -15,6 +15,10 @@
 
 ### Super important
 
-- Changing time period
-- Error messagebox
 - Config (and have one ready with all our hosts)
+- Changing sources where to query from
+
+-----
+
+- Showing full original raw message in a messagebox
+- Get tags out of the message

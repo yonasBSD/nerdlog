@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/dimonomid/nerdlog/core"
@@ -11,15 +12,61 @@ import (
 
 func main() {
 	var hm *core.HostsManager
+	var mainView *MainView
 
 	app := tview.NewApplication()
 
-	mainView := NewMainView(&MainViewParams{
+	cmdCh := make(chan string, 8)
+	go func() {
+		for {
+			cmd := <-cmdCh
+			//mainView.ShowMessagebox("tmp", "Tmp", "Command: "+cmd, nil)
+
+			parts := strings.Fields(cmd)
+			if len(parts) == 0 {
+				return
+			}
+
+			switch parts[0] {
+			case "time":
+				if len(parts) < 2 {
+					mainView.ShowMessagebox("err", "Error", ":time requires an argument, like -5h", nil)
+					return
+				}
+
+				dur, err := time.ParseDuration(parts[1])
+				if err != nil {
+					mainView.ShowMessagebox("err", "Error", "invalid duration: "+err.Error(), nil)
+					return
+				}
+
+				if dur > 0 {
+					dur = -dur
+				}
+
+				from, to := time.Now().Add(dur), time.Time{}
+
+				mainView.SetTimeRange(from, to)
+				mainView.DoQuery()
+
+			default:
+				mainView.ShowMessagebox("err", "Error", fmt.Sprintf("unknown command %q", parts[0]), nil)
+			}
+		}
+	}()
+
+	mainView = NewMainView(&MainViewParams{
 		App: app,
 		OnLogQuery: func(params core.QueryLogsParams) {
 			hm.QueryLogs(params)
 		},
+		OnCmd: func(cmd string) {
+			cmdCh <- cmd
+		},
 	})
+
+	from, to := time.Now().Add(-1*time.Hour), time.Time{}
+	mainView.setTimeRange(from, to)
 
 	hm = initHostsManager(mainView)
 
@@ -56,13 +103,7 @@ func initHostsManager(mainView *MainView) *core.HostsManager {
 			case upd.State != nil:
 				mainView.ApplyHMState(upd.State)
 				if !doneInitialQuery && upd.State.Connected {
-					from, to := time.Now().Add(-1*time.Hour), time.Time{}
-
-					mainView.SetTimeRange(from, to)
-					hm.QueryLogs(core.QueryLogsParams{
-						From: from,
-						To:   to,
-					})
+					mainView.DoQuery()
 					doneInitialQuery = true
 				}
 

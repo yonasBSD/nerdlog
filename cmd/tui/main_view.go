@@ -22,6 +22,9 @@ type MainViewParams struct {
 	// OnLogQuery is called by MainView whenever the user submits a query to get
 	// logs.
 	OnLogQuery OnLogQueryCallback
+
+	// TODO: support command history
+	OnCmd OnCmdCallback
 }
 
 type MainView struct {
@@ -31,6 +34,11 @@ type MainView struct {
 
 	queryInput *tview.InputField
 	cmdInput   *tview.InputField
+
+	// focusedBeforeCmd is a primitive which was focused before cmdInput was
+	// focused. Once the user is done editing command, focusedBeforeCmd
+	// normally resumes focus.
+	focusedBeforeCmd tview.Primitive
 
 	histogram *Histogram
 
@@ -52,9 +60,11 @@ type MainView struct {
 
 	//marketViewsByID map[common.MarketID]*MarketView
 	//marketDescrByID map[common.MarketID]MarketDescr
+
 }
 
 type OnLogQueryCallback func(core.QueryLogsParams)
+type OnCmdCallback func(cmd string)
 
 func NewMainView(params *MainViewParams) *MainView {
 	mv := &MainView{
@@ -69,13 +79,7 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.queryInput.SetDoneFunc(func(key tcell.Key) {
 		switch key {
 		case tcell.KeyEnter:
-			// TODO: remove it from here
-			mv.setTimeRange(time.Now().Add(-5*time.Hour), time.Time{})
-
-			mv.params.OnLogQuery(core.QueryLogsParams{
-				From:  mv.from,
-				Query: mv.queryInput.GetText(),
-			})
+			mv.doQuery()
 		case tcell.KeyTab:
 			mv.params.App.SetFocus(mv.logsTable)
 		}
@@ -127,6 +131,14 @@ func NewMainView(params *MainViewParams) *MainView {
 			// TODO: ideally we'd want to only go half a page up, but for now just
 			// return Ctrl+B which will go the full page up
 			return tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModNone)
+
+		case tcell.KeyRune:
+			switch event.Rune() {
+			case ':':
+				mv.cmdInput.SetText(":")
+				mv.focusedBeforeCmd = mv.params.App.GetFocus()
+				mv.params.App.SetFocus(mv.cmdInput)
+			}
 		}
 
 		return event
@@ -146,9 +158,8 @@ func NewMainView(params *MainViewParams) *MainView {
 			mv.params.App.SetFocus(mv.queryInput)
 		}
 	}).SetSelectedFunc(func(row int, column int) {
-		// TODO: show the full message
-		//mv.logsTable.GetCell(row, column).SetTextColor(tcell.ColorRed)
-		//mv.logsTable.SetSelectable(false, false)
+		// TODO: instead of showing current cell contents, show original raw message
+		mv.showMessagebox("msg", "Message", mv.logsTable.GetCell(row, 1).Text, nil)
 	}) // TODO .SetInputCapture
 
 	/*
@@ -179,6 +190,33 @@ func NewMainView(params *MainViewParams) *MainView {
 	mainFlex.AddItem(mv.statusLine, 1, 0, false)
 
 	mv.cmdInput = tview.NewInputField()
+	mv.cmdInput.SetChangedFunc(func(text string) {
+		if text == "" {
+			mv.params.App.SetFocus(mv.focusedBeforeCmd)
+		}
+	})
+
+	mv.cmdInput.SetDoneFunc(func(key tcell.Key) {
+		switch key {
+		case tcell.KeyEnter:
+			cmd := mv.cmdInput.GetText()
+
+			// Remove the ":" prefix
+			cmd = cmd[1:]
+
+			if cmd != "" {
+				mv.params.OnCmd(cmd)
+			}
+
+		case tcell.KeyEsc:
+		// Gonna just stop editing it
+		default:
+			// Ignore it
+			return
+		}
+
+		mv.cmdInput.SetText("")
+	})
 
 	mainFlex.AddItem(mv.cmdInput, 1, 0, false)
 
@@ -372,6 +410,20 @@ func (mv *MainView) SetTimeRange(from, to time.Time) {
 	})
 }
 
+func (mv *MainView) doQuery() {
+	mv.params.OnLogQuery(core.QueryLogsParams{
+		From:  mv.from,
+		To:    mv.to,
+		Query: mv.queryInput.GetText(),
+	})
+}
+
+func (mv *MainView) DoQuery() {
+	mv.params.App.QueueUpdateDraw(func() {
+		mv.doQuery()
+	})
+}
+
 func (mv *MainView) updateHistogramTimeRange() {
 	var fromUnix, toUnix int
 
@@ -409,7 +461,7 @@ type MessageboxParams struct {
 	OnButtonPressed func(label string, idx int)
 }
 
-func (mv *MainView) ShowMessagebox(
+func (mv *MainView) showMessagebox(
 	msgID, title, message string, params *MessageboxParams,
 ) {
 	var msgvErr *MessageView
@@ -423,17 +475,24 @@ func (mv *MainView) ShowMessagebox(
 		}
 	}
 
-	mv.params.App.QueueUpdateDraw(func() {
-		msgvErr = NewMessageView(mv, &MessageViewParams{
-			MessageID:       msgID,
-			Title:           title,
-			Message:         message,
-			Buttons:         params.Buttons,
-			OnButtonPressed: params.OnButtonPressed,
+	msgvErr = NewMessageView(mv, &MessageViewParams{
+		MessageID:       msgID,
+		Title:           title,
+		Message:         message,
+		Buttons:         params.Buttons,
+		OnButtonPressed: params.OnButtonPressed,
 
-			Width: 60,
-		})
-		msgvErr.Show()
+		Width:  120,
+		Height: 20,
+	})
+	msgvErr.Show()
+}
+
+func (mv *MainView) ShowMessagebox(
+	msgID, title, message string, params *MessageboxParams,
+) {
+	mv.params.App.QueueUpdateDraw(func() {
+		mv.showMessagebox(msgID, title, message, params)
 	})
 }
 
