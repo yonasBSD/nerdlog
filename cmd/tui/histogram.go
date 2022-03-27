@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -111,11 +112,26 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 		return
 	}
 
+	fldMarginLeft = (width - fldData.effectiveWidthRunes) / 2
+
 	lines := h.fldDataToLines(fldData.dots)
 
 	for lineY, line := range lines {
-		tview.Print(screen, line, x, y+lineY, width, tview.AlignLeft, tcell.ColorLightGray)
+		tview.Print(screen, line, x+fldMarginLeft, y+lineY, width-fldMarginLeft, tview.AlignLeft, tcell.ColorLightGray)
 	}
+
+	// Print max label in the top left corner
+	maxLabel := fmt.Sprintf("%d", fldData.yScale)
+	maxLabelOffset := fldMarginLeft - len(maxLabel) - 1
+	printDot := true
+	if maxLabelOffset < 0 {
+		maxLabelOffset = 0
+		printDot = false // no space for it, better to omit it
+	}
+	if printDot {
+		maxLabel = maxLabel + "[yellow]▀[-]"
+	}
+	tview.Print(screen, maxLabel, x+maxLabelOffset, y, width-maxLabelOffset, tview.AlignLeft, tcell.ColorWhite)
 
 	marks := h.getXMarks(h.from, h.to, width-fldMarginLeft)
 
@@ -150,11 +166,23 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 }
 
 type fieldData struct {
-	dots               [][]bool
-	dataBinsInChartBin int
-	chartBinsInDataBin int
+	dots [][]bool
 
-	//effectiveWidth int
+	dataBinsInChartDot int
+	chartDotsInDataBin int
+
+	// dotYScale is how many messages in one dot
+	dotYScale int
+
+	// max is the actual (unrounded) max value in the chart bar (not in the data,
+	// but in the chart bar, which might be composed of more than one data bin)
+	max int
+
+	// yScale is the maximum value as per chart (it's larger than max).
+	yScale int
+
+	effectiveWidthDots  int
+	effectiveWidthRunes int
 }
 
 // genFieldData returns a 2-dimensional field as nested slices: [y][x].
@@ -166,23 +194,33 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 		return nil
 	}
 
-	dataBinsInChartBin := (rangeLen + width - 1) / width
-	chartBinsInDataBin := width / rangeLen
-	if chartBinsInDataBin == 0 {
-		chartBinsInDataBin = 1
+	dataBinsInChartDot := (rangeLen + width - 1) / width
+	chartDotsInDataBin := width / rangeLen
+	if chartDotsInDataBin == 0 {
+		chartDotsInDataBin = 1
 	}
 
-	//effectiveWidth := rangeLen
+	valAt := func(idx, n int) int {
+		var val int
+		for i := 0; i < n; i++ {
+			val += h.data[h.from+(idx+i)*h.binSize]
+		}
+		return val
+	}
 
-	// Find the max bin value
+	//effectiveWidthDots := rangeLen
+
+	// Find the max bin value per bar on the chart
 	max := 0
-	for _, v := range h.data {
-		if max < v {
-			max = v
+	for xData := 0; xData < rangeLen; xData = xData + dataBinsInChartDot {
+		val := valAt(xData, dataBinsInChartDot)
+
+		if max < val {
+			max = val
 		}
 	}
 
-	dotSize := (max + height - 1) / height
+	dotYScale := (max + height - 1) / height
 	// TODO: round it
 
 	// Allocate all the slices so we have the field ready
@@ -192,27 +230,37 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 	}
 
 	// Iterate over data and set dots to true
-	for xData, xChart := 0, 0; xData < rangeLen; xData, xChart = xData+dataBinsInChartBin, xChart+chartBinsInDataBin {
-		var val int
-		for i := 0; i < dataBinsInChartBin; i++ {
-			val += h.data[h.from+(xData+i)*h.binSize]
-		}
+	for xData, xChart := 0, 0; xData < rangeLen; xData, xChart = xData+dataBinsInChartDot, xChart+chartDotsInDataBin {
+		val := valAt(xData, dataBinsInChartDot)
 
 		for y := 0; y < height; y++ {
-			if val <= y*dotSize {
+			if val <= y*dotYScale {
 				break
 			}
 
-			for i := 0; i < chartBinsInDataBin; i++ {
+			for i := 0; i < chartDotsInDataBin; i++ {
 				dots[height-y-1][xChart+i] = true
 			}
 		}
 	}
 
+	effectiveWidthDots := rangeLen / dataBinsInChartDot * chartDotsInDataBin
+	effectiveWidthRunes := effectiveWidthDots / 2
+	if (effectiveWidthDots & 0x01) > 0 {
+		effectiveWidthRunes++
+	}
+
 	return &fieldData{
 		dots:               dots,
-		dataBinsInChartBin: dataBinsInChartBin,
-		chartBinsInDataBin: chartBinsInDataBin,
+		dataBinsInChartDot: dataBinsInChartDot,
+		chartDotsInDataBin: chartDotsInDataBin,
+
+		max:       max,
+		dotYScale: dotYScale,
+		yScale:    dotYScale * height,
+
+		effectiveWidthDots:  effectiveWidthDots,
+		effectiveWidthRunes: effectiveWidthRunes,
 	}
 
 	/*
@@ -273,5 +321,5 @@ func (h *Histogram) fldDataToLines(dots [][]bool) []string {
 }
 
 func (h *Histogram) valToCoord(fldData *fieldData, v int) int {
-	return (v - h.from) / fldData.dataBinsInChartBin * fldData.chartBinsInDataBin
+	return (v - h.from) / fldData.dataBinsInChartDot * fldData.chartDotsInDataBin
 }

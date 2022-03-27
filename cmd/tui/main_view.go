@@ -66,7 +66,7 @@ func NewMainView(params *MainViewParams) *MainView {
 		switch key {
 		case tcell.KeyEnter:
 			// TODO: remove it from here
-			mv.setTimeRange(time.Now().Add(-1*time.Hour), time.Time{})
+			mv.setTimeRange(time.Now().Add(-5*time.Hour), time.Time{})
 
 			mv.params.OnLogQuery(core.QueryLogsParams{
 				From:  mv.from,
@@ -337,10 +337,10 @@ func (mv *MainView) updateHistogramTimeRange() {
 	}
 
 	if mv.actualFrom.IsZero() {
-		mv.actualFrom = time.Now().Truncate(1 * time.Minute)
+		mv.actualFrom = time.Now()
 	}
 
-	mv.actualFrom = mv.actualFrom.Truncate(1 * time.Minute)
+	mv.actualFrom = mv.actualFrom.Truncate(1 * time.Minute).Add(1 * time.Minute)
 
 	fromUnix = int(mv.actualFrom.Unix())
 
@@ -349,10 +349,10 @@ func (mv *MainView) updateHistogramTimeRange() {
 	}
 
 	if mv.actualTo.IsZero() {
-		mv.actualTo = time.Now().Truncate(1 * time.Minute).Add(1 * time.Minute)
+		mv.actualTo = time.Now()
 	}
 
-	mv.actualTo = mv.actualTo.Truncate(1 * time.Minute)
+	mv.actualTo = mv.actualTo.Truncate(1 * time.Minute).Add(1 * time.Minute)
 
 	toUnix = int(mv.actualTo.Unix())
 

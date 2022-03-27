@@ -12,3 +12,10 @@
 - Statusline: (green) * 21 (orange) * 3 (red) * 0 . When number is non-zero,
   font is bold.
 - Searching and highlighting can be implemented using color tags like [:red]foo[:-]
+
+### Super important
+
+- Config (and have one ready with all our hosts)
+- When logs are being reloaded, clear table first
+- On startup, have some state like "connecting" and don't panic if a query is
+  made. Also, query 1h right away
