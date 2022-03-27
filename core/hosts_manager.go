@@ -3,8 +3,16 @@ package core
 import (
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/juju/errors"
+)
+
+const (
+	// maxNumLines is how many log lines the nerdlog_query.sh will return at
+	// most.
+	// TODO: make it more configurable, perhaps
+	maxNumLines = 100
 )
 
 type HostsManager struct {
@@ -261,6 +269,8 @@ func (hm *HostsManager) mergeLogRespsAndSend() {
 		MinuteStats: make(map[int64]MinuteStatsItem),
 	}
 
+	var logsCoveredSince time.Time
+
 	for _, resp := range resps {
 		for k, v := range resp.MinuteStats {
 			ret.MinuteStats[k] = MinuteStatsItem{
@@ -268,14 +278,26 @@ func (hm *HostsManager) mergeLogRespsAndSend() {
 			}
 		}
 
-		for _, msg := range resp.Logs {
-			ret.Logs = append(ret.Logs, msg)
+		ret.Logs = append(ret.Logs, resp.Logs...)
+
+		// If the timespan covered by logs from this host is shorter than what
+		// we've seen before, remember it.
+		if len(resp.Logs) == maxNumLines && logsCoveredSince.Before(resp.Logs[0].Time) {
+			logsCoveredSince = resp.Logs[0].Time
 		}
 	}
 
 	sort.SliceStable(ret.Logs, func(i, j int) bool {
 		return ret.Logs[i].Time.Before(ret.Logs[j].Time)
 	})
+
+	// Cut all potentially incomplete logs, only leave timespan that we're sure
+	// we have covered from all nodes
+	coveredSinceIdx := sort.Search(len(ret.Logs), func(i int) bool {
+		return !ret.Logs[i].Time.Before(logsCoveredSince)
+	})
+
+	ret.Logs = ret.Logs[coveredSinceIdx:]
 
 	hm.sendLogRespUpdate(ret)
 }

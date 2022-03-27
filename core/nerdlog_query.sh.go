@@ -1,5 +1,7 @@
 package core
 
+import "strconv"
+
 // TODO: convert it to an embedded file
 var nerdlogQuerySh = `#/bin/bash
 
@@ -175,7 +177,7 @@ if [[ "$lines_until" != "" ]]; then
 fi
 
 awk_script='
-BEGIN { curline=0; maxlines=100 }
+BEGIN { curline=0; maxlines=` + strconv.Itoa(maxNumLines) + ` }
 '$awk_pattern'
 {
   stats[$1 "-" $2 "-" substr($3,1,5)]++;
