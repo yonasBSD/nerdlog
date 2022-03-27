@@ -66,7 +66,7 @@ func NewMainView(params *MainViewParams) *MainView {
 		switch key {
 		case tcell.KeyEnter:
 			// TODO: remove it from here
-			mv.setTimeRange(time.Now().Add(-5*time.Minute), time.Time{})
+			mv.setTimeRange(time.Now().Add(-1*time.Hour), time.Time{})
 
 			mv.params.OnLogQuery(core.QueryLogsParams{
 				From:  mv.from,

@@ -103,18 +103,6 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 	for lineY, line := range lines {
 		tview.Print(screen, line, x, y+lineY, width, tview.AlignLeft, tcell.ColorWhite)
 	}
-
-	//for index, option := range h.options {
-	//if index >= height {
-	//break
-	//}
-	//radioButton := "\u25ef" // Unchecked.
-	//if index == h.currentOption {
-	//radioButton = "\u25c9" // Checked.
-	//}
-	//line := fmt.Sprintf(`%s[white]  %s`, radioButton, option)
-	//tview.Print(screen, line, x, y+index, width, tview.AlignLeft, tcell.ColorYellow)
-	//}
 }
 
 // genFieldData returns a 2-dimensional field as nested slices: [y][x].
@@ -122,7 +110,15 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 func (h *Histogram) genFieldData(width, height int) [][]bool {
 	rangeLen := (h.to - h.from + 1) / h.binSize
 
+	if rangeLen == 0 {
+		return nil
+	}
+
 	dataBinsInChartBin := (rangeLen + width - 1) / width
+	chartBinsInDataBin := width / rangeLen
+	if chartBinsInDataBin == 0 {
+		chartBinsInDataBin = 1
+	}
 
 	// Find the max bin value
 	max := 0
@@ -133,7 +129,6 @@ func (h *Histogram) genFieldData(width, height int) [][]bool {
 	}
 
 	dotSize := (max + height - 1) / height
-	//fmt.Println("HEY dotSize", dotSize)
 	// TODO: round it
 
 	// Allocate all the slices so we have the field ready
@@ -142,15 +137,20 @@ func (h *Histogram) genFieldData(width, height int) [][]bool {
 		ret[y] = make([]bool, width)
 	}
 
-	for xData, xChart := 0, 0; xData < rangeLen; xData, xChart = xData+dataBinsInChartBin, xChart+1 {
+	// Iterate over data and set dots to true
+	for xData, xChart := 0, 0; xData < rangeLen; xData, xChart = xData+dataBinsInChartBin, xChart+chartBinsInDataBin {
 		var val int
 		for i := 0; i < dataBinsInChartBin; i++ {
 			val += h.data[h.from+(xData+i)*h.binSize]
 		}
 
 		for y := 0; y < height; y++ {
-			if val > y*dotSize {
-				ret[height-y-1][xChart] = true
+			if val <= y*dotSize {
+				break
+			}
+
+			for i := 0; i < chartBinsInDataBin; i++ {
+				ret[height-y-1][xChart+i] = true
 			}
 		}
 	}
