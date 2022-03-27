@@ -10,8 +10,9 @@ import (
 type HostsManager struct {
 	params HostsManagerParams
 
-	has      map[string]*HostAgent
-	haStates map[string]HostAgentState
+	has          map[string]*HostAgent
+	haStates     map[string]HostAgentState
+	hostsByState map[HostAgentState]map[string]struct{}
 
 	hostUpdatesCh chan *HostAgentUpdate
 	reqCh         chan hostsManagerReq
@@ -73,6 +74,13 @@ func (hm *HostsManager) run() {
 		case req := <-hm.reqCh:
 			switch {
 			case req.queryLogs != nil:
+				if !hm.isFullyConnected() {
+					hm.sendLogRespUpdate(&LogResp{
+						Errs: []error{errors.Errorf("not connected to all hosts yet")},
+					})
+					continue
+				}
+
 				if hm.curQueryLogsCtx != nil {
 					hm.sendLogRespUpdate(&LogResp{
 						Errs: []error{errors.Errorf("busy with another query")},
@@ -184,18 +192,20 @@ type HostsManagerState struct {
 
 	HostsByState map[HostAgentState]map[string]struct{}
 
-	// Busy is true when a query is in progress
+	// Connected is true when all hosts are connected.
+	Connected bool
+	// Busy is true when a query is in progress.
 	Busy bool
 }
 
 func (hm *HostsManager) sendStateUpdate() {
-	hostsByState := map[HostAgentState]map[string]struct{}{}
+	hm.hostsByState = map[HostAgentState]map[string]struct{}{}
 
 	for name, state := range hm.haStates {
-		set, ok := hostsByState[state]
+		set, ok := hm.hostsByState[state]
 		if !ok {
 			set = map[string]struct{}{}
-			hostsByState[state] = set
+			hm.hostsByState[state] = set
 		}
 
 		set[name] = struct{}{}
@@ -204,10 +214,15 @@ func (hm *HostsManager) sendStateUpdate() {
 	hm.params.UpdatesCh <- HostsManagerUpdate{
 		State: &HostsManagerState{
 			NumHosts:     len(hm.has),
-			HostsByState: hostsByState,
+			HostsByState: hm.hostsByState,
+			Connected:    hm.isFullyConnected(),
 			Busy:         hm.curQueryLogsCtx != nil,
 		},
 	}
+}
+
+func (hm *HostsManager) isFullyConnected() bool {
+	return len(hm.hostsByState[HostAgentStateDisconnected])+len(hm.hostsByState[HostAgentStateConnecting]) == 0
 }
 
 func (hm *HostsManager) sendLogRespUpdate(resp *LogResp) {

@@ -191,7 +191,9 @@ func (mv *MainView) ApplyHMState(hmState *core.HostsManagerState) {
 	mv.params.App.QueueUpdateDraw(func() {
 		sb := strings.Builder{}
 
-		if hmState.Busy {
+		if !hmState.Connected {
+			sb.WriteString("connecting ")
+		} else if hmState.Busy {
 			sb.WriteString("busy ")
 		} else {
 			sb.WriteString("idle ")
