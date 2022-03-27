@@ -111,6 +111,23 @@ func NewMainView(params *MainViewParams) *MainView {
 		mv.logsTable.SetSelectable(false, false)
 	})
 
+	mv.logsTable.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		key := event.Key()
+
+		switch key {
+		case tcell.KeyCtrlD:
+			// TODO: ideally we'd want to only go half a page down, but for now just
+			// return Ctrl+F which will go the full page down
+			return tcell.NewEventKey(tcell.KeyCtrlF, 0, tcell.ModNone)
+		case tcell.KeyCtrlU:
+			// TODO: ideally we'd want to only go half a page up, but for now just
+			// return Ctrl+B which will go the full page up
+			return tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModNone)
+		}
+
+		return event
+	})
+
 	// TODO: once tableview fixed, use SetFixed(1, 1)
 	// (there's an issue with going to the very top using "g")
 	mv.logsTable.SetFixed(1, 1)
