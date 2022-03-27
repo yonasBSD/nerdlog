@@ -81,6 +81,24 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mv.histogram = NewHistogram()
 	mv.histogram.SetBinSize(60) // 1 minute
+	mv.histogram.SetXFormatter(func(v int) string {
+		t := time.Unix(int64(v), 0)
+		return t.Format("15:04")
+	})
+	mv.histogram.SetXMarker(func(from, to int, numChars int) []int {
+		// TODO proper impl
+		step := (to - from) / 6
+		if step == 0 {
+			return nil
+		}
+
+		ret := []int{}
+		for i := from; i <= to; i += step {
+			ret = append(ret, i)
+		}
+
+		return ret
+	})
 	mainFlex.AddItem(mv.histogram, 6, 0, false)
 
 	mv.logsTable = tview.NewTable().SetSelectable(true, false)
@@ -319,7 +337,7 @@ func (mv *MainView) updateHistogramTimeRange() {
 	}
 
 	if mv.actualFrom.IsZero() {
-		mv.actualFrom = time.Now()
+		mv.actualFrom = time.Now().Truncate(1 * time.Minute)
 	}
 
 	mv.actualFrom = mv.actualFrom.Truncate(1 * time.Minute)
@@ -331,7 +349,7 @@ func (mv *MainView) updateHistogramTimeRange() {
 	}
 
 	if mv.actualTo.IsZero() {
-		mv.actualTo = time.Now()
+		mv.actualTo = time.Now().Truncate(1 * time.Minute).Add(1 * time.Minute)
 	}
 
 	mv.actualTo = mv.actualTo.Truncate(1 * time.Minute)

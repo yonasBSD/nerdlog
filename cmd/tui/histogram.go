@@ -48,6 +48,9 @@ type Histogram struct {
 	// bin.
 	data map[int]int
 
+	// getXMarks returns where to put marks on X axis
+	getXMarks func(from, to int, numChars int) []int
+
 	// xFormat formats values for X axis
 	xFormat func(v int) string
 }
@@ -55,6 +58,7 @@ type Histogram struct {
 func NewHistogram() *Histogram {
 	return &Histogram{
 		Box: tview.NewBox(),
+		// TODO: set default getXMarks and xFormat, we just don't have defaults yet.
 	}
 }
 
@@ -77,8 +81,14 @@ func (h *Histogram) SetData(data map[int]int) *Histogram {
 	return h
 }
 
-func (h *Histogram) SetXFormat(xFormat func(v int) string) *Histogram {
+func (h *Histogram) SetXFormatter(xFormat func(v int) string) *Histogram {
 	h.xFormat = xFormat
+
+	return h
+}
+
+func (h *Histogram) SetXMarker(getXMarks func(from, to int, numChars int) []int) *Histogram {
+	h.getXMarks = getXMarks
 
 	return h
 }
@@ -87,27 +97,69 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 	h.Box.DrawForSubclass(screen, h)
 	x, y, width, height := h.GetInnerRect()
 
+	fldMarginLeft := 0
+
 	// We multiply width and height by 2 because we use quadrant graphics,
 	// so one character is a 2x2 field.
-	fldWidth := width * 2
+	fldWidth := (width - fldMarginLeft) * 2
 	fldHeight := (height - 1) * 2 // One line for axis
 
 	fldData := h.genFieldData(fldWidth, fldHeight)
 	if fldData == nil {
 		// Field is too small
+		// TODO: clean whole area
 		return
 	}
 
-	lines := h.fldDataToLines(fldData)
+	lines := h.fldDataToLines(fldData.dots)
 
 	for lineY, line := range lines {
-		tview.Print(screen, line, x, y+lineY, width, tview.AlignLeft, tcell.ColorWhite)
+		tview.Print(screen, line, x, y+lineY, width, tview.AlignLeft, tcell.ColorLightGray)
 	}
+
+	marks := h.getXMarks(h.from, h.to, width-fldMarginLeft)
+
+	sb := strings.Builder{}
+	numRunes := 0
+
+	for _, mark := range marks {
+		markStr := h.xFormat(mark)
+		dotCoord := h.valToCoord(fldData, mark) / 60
+
+		charCoord := dotCoord / 2
+		remaining := charCoord - numRunes
+		for i := 0; i < remaining; i++ {
+			sb.WriteRune(' ')
+			numRunes++
+		}
+
+		sb.WriteString("[yellow]")
+		if (dotCoord & 0x01) != 0 {
+			sb.WriteRune('▝')
+		} else {
+			sb.WriteRune('▘')
+		}
+		sb.WriteString("[-] ")
+		numRunes += 2
+		//sb.WriteString("^ ")
+		sb.WriteString(markStr)
+		numRunes += len(markStr)
+	}
+
+	tview.Print(screen, sb.String(), x+fldMarginLeft, y+height-1, width-fldMarginLeft, tview.AlignLeft, tcell.ColorWhite)
+}
+
+type fieldData struct {
+	dots               [][]bool
+	dataBinsInChartBin int
+	chartBinsInDataBin int
+
+	//effectiveWidth int
 }
 
 // genFieldData returns a 2-dimensional field as nested slices: [y][x].
 // If the field is too small, returns nil.
-func (h *Histogram) genFieldData(width, height int) [][]bool {
+func (h *Histogram) genFieldData(width, height int) *fieldData {
 	rangeLen := (h.to - h.from + 1) / h.binSize
 
 	if rangeLen == 0 {
@@ -119,6 +171,8 @@ func (h *Histogram) genFieldData(width, height int) [][]bool {
 	if chartBinsInDataBin == 0 {
 		chartBinsInDataBin = 1
 	}
+
+	//effectiveWidth := rangeLen
 
 	// Find the max bin value
 	max := 0
@@ -132,9 +186,9 @@ func (h *Histogram) genFieldData(width, height int) [][]bool {
 	// TODO: round it
 
 	// Allocate all the slices so we have the field ready
-	ret := make([][]bool, height)
+	dots := make([][]bool, height)
 	for y := 0; y < height; y++ {
-		ret[y] = make([]bool, width)
+		dots[y] = make([]bool, width)
 	}
 
 	// Iterate over data and set dots to true
@@ -150,12 +204,16 @@ func (h *Histogram) genFieldData(width, height int) [][]bool {
 			}
 
 			for i := 0; i < chartBinsInDataBin; i++ {
-				ret[height-y-1][xChart+i] = true
+				dots[height-y-1][xChart+i] = true
 			}
 		}
 	}
 
-	return ret
+	return &fieldData{
+		dots:               dots,
+		dataBinsInChartBin: dataBinsInChartBin,
+		chartBinsInDataBin: chartBinsInDataBin,
+	}
 
 	/*
 		ret := [][]bool{}
@@ -180,12 +238,12 @@ func (h *Histogram) genFieldData(width, height int) [][]bool {
 	//}
 }
 
-func (h *Histogram) fldDataToLines(fldData [][]bool) []string {
-	ret := make([]string, 0, len(fldData)/2)
+func (h *Histogram) fldDataToLines(dots [][]bool) []string {
+	ret := make([]string, 0, len(dots)/2)
 
-	for y := 0; y < len(fldData); y += 2 {
-		fldRow1 := fldData[y+0]
-		fldRow2 := fldData[y+1]
+	for y := 0; y < len(dots); y += 2 {
+		fldRow1 := dots[y+0]
+		fldRow2 := dots[y+1]
 
 		row := strings.Builder{}
 		row.Grow(len(fldRow1))
@@ -212,4 +270,8 @@ func (h *Histogram) fldDataToLines(fldData [][]bool) []string {
 	}
 
 	return ret
+}
+
+func (h *Histogram) valToCoord(fldData *fieldData, v int) int {
+	return (v - h.from) / fldData.dataBinsInChartBin * fldData.chartBinsInDataBin
 }
