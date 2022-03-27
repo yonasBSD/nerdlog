@@ -34,6 +34,8 @@ type HostAgent struct {
 	cmdQueue   []hostCmd
 	curCmdCtx  *hostCmdCtx
 	nextCmdIdx int
+
+	//debugFile *os.File
 }
 
 type connCtx struct {
@@ -88,6 +90,9 @@ func NewHostAgent(params HostAgentParams) *HostAgent {
 		state:        HostAgentStateDisconnected,
 		enqueueCmdCh: make(chan hostCmd, 32),
 	}
+
+	//debugFile, _ := os.Create("/tmp/host_agent_debug.log")
+	//ha.debugFile = debugFile
 
 	ha.changeState(HostAgentStateConnecting)
 
@@ -208,8 +213,8 @@ func (ha *HostAgent) run() {
 		case line := <-ha.conn.getStdoutLinesCh():
 			lastUpdTime = time.Now()
 
-			//if ha.params.Config.Name == "my-host-01" {
-			//fmt.Println("rx:", line)
+			//if ha.params.Config.Name == "my-host-10" {
+			//fmt.Fprintln(ha.debugFile, "rx:", line)
 			//}
 
 			switch ha.state {
@@ -260,6 +265,10 @@ func (ha *HostAgent) run() {
 						// msg:Mar 26 17:08:34 localhost myapp[21134]: Mar 26 17:08:34.476329 foo bar foo bar
 						msg := strings.TrimPrefix(line, "msg:")
 
+						//if msg == "" {
+						//continue
+						//}
+
 						// Mar 26 17:08:35 localhost redacted[21
 
 						// Find the index of third space, which would indicate where
@@ -279,7 +288,7 @@ func (ha *HostAgent) run() {
 						}
 
 						if ts1Len == 0 {
-							resp.Errs = append(resp.Errs, errors.Errorf("parsing log msg: no time"))
+							resp.Errs = append(resp.Errs, errors.Errorf("parsing log msg: no time in %q", line))
 							continue
 						}
 
@@ -369,11 +378,18 @@ func (ha *HostAgent) run() {
 
 						var err error
 						if len(resp.Errs) > 0 {
-							if len(resp.Errs) == 1 {
-								err = resp.Errs[0]
-							} else {
-								err = errors.Errorf("%s and %d more errors", resp.Errs[0], len(resp.Errs))
+							//if len(resp.Errs) == 1 {
+							//err = resp.Errs[0]
+							//} else {
+							//err = errors.Errorf("%s and %d more errors", resp.Errs[0], len(resp.Errs))
+							//}
+
+							ss := []string{}
+							for _, e := range resp.Errs {
+								ss = append(ss, e.Error())
 							}
+
+							err = errors.Errorf("%d errors: %s", len(resp.Errs), strings.Join(ss, "; "))
 						}
 
 						ha.sendCmdResp(resp, err)
@@ -699,6 +715,10 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 
 		cmd := strings.Join(parts, " ") + "\n"
 		//fmt.Println("hey", ha.params.Config.Name, "cmd:", cmd)
+
+		//if ha.params.Config.Name == "my-host-10" {
+		//fmt.Fprintln(ha.debugFile, "cmd:", cmd)
+		//}
 
 		ha.conn.stdinBuf.Write([]byte(cmd))
 

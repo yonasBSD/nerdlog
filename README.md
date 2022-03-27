@@ -16,7 +16,5 @@
 ### Super important
 
 - Changing time period
-- On startup, have some state like "connecting" and don't panic if a query is
-  made. Also, query 1h right away
-- Only use logs for the fully covered time period (the shortest one from all nodes)
+- Error messagebox
 - Config (and have one ready with all our hosts)

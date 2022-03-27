@@ -67,6 +67,11 @@ func initHostsManager(mainView *MainView) *core.HostsManager {
 				}
 
 			case upd.LogResp != nil:
+				if len(upd.LogResp.Errs) > 0 {
+					// TODO: include other errors too, not only the first one
+					mainView.ShowMessagebox("err", "Log query error", upd.LogResp.Errs[0].Error(), nil)
+					continue
+				}
 				mainView.ApplyLogs(upd.LogResp)
 
 			default:

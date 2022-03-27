@@ -12,6 +12,10 @@ import (
 
 const logsTableTimeLayout = "Jan02 15:04:05.000"
 
+const (
+	pageNameMessage = "message"
+)
+
 type MainViewParams struct {
 	App *tview.Application
 
@@ -241,7 +245,6 @@ func (mv *MainView) updateTableHeader(msgs []core.LogMsg) (colNames []string) {
 
 func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 	mv.params.App.QueueUpdateDraw(func() {
-		// TODO: handle resp.Err, maybe just a dialog
 		mv.curLogResp = resp
 
 		histogramData := make(map[int]int, len(resp.MinuteStats))
@@ -399,4 +402,62 @@ func (mv *MainView) updateHistogramTimeRange() {
 	toUnix = int(mv.actualTo.Unix())
 
 	mv.histogram.SetRange(fromUnix, toUnix)
+}
+
+type MessageboxParams struct {
+	Buttons         []string
+	OnButtonPressed func(label string, idx int)
+}
+
+func (mv *MainView) ShowMessagebox(
+	msgID, title, message string, params *MessageboxParams,
+) {
+	var msgvErr *MessageView
+
+	if params == nil {
+		params = &MessageboxParams{
+			Buttons: []string{"OK"},
+			OnButtonPressed: func(label string, idx int) {
+				msgvErr.Hide()
+			},
+		}
+	}
+
+	mv.params.App.QueueUpdateDraw(func() {
+		msgvErr = NewMessageView(mv, &MessageViewParams{
+			MessageID:       msgID,
+			Title:           title,
+			Message:         message,
+			Buttons:         params.Buttons,
+			OnButtonPressed: params.OnButtonPressed,
+
+			Width: 60,
+		})
+		msgvErr.Show()
+	})
+}
+
+func (mv *MainView) HideMessagebox(msgID string) {
+	mv.params.App.QueueUpdateDraw(func() {
+		mv.hideModal(pageNameMessage + msgID)
+	})
+}
+
+func (mv *MainView) showModal(name string, primitive tview.Primitive, width, height int) {
+	// Returns a new primitive which puts the provided primitive in the center and
+	// sets its size to the given width and height.
+	modal := func(p tview.Primitive, width, height int) tview.Primitive {
+		return tview.NewGrid().
+			SetColumns(0, width, 0).
+			SetRows(0, height, 0).
+			AddItem(p, 1, 1, 1, 1, 0, 0, true)
+	}
+
+	mv.rootPages.AddPage(name, modal(primitive, width, height), true, true)
+
+	mv.params.App.SetFocus(primitive)
+}
+
+func (mv *MainView) hideModal(name string) {
+	mv.rootPages.RemovePage(name)
 }

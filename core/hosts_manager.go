@@ -296,7 +296,6 @@ func (hm *HostsManager) mergeLogRespsAndSend() {
 	coveredSinceIdx := sort.Search(len(ret.Logs), func(i int) bool {
 		return !ret.Logs[i].Time.Before(logsCoveredSince)
 	})
-
 	ret.Logs = ret.Logs[coveredSinceIdx:]
 
 	hm.sendLogRespUpdate(ret)

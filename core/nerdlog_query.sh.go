@@ -203,6 +203,10 @@ END {
       ln -= maxlines;
     }
 
+    if (!lastlines[ln]) {
+      continue;
+    }
+
     print "msg:" lastlines[ln];
   }
 }
