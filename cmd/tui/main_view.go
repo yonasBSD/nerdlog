@@ -203,11 +203,11 @@ func (mv *MainView) ApplyHMState(hmState *core.HostsManagerState) {
 		numBusy := len(hmState.HostsByState[core.HostAgentStateConnectedBusy])
 		numOther := hmState.NumHosts - numIdle - numBusy
 
-		sb.WriteString(getStatuslineNumStr("*", numIdle, "green"))
+		sb.WriteString(getStatuslineNumStr("🖳", numIdle, "green"))
 		sb.WriteString(" ")
-		sb.WriteString(getStatuslineNumStr("*", numBusy, "orange"))
+		sb.WriteString(getStatuslineNumStr("🖳", numBusy, "orange"))
 		sb.WriteString(" ")
-		sb.WriteString(getStatuslineNumStr("*", numOther, "red"))
+		sb.WriteString(getStatuslineNumStr("🖳", numOther, "red"))
 
 		mv.statusLine.SetText(sb.String())
 	})
@@ -361,6 +361,12 @@ func (mv *MainView) setTimeRange(from, to time.Time) {
 	mv.to = to
 
 	mv.updateHistogramTimeRange()
+}
+
+func (mv *MainView) SetTimeRange(from, to time.Time) {
+	mv.params.App.QueueUpdateDraw(func() {
+		mv.setTimeRange(from, to)
+	})
 }
 
 func (mv *MainView) updateHistogramTimeRange() {

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/rivo/tview"
@@ -43,14 +44,27 @@ func main() {
 
 func initHostsManager(mainView *MainView) *core.HostsManager {
 	updatesCh := make(chan core.HostsManagerUpdate, 128)
+	var hm *core.HostsManager
 
 	go func() {
+		doneInitialQuery := false
+
 		for {
 			upd := <-updatesCh
 
 			switch {
 			case upd.State != nil:
 				mainView.ApplyHMState(upd.State)
+				if !doneInitialQuery && upd.State.Connected {
+					from, to := time.Now().Add(-1*time.Hour), time.Time{}
+
+					mainView.SetTimeRange(from, to)
+					hm.QueryLogs(core.QueryLogsParams{
+						From: from,
+						To:   to,
+					})
+					doneInitialQuery = true
+				}
 
 			case upd.LogResp != nil:
 				mainView.ApplyLogs(upd.LogResp)
@@ -61,7 +75,7 @@ func initHostsManager(mainView *MainView) *core.HostsManager {
 		}
 	}()
 
-	hm := core.NewHostsManager(core.HostsManagerParams{
+	hm = core.NewHostsManager(core.HostsManagerParams{
 		ConfigHosts: makeConfigHosts(),
 		UpdatesCh:   updatesCh,
 	})

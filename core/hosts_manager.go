@@ -10,9 +10,11 @@ import (
 type HostsManager struct {
 	params HostsManagerParams
 
-	has          map[string]*HostAgent
-	haStates     map[string]HostAgentState
-	hostsByState map[HostAgentState]map[string]struct{}
+	has      map[string]*HostAgent
+	haStates map[string]HostAgentState
+
+	hostsByState    map[HostAgentState]map[string]struct{}
+	numNotConnected int
 
 	hostUpdatesCh chan *HostAgentUpdate
 	reqCh         chan hostsManagerReq
@@ -66,6 +68,8 @@ func (hm *HostsManager) run() {
 		case upd := <-hm.hostUpdatesCh:
 			if upd.State != nil {
 				hm.haStates[upd.Name] = upd.State.NewState
+
+				hm.updateHostsByState()
 				hm.sendStateUpdate()
 			} else {
 				panic("empty update " + upd.Name)
@@ -74,7 +78,7 @@ func (hm *HostsManager) run() {
 		case req := <-hm.reqCh:
 			switch {
 			case req.queryLogs != nil:
-				if !hm.isFullyConnected() {
+				if hm.numNotConnected > 0 {
 					hm.sendLogRespUpdate(&LogResp{
 						Errs: []error{errors.Errorf("not connected to all hosts yet")},
 					})
@@ -198,7 +202,8 @@ type HostsManagerState struct {
 	Busy bool
 }
 
-func (hm *HostsManager) sendStateUpdate() {
+func (hm *HostsManager) updateHostsByState() {
+	hm.numNotConnected = 0
 	hm.hostsByState = map[HostAgentState]map[string]struct{}{}
 
 	for name, state := range hm.haStates {
@@ -209,20 +214,22 @@ func (hm *HostsManager) sendStateUpdate() {
 		}
 
 		set[name] = struct{}{}
-	}
 
+		if !isStateConnected(state) {
+			hm.numNotConnected++
+		}
+	}
+}
+
+func (hm *HostsManager) sendStateUpdate() {
 	hm.params.UpdatesCh <- HostsManagerUpdate{
 		State: &HostsManagerState{
 			NumHosts:     len(hm.has),
 			HostsByState: hm.hostsByState,
-			Connected:    hm.isFullyConnected(),
+			Connected:    hm.numNotConnected == 0,
 			Busy:         hm.curQueryLogsCtx != nil,
 		},
 	}
-}
-
-func (hm *HostsManager) isFullyConnected() bool {
-	return len(hm.hostsByState[HostAgentStateDisconnected])+len(hm.hostsByState[HostAgentStateConnecting]) == 0
 }
 
 func (hm *HostsManager) sendLogRespUpdate(resp *LogResp) {
