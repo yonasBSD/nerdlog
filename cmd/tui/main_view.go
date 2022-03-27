@@ -70,14 +70,15 @@ func NewMainView(params *MainViewParams) *MainView {
 			mv.params.App.Stop()
 		}
 		if key == tcell.KeyEnter {
-			mv.logsTable.SetSelectable(true, true)
+			//mv.logsTable.SetSelectable(true, true)
 		}
 		if key == tcell.KeyBacktab {
 			mv.params.App.SetFocus(mv.queryInput)
 		}
 	}).SetSelectedFunc(func(row int, column int) {
-		mv.logsTable.GetCell(row, column).SetTextColor(tcell.ColorRed)
-		mv.logsTable.SetSelectable(false, false)
+		// TODO: show the full message
+		//mv.logsTable.GetCell(row, column).SetTextColor(tcell.ColorRed)
+		//mv.logsTable.SetSelectable(false, false)
 	}) // TODO .SetInputCapture
 
 	/*
