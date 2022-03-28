@@ -43,10 +43,6 @@ func main() {
 					return
 				}
 
-				if from.Dur > 0 {
-					from.Dur = -from.Dur
-				}
-
 				to := TimeOrDur{}
 
 				if len(parts) >= 3 && parts[2] != "" {

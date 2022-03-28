@@ -487,12 +487,12 @@ func (mv *MainView) setTimeRange(from, to TimeOrDur) {
 	rangeDur := mv.actualTo.Sub(mv.actualFrom)
 
 	var timeStr string
-	if !to.IsZero() {
-		timeStr = fmt.Sprintf("%s to %s (%s)", from, to, formatDuration(rangeDur))
-	} else if from.IsAbsolute() {
-		timeStr = fmt.Sprintf("%s to now (%s)", from, formatDuration(rangeDur))
+	if !mv.to.IsZero() {
+		timeStr = fmt.Sprintf("%s to %s (%s)", mv.from, mv.to, formatDuration(rangeDur))
+	} else if mv.from.IsAbsolute() {
+		timeStr = fmt.Sprintf("%s to now (%s)", mv.from, formatDuration(rangeDur))
 	} else {
-		timeStr = fmt.Sprintf("last %s", TimeOrDur{Dur: -from.Dur})
+		timeStr = fmt.Sprintf("last %s", TimeOrDur{Dur: -mv.from.Dur})
 	}
 
 	mv.timeLabel.SetText(timeStr)
@@ -506,10 +506,21 @@ func (mv *MainView) bumpTimeRange() {
 		panic("should never be here")
 	}
 
+	// Since relative durations are relative to current time, only negative values are
+	// meaningful, so if it's positive, reverse it.
+
+	if !mv.from.IsAbsolute() && mv.from.Dur > 0 {
+		mv.from.Dur = -mv.from.Dur
+	}
+
+	if !mv.to.IsAbsolute() && mv.to.Dur > 0 {
+		mv.to.Dur = -mv.to.Dur
+	}
+
 	mv.actualFrom = mv.from.AbsoluteTime(time.Now())
 
 	if !mv.to.IsZero() {
-		mv.actualTo = mv.to.AbsoluteTime(mv.actualFrom)
+		mv.actualTo = mv.to.AbsoluteTime(time.Now())
 	} else {
 		mv.actualTo = time.Now()
 	}
