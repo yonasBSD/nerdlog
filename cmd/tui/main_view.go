@@ -35,6 +35,8 @@ type MainView struct {
 	queryInput *tview.InputField
 	cmdInput   *tview.InputField
 
+	queryEditBtn *tview.Button
+
 	// focusedBeforeCmd is a primitive which was focused before cmdInput was
 	// focused. Once the user is done editing command, focusedBeforeCmd
 	// normally resumes focus.
@@ -111,6 +113,8 @@ func NewMainView(params *MainViewParams) *MainView {
 			}
 		case tcell.KeyTab:
 			mv.params.App.SetFocus(mv.logsTable)
+		case tcell.KeyBacktab:
+			mv.params.App.SetFocus(mv.queryEditBtn)
 		}
 	})
 
@@ -120,7 +124,25 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	queryInputApplyStyle()
 
-	mainFlex.AddItem(mv.queryInput, 1, 0, false)
+	mv.queryEditBtn = tview.NewButton("Edit")
+	mv.queryEditBtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyTab:
+			mv.params.App.SetFocus(mv.queryInput)
+			return nil
+		}
+
+		return event
+	})
+
+	topFlex := tview.NewFlex().SetDirection(tview.FlexColumn)
+	topFlex.
+		AddItem(mv.queryEditBtn, 6, 0, false).
+		// TODO: time label
+		AddItem(nil, 1, 0, false).
+		AddItem(mv.queryInput, 0, 1, false)
+
+	mainFlex.AddItem(topFlex, 1, 0, false)
 
 	mv.histogram = NewHistogram()
 	mv.histogram.SetBinSize(60) // 1 minute
