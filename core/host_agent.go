@@ -566,7 +566,7 @@ func getJumphostClient() (*ssh.Client, error) {
 	defer jumphostSharedMtx.Unlock()
 
 	if jumphostShared == nil {
-		fmt.Println("Connecting to jumphost...")
+		//fmt.Println("Connecting to jumphost...")
 		addrs, err := net.LookupHost("dummyhost.com")
 		if err != nil {
 			return nil, errors.Trace(err)

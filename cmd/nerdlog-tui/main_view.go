@@ -115,9 +115,9 @@ func NewMainView(params *MainViewParams) *MainView {
 				queryInputApplyStyle()
 			}
 		case tcell.KeyTab:
-			mv.params.App.SetFocus(mv.logsTable)
-		case tcell.KeyBacktab:
 			mv.params.App.SetFocus(mv.queryEditBtn)
+		case tcell.KeyBacktab:
+			mv.params.App.SetFocus(mv.logsTable)
 		}
 	})
 
@@ -131,9 +131,9 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.queryEditBtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyTab:
-			mv.params.App.SetFocus(mv.queryInput)
-		case tcell.KeyBacktab:
 			mv.params.App.SetFocus(mv.logsTable)
+		case tcell.KeyBacktab:
+			mv.params.App.SetFocus(mv.queryInput)
 			return nil
 		}
 
@@ -148,14 +148,13 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mv.topFlex = tview.NewFlex().SetDirection(tview.FlexColumn)
 	mv.topFlex.
-		AddItem(mv.queryEditBtn, 6, 0, false).
-		AddItem(nil, 1, 0, false).
 		AddItem(queryLabel, 6, 0, false).
 		AddItem(nil, 1, 0, false).
 		AddItem(mv.queryInput, 0, 1, false).
 		AddItem(nil, 1, 0, false).
 		AddItem(mv.timeLabel, 1, 0, false).
-		AddItem(nil, 1, 0, false)
+		AddItem(nil, 1, 0, false).
+		AddItem(mv.queryEditBtn, 6, 0, false)
 
 	mainFlex.AddItem(mv.topFlex, 1, 0, false)
 
@@ -221,17 +220,14 @@ func NewMainView(params *MainViewParams) *MainView {
 	// (there's an issue with going to the very top using "g")
 	mv.logsTable.SetFixed(1, 1)
 	mv.logsTable.Select(0, 0).SetDoneFunc(func(key tcell.Key) {
-		if key == tcell.KeyEscape {
-			mv.params.App.Stop()
-		}
 		if key == tcell.KeyEnter {
 			//mv.logsTable.SetSelectable(true, true)
 		}
 		if key == tcell.KeyTab {
-			mv.params.App.SetFocus(mv.queryEditBtn)
+			mv.params.App.SetFocus(mv.queryInput)
 		}
 		if key == tcell.KeyBacktab {
-			mv.params.App.SetFocus(mv.queryInput)
+			mv.params.App.SetFocus(mv.queryEditBtn)
 		}
 	}).SetSelectedFunc(func(row int, column int) {
 		// TODO: instead of showing current cell contents, show original raw message
@@ -297,6 +293,13 @@ func NewMainView(params *MainViewParams) *MainView {
 	mainFlex.AddItem(mv.cmdInput, 1, 0, false)
 
 	mv.rootPages.AddPage("mainFlex", mainFlex, true, true)
+
+	// For some reason, setting focus right here doesn't work, so here's this
+	// hack to start a goroutine which will wait until app is started, and its
+	// event loop will set the focus.
+	go mv.params.App.QueueUpdateDraw(func() {
+		mv.params.App.SetFocus(mv.queryInput)
+	})
 
 	return mv
 }
