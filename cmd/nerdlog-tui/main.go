@@ -10,6 +10,9 @@ import (
 	"github.com/rivo/tview"
 )
 
+// TODO: make multiple of them
+const inputTimeLayout = "Jan02_15:04"
+
 func main() {
 	var hm *core.HostsManager
 	var mainView *MainView
@@ -34,31 +37,25 @@ func main() {
 					return
 				}
 
-				dur, err := time.ParseDuration(parts[1])
+				from, err := ParseTimeOrDur(inputTimeLayout, parts[1])
 				if err != nil {
 					mainView.ShowMessagebox("err", "Error", "invalid 'from' duration: "+err.Error(), nil)
 					return
 				}
 
-				if dur > 0 {
-					dur = -dur
+				if from.Dur > 0 {
+					from.Dur = -from.Dur
 				}
 
-				from := time.Now().Add(dur)
-				to := time.Time{}
+				to := TimeOrDur{}
 
-				if len(parts) >= 3 {
-					dur, err := time.ParseDuration(parts[2])
+				if len(parts) >= 3 && parts[2] != "" {
+					var err error
+					to, err = ParseTimeOrDur(inputTimeLayout, parts[2])
 					if err != nil {
 						mainView.ShowMessagebox("err", "Error", "invalid 'to' duration: "+err.Error(), nil)
 						return
 					}
-
-					to = from.Add(dur)
-				}
-
-				if !to.IsZero() && from.After(to) {
-					from, to = to, from
 				}
 
 				mainView.SetTimeRange(from, to)
@@ -80,7 +77,8 @@ func main() {
 		},
 	})
 
-	from, to := time.Now().Add(-1*time.Hour), time.Time{}
+	// Set default time range
+	from, to := TimeOrDur{Dur: -1 * time.Hour}, TimeOrDur{}
 	mainView.setTimeRange(from, to)
 
 	hm = initHostsManager(mainView)

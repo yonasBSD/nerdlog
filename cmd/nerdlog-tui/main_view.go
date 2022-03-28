@@ -47,12 +47,13 @@ type MainView struct {
 	statusLine *tview.TextView
 
 	// from, to represent the selected time range
-	from, to time.Time
+	from, to TimeOrDur
 
 	// query is the effective search query
 	query string
 
-	// actualFrom, actualTo is like from and to, but they can't be zero.
+	// actualFrom, actualTo represent the actual time range resolved from from
+	// and to, and they both can't be zero.
 	actualFrom, actualTo time.Time
 
 	curLogResp *core.LogResp
@@ -387,7 +388,7 @@ func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 		mv.logsTable.Select(0, 0)
 		mv.logsTable.ScrollToBeginning()
 
-		mv.updateHistogramTimeRange()
+		mv.bumpTimeRange()
 	})
 }
 
@@ -460,23 +461,56 @@ func newTableCellLogmsg(text string) *tview.TableCell {
 
 */
 
-func (mv *MainView) setTimeRange(from, to time.Time) {
+func (mv *MainView) setTimeRange(from, to TimeOrDur) {
+	if from.IsZero() {
+		// TODO: maybe better error handling
+		panic("from can't be zero")
+	}
+
 	mv.from = from
 	mv.to = to
 
-	mv.updateHistogramTimeRange()
+	mv.bumpTimeRange()
 }
 
-func (mv *MainView) SetTimeRange(from, to time.Time) {
+// bumpTimeRange only does something useful if the time is relative to current time.
+func (mv *MainView) bumpTimeRange() {
+	if mv.from.IsZero() {
+		panic("should never be here")
+	}
+
+	mv.actualFrom = mv.from.AbsoluteTime(time.Now())
+
+	if !mv.to.IsZero() {
+		mv.actualTo = mv.to.AbsoluteTime(mv.actualFrom)
+	} else {
+		mv.actualTo = time.Now()
+	}
+
+	// Snap both actualFrom and actualTo to the 1m grid, rounding forward.
+	mv.actualFrom = mv.actualFrom.Truncate(1 * time.Minute).Add(1 * time.Minute)
+	mv.actualTo = mv.actualTo.Truncate(1 * time.Minute).Add(1 * time.Minute)
+
+	// If from is after than to, swap them.
+	if mv.actualFrom.After(mv.actualTo) {
+		mv.actualFrom, mv.actualTo = mv.actualTo, mv.actualFrom
+	}
+
+	// Also update the histogram
+	mv.histogram.SetRange(int(mv.actualFrom.Unix()), int(mv.actualTo.Unix()))
+}
+
+func (mv *MainView) SetTimeRange(from, to TimeOrDur) {
 	mv.params.App.QueueUpdateDraw(func() {
 		mv.setTimeRange(from, to)
 	})
 }
 
 func (mv *MainView) doQuery() {
+
 	mv.params.OnLogQuery(core.QueryLogsParams{
-		From:  mv.from,
-		To:    mv.to,
+		From:  mv.actualFrom,
+		To:    mv.actualTo,
 		Query: mv.query,
 	})
 }
@@ -485,38 +519,6 @@ func (mv *MainView) DoQuery() {
 	mv.params.App.QueueUpdateDraw(func() {
 		mv.doQuery()
 	})
-}
-
-func (mv *MainView) updateHistogramTimeRange() {
-	var fromUnix, toUnix int
-
-	mv.actualFrom, mv.actualTo = mv.from, mv.to
-
-	if mv.actualFrom.IsZero() {
-		mv.actualFrom = mv.statsFrom
-	}
-
-	if mv.actualFrom.IsZero() {
-		mv.actualFrom = time.Now()
-	}
-
-	mv.actualFrom = mv.actualFrom.Truncate(1 * time.Minute).Add(1 * time.Minute)
-
-	fromUnix = int(mv.actualFrom.Unix())
-
-	if mv.actualTo.IsZero() {
-		mv.actualTo = mv.statsTo
-	}
-
-	if mv.actualTo.IsZero() {
-		mv.actualTo = time.Now()
-	}
-
-	mv.actualTo = mv.actualTo.Truncate(1 * time.Minute).Add(1 * time.Minute)
-
-	toUnix = int(mv.actualTo.Unix())
-
-	mv.histogram.SetRange(fromUnix, toUnix)
 }
 
 type MessageboxParams struct {
