@@ -36,7 +36,7 @@ func main() {
 
 				dur, err := time.ParseDuration(parts[1])
 				if err != nil {
-					mainView.ShowMessagebox("err", "Error", "invalid duration: "+err.Error(), nil)
+					mainView.ShowMessagebox("err", "Error", "invalid 'from' duration: "+err.Error(), nil)
 					return
 				}
 
@@ -44,7 +44,22 @@ func main() {
 					dur = -dur
 				}
 
-				from, to := time.Now().Add(dur), time.Time{}
+				from := time.Now().Add(dur)
+				to := time.Time{}
+
+				if len(parts) >= 3 {
+					dur, err := time.ParseDuration(parts[2])
+					if err != nil {
+						mainView.ShowMessagebox("err", "Error", "invalid 'to' duration: "+err.Error(), nil)
+						return
+					}
+
+					to = from.Add(dur)
+				}
+
+				if !to.IsZero() && from.After(to) {
+					from, to = to, from
+				}
 
 				mainView.SetTimeRange(from, to)
 				mainView.DoQuery()

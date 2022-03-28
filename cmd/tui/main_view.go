@@ -482,7 +482,8 @@ func (mv *MainView) showMessagebox(
 		Buttons:         params.Buttons,
 		OnButtonPressed: params.OnButtonPressed,
 
-		Width:  120,
+		//Width: 60,
+		Width:  120, // TODO: from params
 		Height: 20,
 	})
 	msgvErr.Show()
