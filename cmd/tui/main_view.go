@@ -104,6 +104,11 @@ func NewMainView(params *MainViewParams) *MainView {
 			mv.query = mv.queryInput.GetText()
 			mv.doQuery()
 			queryInputApplyStyle()
+		case tcell.KeyEsc:
+			if mv.queryInput.GetText() != mv.query {
+				mv.queryInput.SetText(mv.query)
+				queryInputApplyStyle()
+			}
 		case tcell.KeyTab:
 			mv.params.App.SetFocus(mv.logsTable)
 		}
