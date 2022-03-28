@@ -249,7 +249,7 @@ func (ha *HostAgent) run() {
 							continue
 						}
 
-						t = inferYear(t)
+						t = InferYear(t)
 
 						n, err := strconv.Atoi(parts[1])
 						if err != nil {
@@ -325,7 +325,7 @@ func (ha *HostAgent) run() {
 							continue
 						}
 
-						t = inferYear(t)
+						t = InferYear(t)
 
 						resp.Logs = append(resp.Logs, LogMsg{
 							Time: t,
@@ -736,12 +736,12 @@ func logError(err error) {
 	fmt.Println("ERROR:", err.Error())
 }
 
-// inferYear infers year from the month of the given timestamp, and the current
+// InferYear infers year from the month of the given timestamp, and the current
 // time. Resulting timestamp (with the year populated) is then returned.
 //
 // Most of the time it just uses the current year, but on the year boundary
 // it can return previous or next year.
-func inferYear(t time.Time) time.Time {
+func InferYear(t time.Time) time.Time {
 	now := time.Now()
 
 	// If month of the syslog being parsed is the same as the current month, just

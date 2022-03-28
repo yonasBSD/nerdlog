@@ -37,7 +37,7 @@ func main() {
 					return
 				}
 
-				from, err := ParseTimeOrDur(inputTimeLayout, parts[1])
+				from, err := parseAndInferTimeOrDur(inputTimeLayout, parts[1])
 				if err != nil {
 					mainView.ShowMessagebox("err", "Error", "invalid 'from' duration: "+err.Error(), nil)
 					return
@@ -51,7 +51,7 @@ func main() {
 
 				if len(parts) >= 3 && parts[2] != "" {
 					var err error
-					to, err = ParseTimeOrDur(inputTimeLayout, parts[2])
+					to, err = parseAndInferTimeOrDur(inputTimeLayout, parts[2])
 					if err != nil {
 						mainView.ShowMessagebox("err", "Error", "invalid 'to' duration: "+err.Error(), nil)
 						return
@@ -420,3 +420,16 @@ func main() {
 	fmt.Println("done")
 }
 */
+
+func parseAndInferTimeOrDur(layout, s string) (TimeOrDur, error) {
+	t, err := ParseTimeOrDur(layout, s)
+	if err != nil {
+		return TimeOrDur{}, err
+	}
+
+	if t.IsAbsolute() {
+		t.Time = core.InferYear(t.Time)
+	}
+
+	return t, nil
+}

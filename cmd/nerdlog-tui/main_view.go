@@ -482,11 +482,15 @@ func (mv *MainView) setTimeRange(from, to TimeOrDur) {
 	mv.from = from
 	mv.to = to
 
+	mv.bumpTimeRange()
+
+	rangeDur := mv.actualTo.Sub(mv.actualFrom)
+
 	var timeStr string
 	if !to.IsZero() {
-		timeStr = fmt.Sprintf("%s to %s", from, to)
+		timeStr = fmt.Sprintf("%s to %s (%s)", from, to, formatDuration(rangeDur))
 	} else if from.IsAbsolute() {
-		timeStr = fmt.Sprintf("%s to now", from)
+		timeStr = fmt.Sprintf("%s to now (%s)", from, formatDuration(rangeDur))
 	} else {
 		timeStr = fmt.Sprintf("last %s", TimeOrDur{Dur: -from.Dur})
 	}
@@ -494,7 +498,6 @@ func (mv *MainView) setTimeRange(from, to TimeOrDur) {
 	mv.timeLabel.SetText(timeStr)
 	mv.topFlex.ResizeItem(mv.timeLabel, len(timeStr), 0)
 
-	mv.bumpTimeRange()
 }
 
 // bumpTimeRange only does something useful if the time is relative to current time.
@@ -543,6 +546,19 @@ func (mv *MainView) DoQuery() {
 	mv.params.App.QueueUpdateDraw(func() {
 		mv.doQuery()
 	})
+}
+
+func formatDuration(dur time.Duration) string {
+	ret := dur.String()
+
+	// Strip useless suffix
+	if strings.HasSuffix(ret, "h0m0s") {
+		return ret[:len(ret)-4]
+	} else if strings.HasSuffix(ret, "m0s") {
+		return ret[:len(ret)-2]
+	}
+
+	return ret
 }
 
 type MessageboxParams struct {

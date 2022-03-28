@@ -1,7 +1,6 @@
 package main
 
 import (
-	"strings"
 	"time"
 
 	"github.com/juju/errors"
@@ -44,16 +43,7 @@ func (t TimeOrDur) String() string {
 		return t.Time.String()
 	}
 
-	ret := t.Dur.String()
-
-	// Strip useless suffix
-	if strings.HasSuffix(ret, "h0m0s") {
-		return ret[:len(ret)-4]
-	} else if strings.HasSuffix(ret, "m0s") {
-		return ret[:len(ret)-2]
-	}
-
-	return ret
+	return formatDuration(t.Dur)
 }
 
 // ParseTimeOrDur tries to parse a string as either time or duration.
