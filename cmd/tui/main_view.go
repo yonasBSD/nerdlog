@@ -47,6 +47,9 @@ type MainView struct {
 	// from, to represent the selected time range
 	from, to time.Time
 
+	// query is the effective search query
+	query string
+
 	// actualFrom, actualTo is like from and to, but they can't be zero.
 	actualFrom, actualTo time.Time
 
@@ -75,15 +78,42 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mainFlex := tview.NewFlex().SetDirection(tview.FlexRow)
 
+	queryInputStaleMatch := tcell.Style{}.
+		Background(tcell.ColorBlue).
+		Foreground(tcell.ColorWhite).
+		Bold(true)
+
+	queryInputStaleMismatch := tcell.Style{}.
+		Background(tcell.ColorDarkRed).
+		Foreground(tcell.ColorWhite).
+		Bold(true)
+
+	queryInputApplyStyle := func() {
+		style := queryInputStaleMatch
+		if mv.queryInput.GetText() != mv.query {
+			style = queryInputStaleMismatch
+		}
+
+		mv.queryInput.SetFieldStyle(style)
+	}
+
 	mv.queryInput = tview.NewInputField()
 	mv.queryInput.SetDoneFunc(func(key tcell.Key) {
 		switch key {
 		case tcell.KeyEnter:
+			mv.query = mv.queryInput.GetText()
 			mv.doQuery()
+			queryInputApplyStyle()
 		case tcell.KeyTab:
 			mv.params.App.SetFocus(mv.logsTable)
 		}
 	})
+
+	mv.queryInput.SetChangedFunc(func(text string) {
+		queryInputApplyStyle()
+	})
+
+	queryInputApplyStyle()
 
 	mainFlex.AddItem(mv.queryInput, 1, 0, false)
 
@@ -112,6 +142,7 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.logsTable = tview.NewTable()
 	mv.updateTableHeader(nil)
 
+	//mv.logsTable.SetEvaluateAllRows(true)
 	mv.logsTable.SetFocusFunc(func() {
 		mv.logsTable.SetSelectable(true, false)
 	})
@@ -414,7 +445,7 @@ func (mv *MainView) doQuery() {
 	mv.params.OnLogQuery(core.QueryLogsParams{
 		From:  mv.from,
 		To:    mv.to,
-		Query: mv.queryInput.GetText(),
+		Query: mv.query,
 	})
 }
 
