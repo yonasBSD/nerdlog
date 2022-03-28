@@ -13,7 +13,8 @@ import (
 const logsTableTimeLayout = "Jan02 15:04:05.000"
 
 const (
-	pageNameMessage = "message"
+	pageNameMessage         = "message"
+	pageNameEditQueryParams = "message"
 )
 
 type MainViewParams struct {
@@ -38,6 +39,8 @@ type MainView struct {
 	topFlex      *tview.Flex
 	queryEditBtn *tview.Button
 	timeLabel    *tview.TextView
+
+	queryEditView *QueryEditView
 
 	// focusedBeforeCmd is a primitive which was focused before cmdInput was
 	// focused. Once the user is done editing command, focusedBeforeCmd
@@ -69,6 +72,7 @@ type MainView struct {
 	//marketViewsByID map[common.MarketID]*MarketView
 	//marketDescrByID map[common.MarketID]MarketDescr
 
+	modalsFocusStack []tview.Primitive
 }
 
 type OnLogQueryCallback func(core.QueryLogsParams)
@@ -139,6 +143,14 @@ func NewMainView(params *MainViewParams) *MainView {
 
 		return event
 	})
+	mv.queryEditBtn.SetSelectedFunc(func() {
+		ftr := FromToRange{mv.from, mv.to}
+		mv.queryEditView.Show(QueryEditData{
+			Time:        ftr.String(),
+			Query:       mv.query,
+			HostsFilter: "todo", // TODO
+		})
+	})
 
 	queryLabel := tview.NewTextView()
 	queryLabel.SetScrollable(false).SetText("Query:")
@@ -150,18 +162,18 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.topFlex.
 		AddItem(queryLabel, 6, 0, false).
 		AddItem(nil, 1, 0, false).
-		AddItem(mv.queryInput, 0, 1, false).
+		AddItem(mv.queryInput, 0, 1, true).
 		AddItem(nil, 1, 0, false).
 		AddItem(mv.timeLabel, 1, 0, false).
 		AddItem(nil, 1, 0, false).
 		AddItem(mv.queryEditBtn, 6, 0, false)
 
-	mainFlex.AddItem(mv.topFlex, 1, 0, false)
+	mainFlex.AddItem(mv.topFlex, 1, 0, true)
 
 	mv.histogram = NewHistogram()
 	mv.histogram.SetBinSize(60) // 1 minute
 	mv.histogram.SetXFormatter(func(v int) string {
-		t := time.Unix(int64(v), 0)
+		t := time.Unix(int64(v), 0).UTC()
 		return t.Format("15:04")
 	})
 	mv.histogram.SetXMarker(func(from, to int, numChars int) []int {
@@ -254,7 +266,7 @@ func NewMainView(params *MainViewParams) *MainView {
 		}
 	*/
 
-	mainFlex.AddItem(mv.logsTable, 0, 1, true)
+	mainFlex.AddItem(mv.logsTable, 0, 1, false)
 
 	mv.statusLine = tview.NewTextView()
 	mv.statusLine.SetScrollable(false).SetDynamicColors(true)
@@ -292,14 +304,9 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mainFlex.AddItem(mv.cmdInput, 1, 0, false)
 
-	mv.rootPages.AddPage("mainFlex", mainFlex, true, true)
+	mv.queryEditView = NewQueryEditView(mv, &QueryEditViewParams{})
 
-	// For some reason, setting focus right here doesn't work, so here's this
-	// hack to start a goroutine which will wait until app is started, and its
-	// event loop will set the focus.
-	go mv.params.App.QueueUpdateDraw(func() {
-		mv.params.App.SetFocus(mv.queryInput)
-	})
+	mv.rootPages.AddPage("mainFlex", mainFlex, true, true)
 
 	return mv
 }
@@ -623,6 +630,8 @@ func (mv *MainView) HideMessagebox(msgID string) {
 }
 
 func (mv *MainView) showModal(name string, primitive tview.Primitive, width, height int) {
+	mv.modalsFocusStack = append(mv.modalsFocusStack, mv.params.App.GetFocus())
+
 	// Returns a new primitive which puts the provided primitive in the center and
 	// sets its size to the given width and height.
 	modal := func(p tview.Primitive, width, height int) tview.Primitive {
@@ -639,4 +648,7 @@ func (mv *MainView) showModal(name string, primitive tview.Primitive, width, hei
 
 func (mv *MainView) hideModal(name string) {
 	mv.rootPages.RemovePage(name)
+	l := len(mv.modalsFocusStack)
+	mv.params.App.SetFocus(mv.modalsFocusStack[l-1])
+	mv.modalsFocusStack = mv.modalsFocusStack[:l-1]
 }

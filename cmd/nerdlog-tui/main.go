@@ -11,7 +11,8 @@ import (
 )
 
 // TODO: make multiple of them
-const inputTimeLayout = "Jan02_15:04"
+const inputTimeLayout = "Jan02 15:04"
+const inputTimeLayout2 = "Jan02_15:04"
 
 func main() {
 	var hm *core.HostsManager
@@ -37,7 +38,7 @@ func main() {
 					return
 				}
 
-				from, err := parseAndInferTimeOrDur(inputTimeLayout, parts[1])
+				from, err := parseAndInferTimeOrDur(inputTimeLayout2, parts[1])
 				if err != nil {
 					mainView.ShowMessagebox("err", "Error", "invalid 'from' duration: "+err.Error(), nil)
 					return
@@ -47,7 +48,7 @@ func main() {
 
 				if len(parts) >= 3 && parts[2] != "" {
 					var err error
-					to, err = parseAndInferTimeOrDur(inputTimeLayout, parts[2])
+					to, err = parseAndInferTimeOrDur(inputTimeLayout2, parts[2])
 					if err != nil {
 						mainView.ShowMessagebox("err", "Error", "invalid 'to' duration: "+err.Error(), nil)
 						return

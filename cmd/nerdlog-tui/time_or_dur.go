@@ -46,6 +46,14 @@ func (t TimeOrDur) String() string {
 	return formatDuration(t.Dur)
 }
 
+func (t TimeOrDur) Format(layout string) string {
+	if !t.Time.IsZero() {
+		return t.Time.Format(layout)
+	}
+
+	return formatDuration(t.Dur)
+}
+
 // ParseTimeOrDur tries to parse a string as either time or duration.
 // If parsing as a duration succeeds, then layout is ignored; otherwise it's
 // used to parse it as time.
