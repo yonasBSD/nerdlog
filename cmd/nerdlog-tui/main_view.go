@@ -35,7 +35,9 @@ type MainView struct {
 	queryInput *tview.InputField
 	cmdInput   *tview.InputField
 
+	topFlex      *tview.Flex
 	queryEditBtn *tview.Button
+	timeLabel    *tview.TextView
 
 	// focusedBeforeCmd is a primitive which was focused before cmdInput was
 	// focused. Once the user is done editing command, focusedBeforeCmd
@@ -138,14 +140,24 @@ func NewMainView(params *MainViewParams) *MainView {
 		return event
 	})
 
-	topFlex := tview.NewFlex().SetDirection(tview.FlexColumn)
-	topFlex.
-		AddItem(mv.queryEditBtn, 6, 0, false).
-		// TODO: time label
-		AddItem(nil, 1, 0, false).
-		AddItem(mv.queryInput, 0, 1, false)
+	queryLabel := tview.NewTextView()
+	queryLabel.SetScrollable(false).SetText("Query:")
 
-	mainFlex.AddItem(topFlex, 1, 0, false)
+	mv.timeLabel = tview.NewTextView()
+	mv.timeLabel.SetScrollable(false)
+
+	mv.topFlex = tview.NewFlex().SetDirection(tview.FlexColumn)
+	mv.topFlex.
+		AddItem(mv.queryEditBtn, 6, 0, false).
+		AddItem(nil, 1, 0, false).
+		AddItem(queryLabel, 6, 0, false).
+		AddItem(nil, 1, 0, false).
+		AddItem(mv.queryInput, 0, 1, false).
+		AddItem(nil, 1, 0, false).
+		AddItem(mv.timeLabel, 1, 0, false).
+		AddItem(nil, 1, 0, false)
+
+	mainFlex.AddItem(mv.topFlex, 1, 0, false)
 
 	mv.histogram = NewHistogram()
 	mv.histogram.SetBinSize(60) // 1 minute
@@ -469,6 +481,18 @@ func (mv *MainView) setTimeRange(from, to TimeOrDur) {
 
 	mv.from = from
 	mv.to = to
+
+	var timeStr string
+	if !to.IsZero() {
+		timeStr = fmt.Sprintf("%s to %s", from, to)
+	} else if from.IsAbsolute() {
+		timeStr = fmt.Sprintf("%s to now", from)
+	} else {
+		timeStr = fmt.Sprintf("last %s", TimeOrDur{Dur: -from.Dur})
+	}
+
+	mv.timeLabel.SetText(timeStr)
+	mv.topFlex.ResizeItem(mv.timeLabel, len(timeStr), 0)
 
 	mv.bumpTimeRange()
 }

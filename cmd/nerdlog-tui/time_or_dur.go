@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"time"
 
 	"github.com/juju/errors"
@@ -13,6 +14,10 @@ type TimeOrDur struct {
 
 func (t TimeOrDur) IsZero() bool {
 	return t.Time.IsZero() && t.Dur == 0
+}
+
+func (t TimeOrDur) IsAbsolute() bool {
+	return !t.Time.IsZero()
 }
 
 // AbsoluteTime returns the exact point in time, either relative to the
@@ -39,7 +44,16 @@ func (t TimeOrDur) String() string {
 		return t.Time.String()
 	}
 
-	return t.Dur.String()
+	ret := t.Dur.String()
+
+	// Strip useless suffix
+	if strings.HasSuffix(ret, "h0m0s") {
+		return ret[:len(ret)-4]
+	} else if strings.HasSuffix(ret, "m0s") {
+		return ret[:len(ret)-2]
+	}
+
+	return ret
 }
 
 // ParseTimeOrDur tries to parse a string as either time or duration.
