@@ -129,6 +129,8 @@ func NewMainView(params *MainViewParams) *MainView {
 		switch event.Key() {
 		case tcell.KeyTab:
 			mv.params.App.SetFocus(mv.queryInput)
+		case tcell.KeyBacktab:
+			mv.params.App.SetFocus(mv.logsTable)
 			return nil
 		}
 
@@ -211,6 +213,9 @@ func NewMainView(params *MainViewParams) *MainView {
 		}
 		if key == tcell.KeyEnter {
 			//mv.logsTable.SetSelectable(true, true)
+		}
+		if key == tcell.KeyTab {
+			mv.params.App.SetFocus(mv.queryEditBtn)
 		}
 		if key == tcell.KeyBacktab {
 			mv.params.App.SetFocus(mv.queryInput)
