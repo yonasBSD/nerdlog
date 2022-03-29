@@ -227,12 +227,12 @@ if [[ "$from_nr" != "" ]]; then
 fi
 
 if [[ "$from_nr" == "" && "$to_nr" == "" ]]; then
-  cat $logfiles | awk "$awk_script" - | sort
+  cat $logfiles | awk "$awk_script" -
 elif [[ "$from_nr" != "" && "$to_nr" == "" ]]; then
-  cat $logfiles | tail -n +$from_nr | awk "$awk_script" - | sort
+  cat $logfiles | tail -n +$from_nr | awk "$awk_script" -
 elif [[ "$from_nr" == "" && "$to_nr" != "" ]]; then
-  cat $logfiles | head -n $to_nr | awk "$awk_script" - | sort
+  cat $logfiles | head -n $to_nr | awk "$awk_script" -
 else
-  cat $logfiles | tail -n +$from_nr | head -n $((to_nr - from_nr)) | awk "$awk_script" - | sort
+  cat $logfiles | tail -n +$from_nr | head -n $((to_nr - from_nr)) | awk "$awk_script" -
 fi
 `

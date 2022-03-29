@@ -52,5 +52,6 @@ type hostCmdQueryLogs struct {
 }
 
 type hostCmdCtxQueryLogs struct {
-	Resp *LogResp
+	Resp     *LogResp
+	lastTime time.Time
 }

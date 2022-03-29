@@ -323,7 +323,7 @@ func (ha *HostAgent) run() {
 						msg = msg[colonIdx+1:]
 						msg = strings.TrimSpace(msg)
 
-						// Logs sometimes contain double timestamps: one from systemd and
+						// Logs often contain double timestamps: one from systemd and
 						// the next one from the app, so check if the second one exists
 						// indeed.
 						ts2Idx := strings.Index(msg, tsStr)
@@ -347,6 +347,16 @@ func (ha *HostAgent) run() {
 
 						t = InferYear(t)
 
+						lastTime := ha.curCmdCtx.queryLogsCtx.lastTime
+
+						if t.Before(lastTime) {
+							// Time has decreased: this might happen if the previous log line had
+							// a precies timestamp with microseconds, but the current line only has
+							// a second precision. Then we just hackishly set the current timestamp
+							// to be the same.
+							t = lastTime
+						}
+
 						resp.Logs = append(resp.Logs, LogMsg{
 							Time: t,
 							Msg:  msg,
@@ -355,6 +365,8 @@ func (ha *HostAgent) run() {
 								"source": ha.params.Config.Name,
 							},
 						})
+
+						ha.curCmdCtx.queryLogsCtx.lastTime = t
 					}
 				}
 
