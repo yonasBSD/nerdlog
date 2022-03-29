@@ -7,6 +7,7 @@ import (
 
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/gdamore/tcell/v2"
+	"github.com/juju/errors"
 	"github.com/rivo/tview"
 )
 
@@ -78,7 +79,7 @@ type MainView struct {
 }
 
 type OnLogQueryCallback func(params core.QueryLogsParams)
-type OnHostsFilterChange func(hostsFilter string)
+type OnHostsFilterChange func(hostsFilter string) error
 type OnCmdCallback func(cmd string)
 
 func NewMainView(params *MainViewParams) *MainView {
@@ -309,9 +310,11 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mv.queryEditView = NewQueryEditView(mv, &QueryEditViewParams{
 		DoneFunc: func(data QueryEditData) error {
-			mv.params.OnHostsFilterChange(data.HostsFilter)
+			err := mv.params.OnHostsFilterChange(data.HostsFilter)
+			if err != nil {
+				return errors.Trace(err)
+			}
 
-			// TODO: check for errors
 			return nil
 		},
 	})

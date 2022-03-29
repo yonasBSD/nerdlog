@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/dimonomid/nerdlog/core"
+	"github.com/juju/errors"
 	"github.com/rivo/tview"
 )
 
@@ -69,8 +70,19 @@ func main() {
 		OnLogQuery: func(params core.QueryLogsParams) {
 			hm.QueryLogs(params)
 		},
-		OnHostsFilterChange: func(hostsFilter string) {
-			hm.SetHostsFilter(hostsFilter)
+		OnHostsFilterChange: func(hostsFilter string) error {
+			err := hm.SetHostsFilter(hostsFilter)
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			// NOTE: we can't simply call doQuery right here because due to the hosts
+			// change, some hosts might not be connected yet. We need to make sure that
+			// it's being done after the connection has succeeded somehow (similarly
+			// to the initial)
+			//mainView.doQuery()
+
+			return nil
 		},
 		OnCmd: func(cmd string) {
 			cmdCh <- cmd

@@ -49,7 +49,7 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 		params: params,
 		hcs:    make(map[string]ConfigHost, len(params.ConfigHosts)),
 
-		hostsFilter: "initial",
+		hostsFilter: "my-host-",
 
 		has:      map[string]*HostAgent{},
 		haStates: map[string]HostAgentState{},
@@ -81,10 +81,6 @@ func (hm *HostsManager) filterHANames() {
 		// TODO: proper filtering
 		if hm.hostsFilter == "" {
 			// pass
-		} else if hm.hostsFilter == "initial" {
-			if hc.Name != "my-host-01" && hc.Name != "my-host-02" {
-				continue
-			}
 		} else if !strings.Contains(hc.Name, hm.hostsFilter) {
 			continue
 		}
@@ -188,11 +184,24 @@ func (hm *HostsManager) run() {
 				}
 
 			case req.updHostsFilter != nil:
-				hm.hostsFilter = req.updHostsFilter.filter
+				r := req.updHostsFilter
+				if hm.numNotConnected > 0 {
+					r.resCh <- errors.Errorf("not connected to all hosts yet")
+					continue
+				}
+
+				if hm.curQueryLogsCtx != nil {
+					r.resCh <- errors.Errorf("busy with another query")
+					continue
+				}
+
+				hm.hostsFilter = r.filter
 				hm.filterHANames()
 				hm.updateHAs()
 				hm.updateHostsByState()
 				hm.sendStateUpdate()
+
+				r.resCh <- nil
 
 			case req.ping:
 				for _, ha := range hm.has {
@@ -251,6 +260,7 @@ type hostsManagerReq struct {
 
 type hostsManagerReqUpdHostsFilter struct {
 	filter string
+	resCh  chan<- error
 }
 
 func (hm *HostsManager) QueryLogs(params QueryLogsParams) {
@@ -259,12 +269,17 @@ func (hm *HostsManager) QueryLogs(params QueryLogsParams) {
 	}
 }
 
-func (hm *HostsManager) SetHostsFilter(filter string) {
+func (hm *HostsManager) SetHostsFilter(filter string) error {
+	resCh := make(chan error, 1)
+
 	hm.reqCh <- hostsManagerReq{
 		updHostsFilter: &hostsManagerReqUpdHostsFilter{
 			filter: filter,
+			resCh:  resCh,
 		},
 	}
+
+	return <-resCh
 }
 
 func (hm *HostsManager) Ping() {
