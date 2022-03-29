@@ -110,6 +110,19 @@ func NewQueryEditView(
 
 			case tcell.KeyEsc:
 				qev.Hide()
+
+			case tcell.KeyEnter:
+				err := qev.params.DoneFunc(QueryEditData{
+					Time:        qev.timeInput.GetText(),
+					Query:       qev.queryInput.GetText(),
+					HostsFilter: qev.hostsInput.GetText(),
+				})
+				if err != nil {
+					qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
+					break
+				}
+
+				qev.Hide()
 			}
 		}
 	}

@@ -35,6 +35,10 @@ type HostAgent struct {
 	curCmdCtx  *hostCmdCtx
 	nextCmdIdx int
 
+	// torndownCh is closed once teardown is completed
+	tearingDown bool
+	torndownCh  chan struct{}
+
 	//debugFile *os.File
 }
 
@@ -70,6 +74,9 @@ type HostAgentUpdate struct {
 	Name string
 
 	State *HostAgentUpdateState
+
+	// If TornDown is true, it means it's the last update from that agent.
+	TornDown bool
 }
 
 type HostAgentUpdateState struct {
@@ -89,6 +96,8 @@ func NewHostAgent(params HostAgentParams) *HostAgent {
 
 		state:        HostAgentStateDisconnected,
 		enqueueCmdCh: make(chan hostCmd, 32),
+
+		torndownCh: make(chan struct{}),
 	}
 
 	//debugFile, _ := os.Create("/tmp/host_agent_debug.log")
@@ -109,6 +118,7 @@ type HostAgentState string
 const (
 	HostAgentStateDisconnected  HostAgentState = "disconnected"
 	HostAgentStateConnecting    HostAgentState = "connecting"
+	HostAgentStateDisconnecting HostAgentState = "disconnecting"
 	HostAgentStateConnectedIdle HostAgentState = "connected_idle"
 	HostAgentStateConnectedBusy HostAgentState = "connected_busy"
 )
@@ -123,10 +133,10 @@ func (ha *HostAgent) changeState(newState HostAgentState) {
 	// Properly leave old state
 
 	if isStateConnected(oldState) && !isStateConnected(newState) {
-		ha.conn.sshClient.Close()
-		ha.conn.sshSession.Close()
+		// Initiate disconnect
 		ha.conn.stdinBuf.Close()
-		ha.conn = nil
+		ha.conn.sshSession.Close()
+		ha.conn.sshClient.Close()
 	}
 
 	switch oldState {
@@ -158,6 +168,9 @@ func (ha *HostAgent) changeState(newState HostAgentState) {
 
 			ha.startCmd(nextCmd)
 		}
+
+	case HostAgentStateDisconnected:
+		ha.conn = nil
 	}
 }
 
@@ -210,7 +223,14 @@ func (ha *HostAgent) run() {
 				ha.addCmdToQueue(cmd)
 			}
 
-		case line := <-ha.conn.getStdoutLinesCh():
+		case line, ok := <-ha.conn.getStdoutLinesCh():
+			if !ok {
+				// Stdout was just closed
+				ha.conn.stdoutLinesCh = nil
+				ha.checkIfDisconnected()
+				continue
+			}
+
 			lastUpdTime = time.Now()
 
 			//if ha.params.Config.Name == "my-host-10" {
@@ -401,7 +421,14 @@ func (ha *HostAgent) run() {
 				}
 			}
 
-		case line := <-ha.conn.getStderrLinesCh():
+		case line, ok := <-ha.conn.getStderrLinesCh():
+			if !ok {
+				// Stderr was just closed
+				ha.conn.stderrLinesCh = nil
+				ha.checkIfDisconnected()
+				continue
+			}
+
 			lastUpdTime = time.Now()
 
 			// TODO maybe save somewhere for debugging
@@ -422,6 +449,12 @@ func (ha *HostAgent) run() {
 					ping: &hostCmdPing{},
 				})
 			}
+
+		case <-ha.torndownCh:
+			ha.sendUpdate(&HostAgentUpdate{
+				TornDown: true,
+			})
+			return
 		}
 	}
 }
@@ -643,6 +676,10 @@ func dialWithTimeout(client *ssh.Client, protocol, hostAddr string, timeout time
 
 func getScannerFunc(name string, reader io.Reader, linesCh chan<- string) func() {
 	return func() {
+		defer func() {
+			close(linesCh)
+		}()
+
 		scanner := bufio.NewScanner(reader)
 		// TODO: also defer signal to reconnect
 
@@ -651,18 +688,24 @@ func getScannerFunc(name string, reader io.Reader, linesCh chan<- string) func()
 		}
 
 		if err := scanner.Err(); err != nil {
-			fmt.Println("stdin read error", err)
+			//fmt.Println("stdin read error", err)
 			return
 		} else {
-			fmt.Println("stdin EOF")
+			//fmt.Println("stdin EOF")
 		}
 
-		fmt.Println("stopped reading stdin")
+		//fmt.Println("stopped reading stdin")
 	}
 }
 
 func (ha *HostAgent) EnqueueCmd(cmd hostCmd) {
 	ha.enqueueCmdCh <- cmd
+}
+
+func (ha *HostAgent) Close() {
+	ha.EnqueueCmd(hostCmd{
+		teardown: true,
+	})
 }
 
 func (ha *HostAgent) addCmdToQueue(cmd hostCmd) {
@@ -722,6 +765,10 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 
 		ha.conn.stdinBuf.Write([]byte(cmd))
 
+	case cmdCtx.cmd.teardown:
+		ha.tearingDown = true
+		ha.changeState(HostAgentStateDisconnecting)
+
 	default:
 		panic(fmt.Sprintf("invalid command %+v", cmdCtx.cmd))
 	}
@@ -729,6 +776,19 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 	ha.conn.stdinBuf.Write([]byte(fmt.Sprintf("echo 'command_done:%d'\n", cmdCtx.idx)))
 
 	ha.changeState(HostAgentStateConnectedBusy)
+}
+
+func (ha *HostAgent) checkIfDisconnected() {
+	if ha.conn.stderrLinesCh == nil && ha.conn.stdoutLinesCh == nil {
+		// We're fully disconnected
+		ha.changeState(HostAgentStateDisconnected)
+
+		if ha.tearingDown {
+			close(ha.torndownCh)
+		} else {
+			ha.changeState(HostAgentStateConnecting)
+		}
+	}
 }
 
 func logError(err error) {

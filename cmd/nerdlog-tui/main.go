@@ -69,6 +69,9 @@ func main() {
 		OnLogQuery: func(params core.QueryLogsParams) {
 			hm.QueryLogs(params)
 		},
+		OnHostsFilterChange: func(hostsFilter string) {
+			hm.SetHostsFilter(hostsFilter)
+		},
 		OnCmd: func(cmd string) {
 			cmdCh <- cmd
 		},

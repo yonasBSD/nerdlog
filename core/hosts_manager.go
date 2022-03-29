@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/juju/errors"
@@ -18,11 +19,17 @@ const (
 type HostsManager struct {
 	params HostsManagerParams
 
+	hcs map[string]ConfigHost
+
+	hostsFilter     string
+	matchingHANames map[string]struct{}
+
 	has      map[string]*HostAgent
 	haStates map[string]HostAgentState
 
 	hostsByState    map[HostAgentState]map[string]struct{}
 	numNotConnected int
+	numUnused       int
 
 	hostUpdatesCh chan *HostAgentUpdate
 	reqCh         chan hostsManagerReq
@@ -40,16 +47,75 @@ type HostsManagerParams struct {
 func NewHostsManager(params HostsManagerParams) *HostsManager {
 	hm := &HostsManager{
 		params: params,
+		hcs:    make(map[string]ConfigHost, len(params.ConfigHosts)),
 
-		has:      make(map[string]*HostAgent, len(params.ConfigHosts)),
-		haStates: make(map[string]HostAgentState, len(params.ConfigHosts)),
+		hostsFilter: "initial",
+
+		has:      map[string]*HostAgent{},
+		haStates: map[string]HostAgentState{},
 
 		hostUpdatesCh: make(chan *HostAgentUpdate, 1024),
 		reqCh:         make(chan hostsManagerReq, 8),
 		respCh:        make(chan hostCmdRes),
 	}
 
+	// Populate hm.hcs
 	for _, hc := range params.ConfigHosts {
+		hm.hcs[hc.Name] = hc
+	}
+
+	hm.filterHANames()
+	hm.updateHAs()
+	hm.updateHostsByState()
+	hm.sendStateUpdate()
+
+	go hm.run()
+
+	return hm
+}
+
+func (hm *HostsManager) filterHANames() {
+	hm.matchingHANames = map[string]struct{}{}
+
+	for _, hc := range hm.params.ConfigHosts {
+		// TODO: proper filtering
+		if hm.hostsFilter == "" {
+			// pass
+		} else if hm.hostsFilter == "initial" {
+			if hc.Name != "my-host-01" && hc.Name != "my-host-02" {
+				continue
+			}
+		} else if !strings.Contains(hc.Name, hm.hostsFilter) {
+			continue
+		}
+
+		hm.matchingHANames[hc.Name] = struct{}{}
+	}
+}
+
+func (hm *HostsManager) updateHAs() {
+	// Close unused host agents
+	for name, oldHA := range hm.has {
+		if _, ok := hm.matchingHANames[name]; ok {
+			// The host is still used
+			continue
+		}
+
+		// We used to use this host, but now it's filtered out, so close it
+		oldHA.Close()
+		delete(hm.has, name)
+		delete(hm.haStates, name)
+	}
+
+	// Create new host agents
+	for name := range hm.matchingHANames {
+		if _, ok := hm.has[name]; ok {
+			// This host agent already exists
+			continue
+		}
+
+		// We need to create a new host agent
+		hc := hm.hcs[name]
 		ha := NewHostAgent(HostAgentParams{
 			Config:    hc,
 			UpdatesCh: hm.hostUpdatesCh,
@@ -57,10 +123,6 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 		hm.has[hc.Name] = ha
 		hm.haStates[hc.Name] = HostAgentStateDisconnected
 	}
-
-	go hm.run()
-
-	return hm
 }
 
 func (hm *HostsManager) run() {
@@ -75,12 +137,18 @@ func (hm *HostsManager) run() {
 		select {
 		case upd := <-hm.hostUpdatesCh:
 			if upd.State != nil {
+				// If we don't have state for this agent, it means it's unused and the
+				// state is probably about being torn down, so ignore the update.
+				if _, ok := hm.haStates[upd.Name]; !ok {
+					continue
+				}
+
 				hm.haStates[upd.Name] = upd.State.NewState
 
 				hm.updateHostsByState()
 				hm.sendStateUpdate()
-			} else {
-				panic("empty update " + upd.Name)
+			} else if upd.TornDown {
+				// do we need this event at all?
 			}
 
 		case req := <-hm.reqCh:
@@ -118,6 +186,13 @@ func (hm *HostsManager) run() {
 						},
 					})
 				}
+
+			case req.updHostsFilter != nil:
+				hm.hostsFilter = req.updHostsFilter.filter
+				hm.filterHANames()
+				hm.updateHAs()
+				hm.updateHostsByState()
+				hm.sendStateUpdate()
 
 			case req.ping:
 				for _, ha := range hm.has {
@@ -169,13 +244,26 @@ func (hm *HostsManager) run() {
 type hostsManagerReq struct {
 	// Exactly one field must be non-nil
 
-	queryLogs *QueryLogsParams
-	ping      bool
+	queryLogs      *QueryLogsParams
+	updHostsFilter *hostsManagerReqUpdHostsFilter
+	ping           bool
+}
+
+type hostsManagerReqUpdHostsFilter struct {
+	filter string
 }
 
 func (hm *HostsManager) QueryLogs(params QueryLogsParams) {
 	hm.reqCh <- hostsManagerReq{
 		queryLogs: &params,
+	}
+}
+
+func (hm *HostsManager) SetHostsFilter(filter string) {
+	hm.reqCh <- hostsManagerReq{
+		updHostsFilter: &hostsManagerReqUpdHostsFilter{
+			filter: filter,
+		},
 	}
 }
 
@@ -204,6 +292,9 @@ type HostsManagerState struct {
 
 	HostsByState map[HostAgentState]map[string]struct{}
 
+	// NumUnused is the number of hosts available in the config but filtered out.
+	NumUnused int
+
 	// Connected is true when all hosts are connected.
 	Connected bool
 	// Busy is true when a query is in progress.
@@ -227,6 +318,8 @@ func (hm *HostsManager) updateHostsByState() {
 			hm.numNotConnected++
 		}
 	}
+
+	hm.numUnused = len(hm.params.ConfigHosts) - len(hm.has)
 }
 
 func (hm *HostsManager) sendStateUpdate() {
@@ -235,6 +328,7 @@ func (hm *HostsManager) sendStateUpdate() {
 			NumHosts:     len(hm.has),
 			HostsByState: hm.hostsByState,
 			Connected:    hm.numNotConnected == 0,
+			NumUnused:    hm.numUnused,
 			Busy:         hm.curQueryLogsCtx != nil,
 		},
 	}

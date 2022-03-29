@@ -24,6 +24,8 @@ type MainViewParams struct {
 	// logs.
 	OnLogQuery OnLogQueryCallback
 
+	OnHostsFilterChange OnHostsFilterChange
+
 	// TODO: support command history
 	OnCmd OnCmdCallback
 }
@@ -75,7 +77,8 @@ type MainView struct {
 	modalsFocusStack []tview.Primitive
 }
 
-type OnLogQueryCallback func(core.QueryLogsParams)
+type OnLogQueryCallback func(params core.QueryLogsParams)
+type OnHostsFilterChange func(hostsFilter string)
 type OnCmdCallback func(cmd string)
 
 func NewMainView(params *MainViewParams) *MainView {
@@ -304,7 +307,14 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mainFlex.AddItem(mv.cmdInput, 1, 0, false)
 
-	mv.queryEditView = NewQueryEditView(mv, &QueryEditViewParams{})
+	mv.queryEditView = NewQueryEditView(mv, &QueryEditViewParams{
+		DoneFunc: func(data QueryEditData) error {
+			mv.params.OnHostsFilterChange(data.HostsFilter)
+
+			// TODO: check for errors
+			return nil
+		},
+	})
 
 	mv.rootPages.AddPage("mainFlex", mainFlex, true, true)
 
@@ -336,6 +346,8 @@ func (mv *MainView) ApplyHMState(hmState *core.HostsManagerState) {
 		sb.WriteString(getStatuslineNumStr("🖳", numBusy, "orange"))
 		sb.WriteString(" ")
 		sb.WriteString(getStatuslineNumStr("🖳", numOther, "red"))
+		sb.WriteString(" ")
+		sb.WriteString(getStatuslineNumStr("🖳", hmState.NumUnused, "gray"))
 
 		mv.statusLine.SetText(sb.String())
 	})
@@ -555,7 +567,6 @@ func (mv *MainView) SetTimeRange(from, to TimeOrDur) {
 }
 
 func (mv *MainView) doQuery() {
-
 	mv.params.OnLogQuery(core.QueryLogsParams{
 		From:  mv.actualFrom,
 		To:    mv.actualTo,
