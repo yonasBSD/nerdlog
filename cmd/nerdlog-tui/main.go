@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/juju/errors"
+	"github.com/kevinburke/ssh_config"
 	"github.com/rivo/tview"
 )
 
@@ -65,12 +67,17 @@ func main() {
 		}
 	}()
 
+	initialHostsFilter := "my-host-"
+
 	mainView = NewMainView(&MainViewParams{
+		InitialHostsFilter: initialHostsFilter,
+
 		App: app,
 		OnLogQuery: func(params core.QueryLogsParams) {
 			hm.QueryLogs(params)
 		},
 		OnHostsFilterChange: func(hostsFilter string) error {
+			mainView.setHostsFilter(hostsFilter)
 			err := hm.SetHostsFilter(hostsFilter)
 			if err != nil {
 				return errors.Trace(err)
@@ -93,7 +100,7 @@ func main() {
 	from, to := TimeOrDur{Dur: -1 * time.Hour}, TimeOrDur{}
 	mainView.setTimeRange(from, to)
 
-	hm = initHostsManager(mainView)
+	hm = initHostsManager(mainView, initialHostsFilter)
 
 	fmt.Println("Starting UI ...")
 	if err := app.SetRoot(mainView.GetUIPrimitive(), true).Run(); err != nil {
@@ -114,7 +121,7 @@ func main() {
 	fmt.Println("Have a nice day.")
 }
 
-func initHostsManager(mainView *MainView) *core.HostsManager {
+func initHostsManager(mainView *MainView, initialHostsFilter string) *core.HostsManager {
 	updatesCh := make(chan core.HostsManagerUpdate, 128)
 	var hm *core.HostsManager
 
@@ -147,8 +154,10 @@ func initHostsManager(mainView *MainView) *core.HostsManager {
 	}()
 
 	hm = core.NewHostsManager(core.HostsManagerParams{
-		ConfigHosts: makeConfigHosts(),
-		UpdatesCh:   updatesCh,
+		ConfigHosts:        makeConfigHosts(),
+		InitialHostsFilter: initialHostsFilter,
+
+		UpdatesCh: updatesCh,
 	})
 
 	return hm
@@ -244,65 +253,99 @@ func main() {
 func makeConfigHosts() []core.ConfigHost {
 	hosts := []core.ConfigHost{}
 
-	for i := 0; i < 24; i++ {
-		addr := fmt.Sprintf("my-host-%.2d:22", i+1)
-		switch i + 1 {
-		case 1:
-			addr = "redacted:22"
-		case 2:
-			addr = "redacted:22"
-		case 3:
-			addr = "redacted:22"
-		case 4:
-			addr = "redacted:22"
-		case 5:
-			addr = "redacted:22"
-		case 6:
-			addr = "redacted:22"
-		case 7:
-			addr = "redacted:22"
-		case 8:
-			addr = "redacted:22"
-		case 9:
-			addr = "redacted:22"
-		case 10:
-			addr = "redacted:22"
-		case 11:
-			addr = "redacted:22"
-		case 12:
-			addr = "redacted:22"
-		case 13:
-			addr = "redacted:22"
-		case 14:
-			addr = "redacted:22"
-		case 15:
-			addr = "redacted:22"
-		case 16:
-			addr = "redacted:22"
-		case 17:
-			addr = "redacted:22"
-		case 18:
-			addr = "redacted:22"
-		case 19:
-			addr = "redacted:22"
-		case 20:
-			addr = "redacted:22"
-		case 21:
-			addr = "redacted:22"
-		case 22:
-			addr = "redacted:22"
-		case 23:
-			addr = "redacted:22"
-		case 24:
-			addr = "redacted:22"
+	f, _ := os.Open(filepath.Join(os.Getenv("HOME"), ".ssh", "dummy_config"))
+	cfg, _ := ssh_config.Decode(f)
+	for _, host := range cfg.Hosts {
+		name := host.Patterns[0].String()
+		hostName, err := cfg.Get(name, "HostName")
+		if err != nil {
+			continue
 		}
 
-		hosts = append(hosts, core.ConfigHost{
-			Name: fmt.Sprintf("my-host-%.2d", i+1),
-			Addr: addr,
-			User: "ubuntu",
-		})
+		port, err := cfg.Get(name, "Port")
+		if err != nil {
+			continue
+		}
+
+		user, err := cfg.Get(name, "User")
+		if err != nil {
+			continue
+		}
+
+		if name == "" || hostName == "" || port == "" || user == "" {
+			continue
+		}
+
+		hc := core.ConfigHost{
+			Name: name,
+			Addr: fmt.Sprintf("%s:%s", hostName, port),
+			User: user,
+		}
+
+		hosts = append(hosts, hc)
 	}
+
+	//os.Exit(1)
+
+	//for i := 0; i < 24; i++ {
+	//addr := fmt.Sprintf("my-host-%.2d:22", i+1)
+	//switch i + 1 {
+	//case 1:
+	//addr = "redacted:22"
+	//case 2:
+	//addr = "redacted:22"
+	//case 3:
+	//addr = "redacted:22"
+	//case 4:
+	//addr = "redacted:22"
+	//case 5:
+	//addr = "redacted:22"
+	//case 6:
+	//addr = "redacted:22"
+	//case 7:
+	//addr = "redacted:22"
+	//case 8:
+	//addr = "redacted:22"
+	//case 9:
+	//addr = "redacted:22"
+	//case 10:
+	//addr = "redacted:22"
+	//case 11:
+	//addr = "redacted:22"
+	//case 12:
+	//addr = "redacted:22"
+	//case 13:
+	//addr = "redacted:22"
+	//case 14:
+	//addr = "redacted:22"
+	//case 15:
+	//addr = "redacted:22"
+	//case 16:
+	//addr = "redacted:22"
+	//case 17:
+	//addr = "redacted:22"
+	//case 18:
+	//addr = "redacted:22"
+	//case 19:
+	//addr = "redacted:22"
+	//case 20:
+	//addr = "redacted:22"
+	//case 21:
+	//addr = "redacted:22"
+	//case 22:
+	//addr = "redacted:22"
+	//case 23:
+	//addr = "redacted:22"
+	//case 24:
+	//addr = "redacted:22"
+	//}
+
+	//hosts = append(hosts, core.ConfigHost{
+	//Name: fmt.Sprintf("my-host-%.2d", i+1),
+	//Addr: addr,
+	//User: "ubuntu",
+	//})
+	//}
 
 	return hosts
 }

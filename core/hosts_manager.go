@@ -39,7 +39,8 @@ type HostsManager struct {
 }
 
 type HostsManagerParams struct {
-	ConfigHosts []ConfigHost
+	ConfigHosts        []ConfigHost
+	InitialHostsFilter string
 
 	UpdatesCh chan<- HostsManagerUpdate
 }
@@ -49,7 +50,7 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 		params: params,
 		hcs:    make(map[string]ConfigHost, len(params.ConfigHosts)),
 
-		hostsFilter: "my-host-",
+		hostsFilter: params.InitialHostsFilter,
 
 		has:      map[string]*HostAgent{},
 		haStates: map[string]HostAgentState{},

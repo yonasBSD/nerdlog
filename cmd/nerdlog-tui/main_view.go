@@ -19,6 +19,8 @@ const (
 )
 
 type MainViewParams struct {
+	InitialHostsFilter string
+
 	App *tview.Application
 
 	// OnLogQuery is called by MainView whenever the user submits a query to get
@@ -54,6 +56,8 @@ type MainView struct {
 
 	statusLine *tview.TextView
 
+	hostsFilter string
+
 	// from, to represent the selected time range
 	from, to TimeOrDur
 
@@ -86,6 +90,8 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv := &MainView{
 		params: *params,
 	}
+
+	mv.setHostsFilter(params.InitialHostsFilter)
 
 	mv.rootPages = tview.NewPages()
 
@@ -152,7 +158,7 @@ func NewMainView(params *MainViewParams) *MainView {
 		mv.queryEditView.Show(QueryEditData{
 			Time:        ftr.String(),
 			Query:       mv.query,
-			HostsFilter: "todo", // TODO
+			HostsFilter: mv.hostsFilter,
 		})
 	})
 
@@ -567,6 +573,10 @@ func (mv *MainView) SetTimeRange(from, to TimeOrDur) {
 	mv.params.App.QueueUpdateDraw(func() {
 		mv.setTimeRange(from, to)
 	})
+}
+
+func (mv *MainView) setHostsFilter(s string) {
+	mv.hostsFilter = s
 }
 
 func (mv *MainView) doQuery() {
