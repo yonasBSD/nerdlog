@@ -405,7 +405,7 @@ func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 
 		colNames := mv.updateTableHeader(resp.Logs)
 		// Add all available logs
-		for i, rowIdx := len(resp.Logs)-1, 1; i >= 0; i, rowIdx = i-1, rowIdx+1 {
+		for i, rowIdx := 0, 1; i < len(resp.Logs); i, rowIdx = i+1, rowIdx+1 {
 			msg := resp.Logs[i]
 
 			mv.logsTable.SetCell(
@@ -428,8 +428,8 @@ func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 			//msg.
 		}
 
-		mv.logsTable.Select(0, 0)
-		mv.logsTable.ScrollToBeginning()
+		mv.logsTable.Select(len(resp.Logs), 0)
+		mv.logsTable.ScrollToEnd()
 
 		mv.bumpTimeRange()
 	})

@@ -21,6 +21,8 @@
   above)
 - Implement splitting context from log messages (and also retain the original msg,
   which should be shown when the user presses Enter)
+- Add original line numbers and filenames, and they should be shown when Enter
+  is pressed
 - Implement better indication of the ongoing query (idk how to do that yet)
 
 ## TODO next
@@ -55,3 +57,14 @@
 
 - Showing full original raw message in a messagebox
 - Get tags out of the message
+
+## Limitations
+
+- SSH access is required, so:
+  - might be an issue for prod
+  - only for EC2
+- Due to current log rotation policy, only 1-2 last days are available
+- Uses CPU & IO of the actual nodes, so if the node dies, we can't get logs
+
+^ All of those can be solved by having a separate machine and syncing all log
+files to it (just plain log files, nothing fancy).
