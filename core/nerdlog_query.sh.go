@@ -240,6 +240,13 @@ echo "from $from_nr to $to_nr" 1>&2
 
 echo "scanning logs" 1>&2
 
+prevlog_lines=$(get_prevlog_lines_from_cache)
+
+from_nr_int=$from_nr
+if [[ "$from_nr" == "" ]]; then
+  from_nr_int=0
+fi
+
 awk_pattern=''
 if [[ "$user_pattern" != "" ]]; then
   awk_pattern="!($user_pattern) {next}"
@@ -258,7 +265,9 @@ BEGIN { curline=0; maxlines=` + strconv.Itoa(maxNumLines) + ` }
 
   '$lines_until_check'
 
-  lastlines[curline++] = $0;
+  lastlines[curline] = $0;
+  lastNRs[curline] = NR;
+  curline++
   if (curline >= maxlines) {
     curline = 0;
   }
@@ -267,6 +276,9 @@ BEGIN { curline=0; maxlines=` + strconv.Itoa(maxNumLines) + ` }
 }
 
 END {
+  print "logfile:'$logfile1':0";
+  print "logfile:'$logfile2':'$prevlog_lines'";
+
   for (x in stats) {
     print "mstats:" x "," stats[x]
   }
@@ -281,7 +293,9 @@ END {
       continue;
     }
 
-    print "msg:" lastlines[ln];
+    curNR = lastNRs[ln] + '$from_nr_int' - 1;
+
+    print "msg:" curNR ":" lastlines[ln];
   }
 }
 '
@@ -289,7 +303,6 @@ logfiles="$logfile1 $logfile2"
 
 if [[ "$from_nr" != "" ]]; then
   # Let's see if we need to check the $logfile1 at all
-  prevlog_lines=$(get_prevlog_lines_from_cache)
   if [[ $(( prevlog_lines < from_nr )) == 1 ]]; then
     echo "Ignoring prev log file" 1>&2
     from_nr=$(( from_nr - prevlog_lines ))

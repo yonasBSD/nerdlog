@@ -52,6 +52,13 @@ type hostCmdQueryLogs struct {
 }
 
 type hostCmdCtxQueryLogs struct {
-	Resp     *LogResp
+	Resp *LogResp
+
+	logfiles []logfileWithStartingLinenumber
 	lastTime time.Time
+}
+
+type logfileWithStartingLinenumber struct {
+	filename       string
+	fromLinenumber int
 }

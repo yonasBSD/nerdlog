@@ -252,8 +252,16 @@ func NewMainView(params *MainViewParams) *MainView {
 			mv.params.App.SetFocus(mv.queryEditBtn)
 		}
 	}).SetSelectedFunc(func(row int, column int) {
-		// TODO: instead of showing current cell contents, show original raw message
-		mv.showMessagebox("msg", "Message", mv.logsTable.GetCell(row, 1).Text, nil)
+		timeCell := mv.logsTable.GetCell(row, 0)
+		msg := timeCell.GetReference().(core.LogMsg)
+
+		s := fmt.Sprintf(
+			"%s %s (line %d)\n\n%s",
+			msg.Context["source"], msg.LogFilename, msg.LogLinenumber,
+			msg.OrigLine,
+		)
+
+		mv.showMessagebox("msg", "Message", s, nil)
 	}) // TODO .SetInputCapture
 
 	/*
@@ -429,6 +437,8 @@ func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 					newTableCellLogmsg(msg.Context[colName]),
 				)
 			}
+
+			mv.logsTable.GetCell(rowIdx, 0).SetReference(msg)
 
 			//msg.
 		}

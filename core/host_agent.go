@@ -252,7 +252,8 @@ func (ha *HostAgent) run() {
 
 				case ha.curCmdCtx.cmd.queryLogs != nil:
 					// TODO: collect all the info into ha.curCmdCtx.queryLogsCtx
-					resp := ha.curCmdCtx.queryLogsCtx.Resp
+					respCtx := ha.curCmdCtx.queryLogsCtx
+					resp := respCtx.Resp
 
 					switch {
 					case strings.HasPrefix(line, "mstats:"):
@@ -281,9 +282,57 @@ func (ha *HostAgent) run() {
 							NumMsgs: n,
 						}
 
+					case strings.HasPrefix(line, "logfile:"):
+						msg := strings.TrimPrefix(line, "logfile:")
+						idx := strings.IndexRune(msg, ':')
+						if idx <= 0 {
+							resp.Errs = append(resp.Errs, errors.Errorf("parsing logfile msg: no number of lines %q", line))
+							continue
+						}
+
+						logFilename := msg[:idx]
+						logNumberOfLinesStr := msg[idx+1:]
+						logNumberOfLines, err := strconv.Atoi(logNumberOfLinesStr)
+						if err != nil {
+							resp.Errs = append(resp.Errs, errors.Errorf("parsing logfile msg: invalid number in %q", line))
+							continue
+						}
+
+						respCtx.logfiles = append(respCtx.logfiles, logfileWithStartingLinenumber{
+							filename:       logFilename,
+							fromLinenumber: logNumberOfLines,
+						})
+
 					case strings.HasPrefix(line, "msg:"):
 						// msg:Mar 26 17:08:34 localhost myapp[21134]: Mar 26 17:08:34.476329 foo bar foo bar
 						msg := strings.TrimPrefix(line, "msg:")
+						idx := strings.IndexRune(msg, ':')
+						if idx <= 0 {
+							resp.Errs = append(resp.Errs, errors.Errorf("parsing log msg: no line number in %q", line))
+							continue
+						}
+
+						logLinenoStr := msg[:idx]
+						msg = msg[idx+1:]
+
+						logLineno, err := strconv.Atoi(logLinenoStr)
+						if err != nil {
+							resp.Errs = append(resp.Errs, errors.Errorf("parsing log msg: invalid line number in %q", line))
+							continue
+						}
+
+						var logFilename string
+
+						for i := len(respCtx.logfiles) - 1; i >= 0; i-- {
+							logfile := respCtx.logfiles[i]
+							if logLineno > logfile.fromLinenumber {
+								logLineno -= logfile.fromLinenumber
+								logFilename = logfile.filename
+								break
+							}
+						}
+
+						origLine := msg
 
 						//if msg == "" {
 						//continue
@@ -347,7 +396,7 @@ func (ha *HostAgent) run() {
 
 						t = InferYear(t)
 
-						lastTime := ha.curCmdCtx.queryLogsCtx.lastTime
+						lastTime := respCtx.lastTime
 						decreasedTimestamp := false
 
 						if t.Before(lastTime) {
@@ -363,14 +412,19 @@ func (ha *HostAgent) run() {
 							Time:               t,
 							DecreasedTimestamp: decreasedTimestamp,
 
+							LogFilename:   logFilename,
+							LogLinenumber: logLineno,
+
 							Msg: msg,
 							// TODO: Context
 							Context: map[string]string{
 								"source": ha.params.Config.Name,
 							},
+
+							OrigLine: origLine,
 						})
 
-						ha.curCmdCtx.queryLogsCtx.lastTime = t
+						respCtx.lastTime = t
 					}
 				}
 

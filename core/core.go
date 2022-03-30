@@ -27,6 +27,11 @@ type LogMsg struct {
 	Time               time.Time
 	DecreasedTimestamp bool
 
+	LogFilename   string
+	LogLinenumber int
+
 	Msg     string
 	Context map[string]string
+
+	OrigLine string
 }
