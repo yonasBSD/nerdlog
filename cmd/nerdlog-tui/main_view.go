@@ -119,17 +119,22 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.queryInput = tview.NewInputField()
 	mv.queryInput.SetDoneFunc(func(key tcell.Key) {
 		switch key {
+
 		case tcell.KeyEnter:
 			mv.query = mv.queryInput.GetText()
+			mv.bumpTimeRange(false)
 			mv.doQuery()
 			queryInputApplyStyle()
+
 		case tcell.KeyEsc:
 			if mv.queryInput.GetText() != mv.query {
 				mv.queryInput.SetText(mv.query)
 				queryInputApplyStyle()
 			}
+
 		case tcell.KeyTab:
 			mv.params.App.SetFocus(mv.queryEditBtn)
+
 		case tcell.KeyBacktab:
 			mv.params.App.SetFocus(mv.logsTable)
 		}
@@ -446,7 +451,7 @@ func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 		mv.logsTable.Select(len(resp.Logs), 0)
 		mv.logsTable.ScrollToEnd()
 
-		mv.bumpTimeRange()
+		mv.bumpTimeRange(true)
 	})
 }
 
@@ -528,7 +533,7 @@ func (mv *MainView) setTimeRange(from, to TimeOrDur) {
 	mv.from = from
 	mv.to = to
 
-	mv.bumpTimeRange()
+	mv.bumpTimeRange(false)
 
 	rangeDur := mv.actualTo.Sub(mv.actualFrom)
 
@@ -547,7 +552,7 @@ func (mv *MainView) setTimeRange(from, to TimeOrDur) {
 }
 
 // bumpTimeRange only does something useful if the time is relative to current time.
-func (mv *MainView) bumpTimeRange() {
+func (mv *MainView) bumpTimeRange(updateHistogramRange bool) {
 	if mv.from.IsZero() {
 		panic("should never be here")
 	}
@@ -581,7 +586,9 @@ func (mv *MainView) bumpTimeRange() {
 	}
 
 	// Also update the histogram
-	mv.histogram.SetRange(int(mv.actualFrom.Unix()), int(mv.actualTo.Unix()))
+	if updateHistogramRange {
+		mv.histogram.SetRange(int(mv.actualFrom.Unix()), int(mv.actualTo.Unix()))
+	}
 }
 
 func truncateCeil(t time.Time, dur time.Duration) time.Time {
