@@ -70,7 +70,7 @@ function logFieldsToTimestamp(monthStr, day, hhmm) {
   hour = substr(hhmm, 1, 2)
   min = substr(hhmm, 4, 2)
 
-  return mktime(year " " month " " day " " hour " " min " " 0, 1)
+  return mktime(year " " month " " day " " hour " " min " " 0)
 }
 
 function formatNerdlogTime(timestamp) {
@@ -103,6 +103,11 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
 }
 
   '
+# TODO: ^ newer versions of awk support one more argument for mktime, which is to
+#         use UTC. Sadly versions deployed to our machines have older awk, but
+#         fortunately they all use UTC as local time, so shouldn't be an issue.
+#         Harder to debug locally though.
+# TODO: ^ move initialization of monthByName out of logFieldsToTimestamp somehow
 # TODO: ^ year needs to be inferred instead of hardcoding 2022
 # TODO: ^ if we fail to find the next timestamp and abort on 1000, print an error,
 # and then the Go part should see this error and report it to user
