@@ -772,7 +772,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		//fmt.Println("hey", ha.params.Config.Name, "cmd:", cmd)
 
 		//if ha.params.Config.Name == "my-host-10" {
-		//fmt.Fprintln(ha.debugFile, "cmd:", cmd)
+		//fmt.Fprintln(ha.debugFile, "cmd:", ha.params.Config.Name, ":", cmd)
 		//}
 
 		ha.conn.stdinBuf.Write([]byte(cmd))

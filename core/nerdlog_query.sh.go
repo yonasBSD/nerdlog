@@ -49,15 +49,78 @@ function refresh_cache { # {{{
   local awknrplus="NR"
 
   # Add new entries to cache, if needed
+
+  awk_functions='
+function logFieldsToTimestamp(monthStr, day, hhmm) {
+  monthByName["Jan"] = "01";
+  monthByName["Feb"] = "02";
+  monthByName["Mar"] = "03";
+  monthByName["Apr"] = "04";
+  monthByName["May"] = "05";
+  monthByName["Jun"] = "06";
+  monthByName["Jul"] = "07";
+  monthByName["Aug"] = "08";
+  monthByName["Sep"] = "09";
+  monthByName["Oct"] = "10";
+  monthByName["Nov"] = "11";
+  monthByName["Dec"] = "12";
+
+  month = monthByName[monthStr]
+  year = 2022
+  hour = substr(hhmm, 1, 2)
+  min = substr(hhmm, 4, 2)
+
+  return mktime(year " " month " " day " " hour " " min " " 0, 1)
+}
+
+function formatNerdlogTime(timestamp) {
+  return strftime("%b-%d-%H:%M", timestamp, 1)
+}
+
+function nerdlogTimestrToTImestamp(timestr) {
+  return logFieldsToTimestamp(substr(timestr, 1, 3), substr(timestr, 5, 2), substr(timestr, 8, 5));
+}
+
+function printIndexLine(timestr, linenr) {
+  print "idx\t" timestr "\t" linenr;
+}
+
+function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linenr) {
+  if (lastTimestr == "") {
+    printIndexLine(curTimestr, linenr);
+    return;
+  }
+
+  i = 0;
+  do {
+    nextTimestamp = lastTimestamp + 60
+    nextTimestr = formatNerdlogTime(nextTimestamp)
+
+    printIndexLine(nextTimestr, linenr);
+
+    lastTimestamp = nextTimestamp
+  } while (nextTimestamp < curTimestamp && i++ < 1000);
+}
+
+  '
+# TODO: ^ year needs to be inferred instead of hardcoding 2022
+# TODO: ^ if we fail to find the next timestamp and abort on 1000, print an error,
+# and then the Go part should see this error and report it to user
+
+  script1='{
+  curTimestamp = logFieldsToTimestamp($1, $2, $3)
+  curTimestr = formatNerdlogTime(curTimestamp)
+}'
+
   if [ -s $cachefile ]; then
     echo "caching new line numbers" 1>&2
 
     local typ="$(tail -n 1 $cachefile | cut -f1)"
-    local lastts="$(tail -n 1 $cachefile | cut -f2)"
+    local lastTimestr="$(tail -n 1 $cachefile | cut -f2)"
     local lastnr="$(tail -n 1 $cachefile | cut -f3)"
     local awknrplus="NR+$(( lastnr-1 ))"
 
-    echo hey $lastts 1>&2
+    echo hey $lastTimestr 1>&2
     echo hey2 $lastnr 1>&2
     #lastnr=$(( lastnr-1 ))
 
@@ -65,24 +128,30 @@ function refresh_cache { # {{{
     # the cache, so here we get this file size and below we don't cat it.
     local logfile1_numlines=0
 
-    cat $logfile1 $logfile2 | tail -n +$((lastnr-logfile1_numlines)) | awk "BEGIN { lastts = \"$lastts\" }"'
-  { curts = $1 "-" $2 "-" substr($3, 1, 5) }
-  ( lastts != curts ) { print "idx\t" curts "\t" NR+'$(( lastnr-1 ))'; lastts = curts }
+    cat $logfile1 $logfile2 | tail -n +$((lastnr-logfile1_numlines)) | awk "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; lastTimestamp = nerdlogTimestrToTImestamp(lastTimestr) }"'
+  '"$script1"'
+  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(( lastnr-1 ))'); lastTimestr = curTimestr; lastTimestamp = curTimestamp; }
   ' - >> $cachefile
   else
     echo "caching all line numbers" 1>&2
 
     echo "prevlog_modtime	$(stat -c %y $logfile1)" > $cachefile
 
-    cat $logfile1 | awk '
-  { curts = $1 "-" $2 "-" substr($3, 1, 5) }
-  ( lastts != curts ) { print "idx\t" curts "\t" NR; lastts = curts }
+    cat $logfile1 | awk "$awk_functions"'
+  '"$script1"'
+  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR); lastTimestr = curTimestr; lastTimestamp = curTimestamp; }
   END { print "prevlog_lines\t" NR }
   ' - >> $cachefile
 
-    cat $logfile2 | awk '
-  { curts = $1 "-" $2 "-" substr($3, 1, 5) }
-  ( lastts != curts ) { print "idx\t" curts "\t" NR+'$(get_prevlog_lines_from_cache)'; lastts = curts }
+  # Before we start handling $logfile2, gotta read the last idx line (which is
+  # last-but-one line) and set it for the next script, otherwise there is a gap
+  # in index before the first line in the $logfile2.
+  # TODO: make sure that if there are no logs in the $lotfile1, we don't screw up.
+    local lastTimestr="$(tail -n 2 $cachefile | head -n 1 | cut -f2)"
+    #echo hey3 $lastTimestr 1>&2
+    cat $logfile2 | awk "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; lastTimestamp = nerdlogTimestrToTImestamp(lastTimestr) }"'
+  '"$script1"'
+  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(get_prevlog_lines_from_cache)'); lastTimestr = curTimestr;  lastTimestamp = curTimestamp; }
   ' - >> $cachefile
   fi
 } # }}}
@@ -109,13 +178,13 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   logfile1_stored_modtime="$(get_prevlog_modtime_from_cache)"
   logfile1_cur_modtile=$(stat -c %y $logfile1)
   if [[ "$logfile1_stored_modtime" != "$logfile1_cur_modtile" ]]; then
-    echo "logfile has changed: stored '$logfile1_stored_modtime', actual '$logfile1_cur_modtile'" 1>&2
-    rm $cachefile
+    echo "logfile has changed: stored '$logfile1_stored_modtime', actual '$logfile1_cur_modtile', deleting it" 1>&2
+    rm -f $cachefile
   fi
 
   if ! get_prevlog_lines_from_cache > /dev/null; then
     echo "broken cache file (no prevlog lines), deleting it" 1>&2
-    rm $cachefile
+    rm -f $cachefile
   fi
 
   refresh_and_retry=0
