@@ -24,7 +24,9 @@ type MinuteStatsItem struct {
 }
 
 type LogMsg struct {
-	Time    time.Time
+	Time               time.Time
+	DecreasedTimestamp bool
+
 	Msg     string
 	Context map[string]string
 }

@@ -348,6 +348,7 @@ func (ha *HostAgent) run() {
 						t = InferYear(t)
 
 						lastTime := ha.curCmdCtx.queryLogsCtx.lastTime
+						decreasedTimestamp := false
 
 						if t.Before(lastTime) {
 							// Time has decreased: this might happen if the previous log line had
@@ -355,11 +356,14 @@ func (ha *HostAgent) run() {
 							// a second precision. Then we just hackishly set the current timestamp
 							// to be the same.
 							t = lastTime
+							decreasedTimestamp = true
 						}
 
 						resp.Logs = append(resp.Logs, LogMsg{
-							Time: t,
-							Msg:  msg,
+							Time:               t,
+							DecreasedTimestamp: decreasedTimestamp,
+
+							Msg: msg,
 							// TODO: Context
 							Context: map[string]string{
 								"source": ha.params.Config.Name,

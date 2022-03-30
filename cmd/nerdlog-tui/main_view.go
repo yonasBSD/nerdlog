@@ -408,9 +408,14 @@ func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 		for i, rowIdx := 0, 1; i < len(resp.Logs); i, rowIdx = i+1, rowIdx+1 {
 			msg := resp.Logs[i]
 
+			timeStr := msg.Time.Format(logsTableTimeLayout)
+			if msg.DecreasedTimestamp {
+				timeStr = ""
+			}
+
 			mv.logsTable.SetCell(
 				rowIdx, 0,
-				newTableCellLogmsg(msg.Time.Format(logsTableTimeLayout)).SetTextColor(tcell.ColorYellow),
+				newTableCellLogmsg(timeStr).SetTextColor(tcell.ColorYellow),
 			)
 
 			mv.logsTable.SetCell(
