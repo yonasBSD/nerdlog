@@ -572,8 +572,8 @@ func (mv *MainView) bumpTimeRange() {
 	}
 
 	// Snap both actualFrom and actualTo to the 1m grid, rounding forward.
-	mv.actualFrom = mv.actualFrom.Truncate(1 * time.Minute).Add(1 * time.Minute)
-	mv.actualTo = mv.actualTo.Truncate(1 * time.Minute).Add(1 * time.Minute)
+	mv.actualFrom = truncateCeil(mv.actualFrom, 1*time.Minute)
+	mv.actualTo = truncateCeil(mv.actualTo, 1*time.Minute)
 
 	// If from is after than to, swap them.
 	if mv.actualFrom.After(mv.actualTo) {
@@ -582,6 +582,15 @@ func (mv *MainView) bumpTimeRange() {
 
 	// Also update the histogram
 	mv.histogram.SetRange(int(mv.actualFrom.Unix()), int(mv.actualTo.Unix()))
+}
+
+func truncateCeil(t time.Time, dur time.Duration) time.Time {
+	t2 := t.Truncate(dur)
+	if t2.Equal(t) {
+		return t
+	}
+
+	return t2.Add(dur)
 }
 
 func (mv *MainView) SetTimeRange(from, to TimeOrDur) {
