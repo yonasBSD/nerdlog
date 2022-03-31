@@ -379,6 +379,7 @@ func (hm *HostsManager) mergeLogRespsAndSend() {
 		MinuteStats: make(map[int64]MinuteStatsItem),
 	}
 
+	var numMsgsTotal int
 	var logsCoveredSince time.Time
 
 	for _, resp := range resps {
@@ -386,6 +387,8 @@ func (hm *HostsManager) mergeLogRespsAndSend() {
 			ret.MinuteStats[k] = MinuteStatsItem{
 				NumMsgs: ret.MinuteStats[k].NumMsgs + v.NumMsgs,
 			}
+
+			numMsgsTotal += v.NumMsgs
 		}
 
 		ret.Logs = append(ret.Logs, resp.Logs...)
@@ -407,6 +410,7 @@ func (hm *HostsManager) mergeLogRespsAndSend() {
 		return !ret.Logs[i].Time.Before(logsCoveredSince)
 	})
 	ret.Logs = ret.Logs[coveredSinceIdx:]
+	ret.NumMsgsTotal = numMsgsTotal
 
 	hm.sendLogRespUpdate(ret)
 }

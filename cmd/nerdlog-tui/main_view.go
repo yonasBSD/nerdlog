@@ -54,7 +54,8 @@ type MainView struct {
 
 	histogram *Histogram
 
-	statusLine *tview.TextView
+	statusLineLeft  *tview.TextView
+	statusLineRight *tview.TextView
 
 	hostsFilter string
 
@@ -291,10 +292,19 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mainFlex.AddItem(mv.logsTable, 0, 1, false)
 
-	mv.statusLine = tview.NewTextView()
-	mv.statusLine.SetScrollable(false).SetDynamicColors(true)
+	mv.statusLineLeft = tview.NewTextView()
+	mv.statusLineLeft.SetScrollable(false).SetDynamicColors(true)
 
-	mainFlex.AddItem(mv.statusLine, 1, 0, false)
+	mv.statusLineRight = tview.NewTextView()
+	mv.statusLineRight.SetTextAlign(tview.AlignRight).SetScrollable(false).SetDynamicColors(true)
+
+	statusLineFlex := tview.NewFlex().SetDirection(tview.FlexColumn)
+	statusLineFlex.
+		AddItem(mv.statusLineLeft, 0, 1, false).
+		AddItem(nil, 1, 0, false).
+		AddItem(mv.statusLineRight, 0, 1, true)
+
+	mainFlex.AddItem(statusLineFlex, 1, 0, false)
 
 	mv.cmdInput = tview.NewInputField()
 	mv.cmdInput.SetChangedFunc(func(text string) {
@@ -371,7 +381,7 @@ func (mv *MainView) ApplyHMState(hmState *core.HostsManagerState) {
 		sb.WriteString(" ")
 		sb.WriteString(getStatuslineNumStr("🖳", hmState.NumUnused, "gray"))
 
-		mv.statusLine.SetText(sb.String())
+		mv.statusLineLeft.SetText(sb.String())
 	})
 }
 
@@ -450,6 +460,8 @@ func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 
 		mv.logsTable.Select(len(resp.Logs), 0)
 		mv.logsTable.ScrollToEnd()
+
+		mv.statusLineRight.SetText(fmt.Sprintf("%d / %d", len(resp.Logs), resp.NumMsgsTotal))
 
 		mv.bumpTimeRange(true)
 	})
