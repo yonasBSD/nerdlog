@@ -5,6 +5,11 @@ import "strconv"
 // TODO: convert it to an embedded file
 var nerdlogQuerySh = `#/bin/bash
 
+# Arguments:
+#
+# --from, --to: time in the format Jan-02-15:04. NOTE it's important to keep
+#               the leading zero!
+
 cachefile=/tmp/nerdlog_query_cache
 
 logfile1=/var/log/syslog.1

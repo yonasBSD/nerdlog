@@ -19,8 +19,28 @@ import (
 
 const connectionTimeout = 5 * time.Second
 
-const queryLogsTimeLayout = "Jan-02-15:04"
-const syslogTimeLayout = "Jan 02 15:04:05"
+// It's pretty messy, but to keep things optimized for speed as much as we can,
+// we have to use different time formats.
+//
+// queryLogsArgsTimeLayout is used to format the --from and --to arguments for
+// nerdlog_query.sh, and it must have leading zeros, since that's how awk's
+// strftime formats time and thus that's how the index file has it formatted and
+// --from, --to must match exactly. (strftime has %d, which has leading zeros,
+// and %e, which has leading spaces, but there are no options to have no
+// leading characters at all)
+//
+// queryLogsMstatsTimeLayout is used to parse the "mstats" (message stats)
+// lines output by nerdlog_query.sh, and it uses no leading spaces or zeros,
+// because we just operate with awk's "fields" of log lines there, and in
+// syslog, those fields are separated by whitespace; so in syslog we get like
+// "Apr  9" or "Apr 10", but in mstats we'll have "Apr-9" or "Apr-10".
+//
+// To avoid reformatting things manually and thus slowing them down, we just use
+// different formats.
+const queryLogsArgsTimeLayout = "Jan-02-15:04"
+const queryLogsMstatsTimeLayout = "Jan-2-15:04"
+
+const syslogTimeLayout = "Jan _2 15:04:05"
 
 type HostAgent struct {
 	params HostAgentParams
@@ -265,7 +285,7 @@ func (ha *HostAgent) run() {
 							continue
 						}
 
-						t, err := time.Parse(queryLogsTimeLayout, parts[0])
+						t, err := time.Parse(queryLogsMstatsTimeLayout, parts[0])
 						if err != nil {
 							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing mstats"))
 							continue
@@ -339,16 +359,25 @@ func (ha *HostAgent) run() {
 						//continue
 						//}
 
+						// Mar  6 17:08:35 localhost redacted[21
 						// Mar 26 17:08:35 localhost redacted[21
 
 						// Find the index of third space, which would indicate where
 						// timestamp ends
 						ts1Len := 0
 						ns := 0
+						inWhitespace := false
 						for i, r := range msg {
 							if r != ' ' {
+								inWhitespace = false
 								continue
 							}
+
+							if inWhitespace {
+								continue
+							}
+
+							inWhitespace = true
 
 							ns++
 							if ns >= 3 {
@@ -843,11 +872,11 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		}
 
 		if !cmdCtx.cmd.queryLogs.from.IsZero() {
-			parts = append(parts, "--from", cmdCtx.cmd.queryLogs.from.UTC().Format(queryLogsTimeLayout))
+			parts = append(parts, "--from", cmdCtx.cmd.queryLogs.from.UTC().Format(queryLogsArgsTimeLayout))
 		}
 
 		if !cmdCtx.cmd.queryLogs.to.IsZero() {
-			parts = append(parts, "--to", cmdCtx.cmd.queryLogs.to.UTC().Format(queryLogsTimeLayout))
+			parts = append(parts, "--to", cmdCtx.cmd.queryLogs.to.UTC().Format(queryLogsArgsTimeLayout))
 		}
 
 		if cmdCtx.cmd.queryLogs.query != "" {
