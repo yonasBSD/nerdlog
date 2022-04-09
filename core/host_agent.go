@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/juju/errors"
 	"golang.org/x/crypto/ssh"
@@ -401,11 +402,41 @@ func (ha *HostAgent) run() {
 
 						if t.Before(lastTime) {
 							// Time has decreased: this might happen if the previous log line had
-							// a precies timestamp with microseconds, but the current line only has
+							// a precise timestamp with microseconds, but the current line only has
 							// a second precision. Then we just hackishly set the current timestamp
 							// to be the same.
 							t = lastTime
 							decreasedTimestamp = true
+						}
+
+						ctxMap := map[string]string{
+							"source": ha.params.Config.Name,
+						}
+
+						// Extract context tags from msg
+						lastEqIdx := strings.LastIndexByte(msg, '=')
+					tagsLoop:
+						for ; lastEqIdx >= 0; lastEqIdx = strings.LastIndexByte(msg, '=') {
+							val := msg[lastEqIdx+1:]
+							msg = msg[:lastEqIdx]
+							var key string
+
+							lastSpaceIdx := strings.LastIndexByte(msg, ' ')
+							if lastSpaceIdx >= 0 {
+								key = msg[lastSpaceIdx+1:]
+								msg = msg[:lastSpaceIdx]
+							} else {
+								key = msg
+								msg = ""
+							}
+
+							for _, r := range key {
+								if !unicode.IsLetter(r) && !unicode.IsNumber(r) && r != '_' && r != '-' {
+									continue tagsLoop
+								}
+							}
+
+							ctxMap[key] = val
 						}
 
 						resp.Logs = append(resp.Logs, LogMsg{
@@ -415,11 +446,8 @@ func (ha *HostAgent) run() {
 							LogFilename:   logFilename,
 							LogLinenumber: logLineno,
 
-							Msg: msg,
-							// TODO: Context
-							Context: map[string]string{
-								"source": ha.params.Config.Name,
-							},
+							Msg:     msg,
+							Context: ctxMap,
 
 							OrigLine: origLine,
 						})

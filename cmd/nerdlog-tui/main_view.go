@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -395,10 +396,23 @@ func getStatuslineNumStr(icon string, num int, color string) string {
 }
 
 func (mv *MainView) updateTableHeader(msgs []core.LogMsg) (colNames []string) {
-	colNames = []string{"time", "message", "source"}
-	// TODO: add all context tags from the available logs
+	tagNamesSet := map[string]struct{}{}
+	for _, msg := range msgs {
+		for name := range msg.Context {
+			tagNamesSet[name] = struct{}{}
+		}
+	}
 
-	// TODO: clear or update table from the prev state
+	delete(tagNamesSet, "source")
+
+	tagNames := make([]string, 0, len(tagNamesSet))
+	for name := range tagNamesSet {
+		tagNames = append(tagNames, name)
+	}
+
+	sort.Strings(tagNames)
+
+	colNames = append([]string{"time", "message", "source"}, tagNames...)
 
 	// Add header
 	for i, colName := range colNames {
