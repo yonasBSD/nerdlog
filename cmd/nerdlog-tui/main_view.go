@@ -204,9 +204,21 @@ func NewMainView(params *MainViewParams) *MainView {
 	})
 	mv.histogram.SetXMarker(func(from, to int, numChars int) []int {
 		// TODO proper impl
-		step := (to - from) / 6
-		if step == 0 {
-			return nil
+
+		diff := to - from
+
+		var step int
+		if diff <= 10*60 {
+			step = 60
+		} else {
+			step = diff / 6
+			if step == 0 {
+				return nil
+			}
+
+			// Snap to 1m grid: make sure our marks will be on minute boundaries
+			tmp := (step + 60/2) / 60
+			step = tmp * 60
 		}
 
 		ret := []int{}
