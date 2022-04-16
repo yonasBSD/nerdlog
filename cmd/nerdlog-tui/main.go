@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/dimonomid/nerdlog/core"
@@ -15,6 +16,11 @@ import (
 
 // TODO: make multiple of them
 const inputTimeLayout2 = "Jan02_15:04"
+
+var (
+	lastLogResp     *core.LogRespTotal
+	lastLogRespLock sync.Mutex
+)
 
 func main() {
 	var hm *core.HostsManager
@@ -38,11 +44,62 @@ func main() {
 				ftr, err := ParseFromToRange(strings.Join(parts[1:], " "))
 				if err != nil {
 					mainView.ShowMessagebox("err", "Error", err.Error(), nil)
-					return
+					continue
 				}
 
 				mainView.SetTimeRange(ftr.From, ftr.To)
 				mainView.DoQuery()
+
+			case "w", "write":
+				//if len(parts) < 2 {
+				//mainView.ShowMessagebox("err", "Error", ":write requires an argument: the filename to write", nil)
+				//continue
+				//}
+
+				//fname := parts[1]
+
+				fname := "/tmp/last_nerdlog"
+				if len(parts) >= 2 {
+					fname = parts[1]
+				}
+
+				lastLogRespLock.Lock()
+				lr := lastLogResp
+				lastLogRespLock.Unlock()
+
+				if lr == nil {
+					mainView.ShowMessagebox("err", "Error", "No logs yet", nil)
+					continue
+				}
+
+				lfile, err := os.Create(fname)
+				if err != nil {
+					mainView.ShowMessagebox("err", "Error", fmt.Sprintf("Failed to open %s for writing: %s", fname, err), nil)
+					continue
+				}
+
+				for _, logMsg := range lr.Logs {
+					fmt.Fprintf(lfile, "%s <ssh -t %s vim +%d %s>\n",
+						logMsg.OrigLine,
+						logMsg.Context["source"], logMsg.LogLinenumber, logMsg.LogFilename,
+					)
+				}
+
+				lfile.Close()
+
+				// TODO: make it less intrusive, just a message over command line like in vim.
+				mainView.ShowMessagebox("err", "Fyi", fmt.Sprintf("Saved to %s", fname), nil)
+
+			case "set":
+				if len(parts) < 2 {
+					mainView.ShowMessagebox("err", "Error", "set requires an argument", nil)
+					continue
+				}
+
+				switch parts[1] {
+				case "numlines", "maxnumlines":
+					mainView.ShowMessagebox("err", "Error", "not implemented", nil)
+				}
 
 			default:
 				mainView.ShowMessagebox("err", "Error", fmt.Sprintf("unknown command %q", parts[0]), nil)
@@ -128,7 +185,13 @@ func initHostsManager(mainView *MainView, initialHostsFilter string) *core.Hosts
 					mainView.ShowMessagebox("err", "Log query error", upd.LogResp.Errs[0].Error(), nil)
 					continue
 				}
+
 				mainView.ApplyLogs(upd.LogResp)
+
+				// TODO: do it less hacky. It's only needed for the :w command
+				lastLogRespLock.Lock()
+				lastLogResp = upd.LogResp
+				lastLogRespLock.Unlock()
 
 			default:
 				panic("empty hosts manager update")
