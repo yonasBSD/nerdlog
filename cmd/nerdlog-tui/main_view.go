@@ -123,7 +123,7 @@ func NewMainView(params *MainViewParams) *MainView {
 		switch key {
 
 		case tcell.KeyEnter:
-			mv.query = mv.queryInput.GetText()
+			mv.setQuery(mv.queryInput.GetText())
 			mv.bumpTimeRange(false)
 			mv.doQuery()
 			queryInputApplyStyle()
@@ -346,8 +346,18 @@ func NewMainView(params *MainViewParams) *MainView {
 		DoneFunc: func(data QueryEditData) error {
 			err := mv.params.OnHostsFilterChange(data.HostsFilter)
 			if err != nil {
-				return errors.Trace(err)
+				return errors.Annotate(err, "hosts")
 			}
+
+			ftr, err := ParseFromToRange(data.Time)
+			if err != nil {
+				return errors.Annotatef(err, "time")
+			}
+
+			mv.setQuery(data.Query)
+			mv.setTimeRange(ftr.From, ftr.To)
+			mv.doQuery()
+			queryInputApplyStyle()
 
 			return nil
 		},
@@ -553,6 +563,11 @@ func newTableCellLogmsg(text string) *tview.TableCell {
 	mainFlex.AddItem(mv.bottomForm, 3, 0, false)
 
 */
+
+func (mv *MainView) setQuery(q string) {
+	mv.queryInput.SetText(q)
+	mv.query = q
+}
 
 func (mv *MainView) setTimeRange(from, to TimeOrDur) {
 	if from.IsZero() {

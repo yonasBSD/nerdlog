@@ -36,29 +36,13 @@ func main() {
 
 			switch parts[0] {
 			case "time":
-				if len(parts) < 2 {
-					mainView.ShowMessagebox("err", "Error", ":time requires an argument, like -5h", nil)
-					return
-				}
-
-				from, err := parseAndInferTimeOrDur(inputTimeLayout2, parts[1])
+				ftr, err := ParseFromToRange(strings.Join(parts[1:], " "))
 				if err != nil {
-					mainView.ShowMessagebox("err", "Error", "invalid 'from' duration: "+err.Error(), nil)
+					mainView.ShowMessagebox("err", "Error", err.Error(), nil)
 					return
 				}
 
-				to := TimeOrDur{}
-
-				if len(parts) >= 3 && parts[2] != "" {
-					var err error
-					to, err = parseAndInferTimeOrDur(inputTimeLayout2, parts[2])
-					if err != nil {
-						mainView.ShowMessagebox("err", "Error", "invalid 'to' duration: "+err.Error(), nil)
-						return
-					}
-				}
-
-				mainView.SetTimeRange(from, to)
+				mainView.SetTimeRange(ftr.From, ftr.To)
 				mainView.DoQuery()
 
 			default:

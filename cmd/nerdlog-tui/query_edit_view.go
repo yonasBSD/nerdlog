@@ -13,22 +13,18 @@ var queryLabelText = `Query (awk syntax). Examples:
 `
 
 /*
-var timeLabelText = `Time range. Both "From" and "To" can either be absolute like "[yellow]Mar27 12:00[-]", or relative
+var timeLabelText = `Time range. Both "From" and "To" can either be absolute like "[yellow]Mar27_12:00[-]", or relative
 like "[yellow]-2h30m[-]" (relative to current time). The "To" can also be "now" or just an empty string,
 in which case the current time will be used. Absolute time is in UTC.
 `
 */
 
-var timeLabelText = `Time range in the format "[yellow]<time>[ to <time>][-]", where [yellow]<time>[-] is either absolute like "[yellow]Mar27 12:00[-]"
+var timeLabelText = `Time range in the format "[yellow]<time>[ to <time>][-]", where [yellow]<time>[-] is either absolute like "[yellow]Mar27_12:00[-]"
 (in UTC), or relative like "[yellow]-2h30m[-]" (relative to current time). If the "to" part is omitted,
-current time is used. Examples:
-[yellow]1h[-]
-
-like "[yellow]-2h30m[-]" (relative to current time). The "To" can also be "now" or just an empty string,
-in which case the current time will be used. Absolute time is in UTC.
+current time is used.
 `
 
-var hostsLabelText = `Hosts. TODO explain
+var hostsLabelText = `Hosts. For now, just a substring, e.g. "[yellow]my-host-[-]"
 `
 
 type QueryEditViewParams struct {
@@ -143,6 +139,7 @@ func NewQueryEditView(
 
 	hostsLabel := tview.NewTextView()
 	hostsLabel.SetText(hostsLabelText)
+	hostsLabel.SetDynamicColors(true)
 	qev.flex.AddItem(hostsLabel, 1, 0, false)
 
 	qev.hostsInput = tview.NewInputField()
