@@ -36,6 +36,8 @@ type HostsManager struct {
 	respCh        chan hostCmdRes
 
 	curQueryLogsCtx *manQueryLogsCtx
+
+	curLogs manLogsCtx
 }
 
 type HostsManagerParams struct {
@@ -152,34 +154,47 @@ func (hm *HostsManager) run() {
 			switch {
 			case req.queryLogs != nil:
 				if hm.numNotConnected > 0 {
-					hm.sendLogRespUpdate(&LogResp{
+					hm.sendLogRespUpdate(&LogRespTotal{
 						Errs: []error{errors.Errorf("not connected to all hosts yet")},
 					})
 					continue
 				}
 
 				if hm.curQueryLogsCtx != nil {
-					hm.sendLogRespUpdate(&LogResp{
+					hm.sendLogRespUpdate(&LogRespTotal{
 						Errs: []error{errors.Errorf("busy with another query")},
 					})
 					continue
 				}
 
 				hm.curQueryLogsCtx = &manQueryLogsCtx{
-					resps: make(map[string]*LogResp, len(hm.has)),
-					errs:  map[string]error{},
+					loadEarlier: req.queryLogs.LoadEarlier,
+					resps:       make(map[string]*LogResp, len(hm.has)),
+					errs:        map[string]error{},
 				}
 
 				// sendStateUpdate must be done after setting curQueryLogsCtx.
 				hm.sendStateUpdate()
 
-				for _, ha := range hm.has {
+				for hostName, ha := range hm.has {
+					var linesUntil int
+					if req.queryLogs.LoadEarlier {
+						// Set linesUntil
+						if nodeCtx, ok := hm.curLogs.perNode[hostName]; ok {
+							if len(nodeCtx.logs) > 0 {
+								linesUntil = nodeCtx.logs[0].CombinedLinenumber
+							}
+						}
+					}
+
 					ha.EnqueueCmd(hostCmd{
 						respCh: hm.respCh,
 						queryLogs: &hostCmdQueryLogs{
 							from:  req.queryLogs.From,
 							to:    req.queryLogs.To,
 							query: req.queryLogs.Query,
+
+							linesUntil: linesUntil,
 						},
 					})
 				}
@@ -290,17 +305,33 @@ func (hm *HostsManager) Ping() {
 }
 
 type manQueryLogsCtx struct {
+	// If loadEarlier is true, it means we're only loading the logs _before_ the ones
+	// we already had.
+	loadEarlier bool
+
 	// resps is a map from host name to its response. Once all responses have
 	// been collected, we'll start merging them together.
 	resps map[string]*LogResp
 	errs  map[string]error
 }
 
+type manLogsCtx struct {
+	minuteStats  map[int64]MinuteStatsItem
+	numMsgsTotal int
+
+	perNode map[string]*manLogsNodeCtx
+}
+
+type manLogsNodeCtx struct {
+	logs          []LogMsg
+	isMaxNumLines bool
+}
+
 type HostsManagerUpdate struct {
 	// Exactly one of the fields below must be non-nil
 
 	State   *HostsManagerState
-	LogResp *LogResp
+	LogResp *LogRespTotal
 }
 
 type HostsManagerState struct {
@@ -350,7 +381,7 @@ func (hm *HostsManager) sendStateUpdate() {
 	}
 }
 
-func (hm *HostsManager) sendLogRespUpdate(resp *LogResp) {
+func (hm *HostsManager) sendLogRespUpdate(resp *LogRespTotal) {
 	hm.params.UpdatesCh <- HostsManagerUpdate{
 		LogResp: resp,
 	}
@@ -370,33 +401,59 @@ func (hm *HostsManager) mergeLogRespsAndSend() {
 			return errs2[i].Error() < errs2[j].Error()
 		})
 
-		hm.sendLogRespUpdate(&LogResp{
+		hm.sendLogRespUpdate(&LogRespTotal{
 			Errs: errs2,
 		})
+
+		return
 	}
 
-	ret := &LogResp{
-		MinuteStats: make(map[int64]MinuteStatsItem),
-	}
-
-	var numMsgsTotal int
-	var logsCoveredSince time.Time
-
-	for _, resp := range resps {
-		for k, v := range resp.MinuteStats {
-			ret.MinuteStats[k] = MinuteStatsItem{
-				NumMsgs: ret.MinuteStats[k].NumMsgs + v.NumMsgs,
-			}
-
-			numMsgsTotal += v.NumMsgs
+	// If we're not adding to already existing logs, reset w/e we've had already,
+	// and calculate minuteStats from the resps.
+	if !hm.curQueryLogsCtx.loadEarlier {
+		hm.curLogs = manLogsCtx{
+			minuteStats: map[int64]MinuteStatsItem{},
+			perNode:     map[string]*manLogsNodeCtx{},
 		}
 
-		ret.Logs = append(ret.Logs, resp.Logs...)
+		for nodeName, resp := range resps {
+			for k, v := range resp.MinuteStats {
+				hm.curLogs.minuteStats[k] = MinuteStatsItem{
+					NumMsgs: hm.curLogs.minuteStats[k].NumMsgs + v.NumMsgs,
+				}
+
+				hm.curLogs.numMsgsTotal += v.NumMsgs
+			}
+
+			hm.curLogs.perNode[nodeName] = &manLogsNodeCtx{
+				logs:          resp.Logs,
+				isMaxNumLines: len(resp.Logs) == maxNumLines,
+			}
+		}
+	} else {
+		// Add to existing logs
+		for nodeName, resp := range resps {
+			pn := hm.curLogs.perNode[nodeName]
+			pn.logs = append(resp.Logs, pn.logs...)
+			pn.isMaxNumLines = len(resp.Logs) == maxNumLines
+		}
+	}
+
+	ret := &LogRespTotal{
+		MinuteStats:   hm.curLogs.minuteStats,
+		NumMsgsTotal:  hm.curLogs.numMsgsTotal,
+		LoadedEarlier: hm.curQueryLogsCtx.loadEarlier,
+	}
+
+	var logsCoveredSince time.Time
+
+	for _, pn := range hm.curLogs.perNode {
+		ret.Logs = append(ret.Logs, pn.logs...)
 
 		// If the timespan covered by logs from this host is shorter than what
 		// we've seen before, remember it.
-		if len(resp.Logs) == maxNumLines && logsCoveredSince.Before(resp.Logs[0].Time) {
-			logsCoveredSince = resp.Logs[0].Time
+		if pn.isMaxNumLines && logsCoveredSince.Before(pn.logs[0].Time) {
+			logsCoveredSince = pn.logs[0].Time
 		}
 	}
 
@@ -410,7 +467,6 @@ func (hm *HostsManager) mergeLogRespsAndSend() {
 		return !ret.Logs[i].Time.Before(logsCoveredSince)
 	})
 	ret.Logs = ret.Logs[coveredSinceIdx:]
-	ret.NumMsgsTotal = numMsgsTotal
 
 	hm.sendLogRespUpdate(ret)
 }

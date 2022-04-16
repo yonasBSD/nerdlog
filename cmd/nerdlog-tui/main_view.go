@@ -19,6 +19,11 @@ const (
 	pageNameEditQueryParams = "message"
 )
 
+const (
+	// rowIdxLoadOlder is the index of the row acting as a button to load more (older) logs
+	rowIdxLoadOlder = 1
+)
+
 type MainViewParams struct {
 	InitialHostsFilter string
 
@@ -70,7 +75,7 @@ type MainView struct {
 	// and to, and they both can't be zero.
 	actualFrom, actualTo time.Time
 
-	curLogResp *core.LogResp
+	curLogResp *core.LogRespTotal
 	// statsFrom and statsTo represent the first and last element present
 	// in curLogResp.MinuteStats. Note that this range might be smaller than
 	// (from, to), because for some minute stats might be missing. statsFrom
@@ -263,6 +268,28 @@ func NewMainView(params *MainViewParams) *MainView {
 			mv.params.App.SetFocus(mv.queryEditBtn)
 		}
 	}).SetSelectedFunc(func(row int, column int) {
+		if row == rowIdxLoadOlder {
+			// Request to load more (older) logs
+
+			// Do the query to core
+			mv.params.OnLogQuery(core.QueryLogsParams{
+				From:  mv.actualFrom,
+				To:    mv.actualTo,
+				Query: mv.query,
+
+				LoadEarlier: true,
+			})
+
+			// Update the cell text
+			mv.logsTable.SetCell(
+				rowIdxLoadOlder, 0,
+				newTableCellButton("... loading ..."),
+			)
+			return
+		}
+
+		// "Click" on a data cell: show original message
+
 		timeCell := mv.logsTable.GetCell(row, 0)
 		msg := timeCell.GetReference().(core.LogMsg)
 
@@ -439,7 +466,7 @@ func (mv *MainView) updateTableHeader(msgs []core.LogMsg) (colNames []string) {
 	return colNames
 }
 
-func (mv *MainView) ApplyLogs(resp *core.LogResp) {
+func (mv *MainView) ApplyLogs(resp *core.LogRespTotal) {
 	mv.params.App.QueueUpdateDraw(func() {
 		mv.curLogResp = resp
 
@@ -450,13 +477,21 @@ func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 
 		mv.histogram.SetData(histogramData)
 
-		// TODO: when we implement loading _more_ logs for the same query,
-		// we shouldn't clear table or selection
+		// TODO: perhaps optimize it, instead of clearing and repopulating whole table
+		oldNumRows := mv.logsTable.GetRowCount()
+		selectedRow, _ := mv.logsTable.GetSelection()
+		offsetRow, offsetCol := mv.logsTable.GetOffset()
 		mv.logsTable.Clear()
 
 		colNames := mv.updateTableHeader(resp.Logs)
+
+		mv.logsTable.SetCell(
+			rowIdxLoadOlder, 0,
+			newTableCellButton("< LOAD OLDER >"),
+		)
+
 		// Add all available logs
-		for i, rowIdx := 0, 1; i < len(resp.Logs); i, rowIdx = i+1, rowIdx+1 {
+		for i, rowIdx := 0, 2; i < len(resp.Logs); i, rowIdx = i+1, rowIdx+1 {
 			msg := resp.Logs[i]
 
 			timeStr := msg.Time.Format(logsTableTimeLayout)
@@ -486,8 +521,16 @@ func (mv *MainView) ApplyLogs(resp *core.LogResp) {
 			//msg.
 		}
 
-		mv.logsTable.Select(len(resp.Logs), 0)
-		mv.logsTable.ScrollToEnd()
+		if !resp.LoadedEarlier {
+			// Replaced all logs
+			mv.logsTable.Select(len(resp.Logs)+1, 0)
+			mv.logsTable.ScrollToEnd()
+		} else {
+			// Loaded more (earlier) logs
+			numNewRows := mv.logsTable.GetRowCount() - oldNumRows
+			mv.logsTable.SetOffset(offsetRow+numNewRows, offsetCol)
+			mv.logsTable.Select(selectedRow+numNewRows, 0)
+		}
 
 		mv.statusLineRight.SetText(fmt.Sprintf("%d / %d", len(resp.Logs), resp.NumMsgsTotal))
 
@@ -504,6 +547,10 @@ func newTableCellHeader(text string) *tview.TableCell {
 
 func newTableCellLogmsg(text string) *tview.TableCell {
 	return tview.NewTableCell(text).SetTextColor(tcell.ColorWhite).SetAlign(tview.AlignLeft)
+}
+
+func newTableCellButton(text string) *tview.TableCell {
+	return tview.NewTableCell(text).SetTextColor(tcell.ColorWhite).SetAlign(tview.AlignCenter)
 }
 
 /*

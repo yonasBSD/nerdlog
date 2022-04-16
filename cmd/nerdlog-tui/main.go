@@ -14,7 +14,6 @@ import (
 )
 
 // TODO: make multiple of them
-const inputTimeLayout = "Jan02 15:04"
 const inputTimeLayout2 = "Jan02_15:04"
 
 func main() {

@@ -259,7 +259,7 @@ fi
 
 lines_until_check=''
 if [[ "$lines_until" != "" ]]; then
-  lines_until_check="if (NR >= $lines_until) { next; }"
+  lines_until_check="if (NR >= $((lines_until-from_nr_int+1))) { next; }"
 fi
 
 awk_script='

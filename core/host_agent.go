@@ -336,13 +336,14 @@ func (ha *HostAgent) run() {
 						logLinenoStr := msg[:idx]
 						msg = msg[idx+1:]
 
-						logLineno, err := strconv.Atoi(logLinenoStr)
+						logLinenoCombined, err := strconv.Atoi(logLinenoStr)
 						if err != nil {
 							resp.Errs = append(resp.Errs, errors.Errorf("parsing log msg: invalid line number in %q", line))
 							continue
 						}
 
 						var logFilename string
+						logLineno := logLinenoCombined
 
 						for i := len(respCtx.logfiles) - 1; i >= 0; i-- {
 							logfile := respCtx.logfiles[i]
@@ -474,6 +475,8 @@ func (ha *HostAgent) run() {
 
 							LogFilename:   logFilename,
 							LogLinenumber: logLineno,
+
+							CombinedLinenumber: logLinenoCombined,
 
 							Msg:     msg,
 							Context: ctxMap,
@@ -877,6 +880,10 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 
 		if !cmdCtx.cmd.queryLogs.to.IsZero() {
 			parts = append(parts, "--to", cmdCtx.cmd.queryLogs.to.UTC().Format(queryLogsArgsTimeLayout))
+		}
+
+		if cmdCtx.cmd.queryLogs.linesUntil > 0 {
+			parts = append(parts, "--lines-until", strconv.Itoa(cmdCtx.cmd.queryLogs.linesUntil))
 		}
 
 		if cmdCtx.cmd.queryLogs.query != "" {
