@@ -437,14 +437,29 @@ func getStatuslineNumStr(icon string, num int, color string) string {
 }
 
 func (mv *MainView) updateTableHeader(msgs []core.LogMsg) (colNames []string) {
+	whitelisted := map[string]struct{}{
+		"redacted_id_int":     {},
+		"redacted_symbol_str": {},
+		"level_name":            {},
+		"namespace":             {},
+		"series_ids_string":     {},
+		"series_slug_str":       {},
+		"series_type_str":       {},
+	}
+
 	tagNamesSet := map[string]struct{}{}
 	for _, msg := range msgs {
 		for name := range msg.Context {
+			if _, ok := whitelisted[name]; !ok {
+				continue
+			}
+
 			tagNamesSet[name] = struct{}{}
 		}
 	}
 
 	delete(tagNamesSet, "source")
+	delete(tagNamesSet, "level_name")
 
 	tagNames := make([]string, 0, len(tagNamesSet))
 	for name := range tagNamesSet {
@@ -453,7 +468,7 @@ func (mv *MainView) updateTableHeader(msgs []core.LogMsg) (colNames []string) {
 
 	sort.Strings(tagNames)
 
-	colNames = append([]string{"time", "message", "source"}, tagNames...)
+	colNames = append([]string{"time", "message", "source", "level_name"}, tagNames...)
 
 	// Add header
 	for i, colName := range colNames {
