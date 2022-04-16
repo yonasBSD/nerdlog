@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -312,7 +313,9 @@ func NewMainView(params *MainViewParams) *MainView {
 		)
 
 		mv.showMessagebox("msg", "Message", s, nil)
-	}) // TODO .SetInputCapture
+	}).SetSelectionChangedFunc(func(row, column int) {
+		mv.bumpStatusLineRight()
+	})
 
 	/*
 
@@ -559,10 +562,26 @@ func (mv *MainView) ApplyLogs(resp *core.LogRespTotal) {
 			mv.logsTable.Select(selectedRow+numNewRows, 0)
 		}
 
-		mv.statusLineRight.SetText(fmt.Sprintf("%d / %d", len(resp.Logs), resp.NumMsgsTotal))
-
+		mv.bumpStatusLineRight()
 		mv.bumpTimeRange(true)
 	})
+}
+
+func (mv *MainView) bumpStatusLineRight() {
+	selectedRow, _ := mv.logsTable.GetSelection()
+	selectedRow -= 1
+
+	var selectedRowStr string
+	if selectedRow >= 1 {
+		selectedRowStr = strconv.Itoa(selectedRow)
+	} else {
+		selectedRowStr = "-"
+	}
+
+	mv.statusLineRight.SetText(fmt.Sprintf(
+		"%s / %d / %d",
+		selectedRowStr, len(mv.curLogResp.Logs), mv.curLogResp.NumMsgsTotal,
+	))
 }
 
 func newTableCellHeader(text string) *tview.TableCell {
