@@ -179,6 +179,22 @@ func (hm *HostsManager) run() {
 				for hostName, ha := range hm.has {
 					var linesUntil int
 					if req.queryLogs.LoadEarlier {
+						// TODO: right now, this loadEarlier case isn't optimized at all:
+						// we again query the whole timerange, and every node goes through
+						// all same lines and builds all the same mstats again (which we
+						// then ignore). We can optimize it; however honestly the actual
+						// performance, as per my experiments, isn't going to be
+						// SPECTACULARLY better. Just kinda marginally better (try loading
+						// older logs with time period 5h or 1m: the 1m is somewhat faster,
+						// but not super fast. That's the difference we're talking about)
+						//
+						// Anyway, the way to optimize it is as follows: we already have
+						// mstats, so we know what kind of timeframe we should query to get
+						// the next maxNumLines messages. So we should query only this time
+						// range, and we should avoid building any mstats. This way, no
+						// matter how large the current time period is, loading more
+						// messages will be as fast as possible.
+
 						// Set linesUntil
 						if nodeCtx, ok := hm.curLogs.perNode[hostName]; ok {
 							if len(nodeCtx.logs) > 0 {

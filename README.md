@@ -12,17 +12,10 @@
   main, and given to HostsManager as the same config). Also implement the nerdlog
   own config, where we'll have again another awk filter for nodes which need
   a jumphost, and the jumphost address itself
-- Implement the rest of QueryEditView properly (time, query, all labels etc)
-- Fix the bug that after a single time parsing error in the command line, other
-  errors stop showing
 - Implement profile id, combined from the OS user plus some optional custom string
   given as a command line flag
 - Implement state persistence (in a directory with the name based on profile id
   above)
-- Implement splitting context from log messages (and also retain the original msg,
-  which should be shown when the user presses Enter)
-- Add original line numbers and filenames, and they should be shown when Enter
-  is pressed
 - Implement better indication of the ongoing query (idk how to do that yet)
 
 ## TODO next
