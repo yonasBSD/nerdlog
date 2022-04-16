@@ -627,7 +627,9 @@ func newTableCellButton(text string) *tview.TableCell {
 */
 
 func (mv *MainView) setQuery(q string) {
-	mv.queryInput.SetText(q)
+	if mv.queryInput.GetText() != q {
+		mv.queryInput.SetText(q)
+	}
 	mv.query = q
 }
 
