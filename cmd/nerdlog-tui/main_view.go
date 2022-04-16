@@ -129,10 +129,11 @@ func NewMainView(params *MainViewParams) *MainView {
 			queryInputApplyStyle()
 
 		case tcell.KeyEsc:
-			if mv.queryInput.GetText() != mv.query {
-				mv.queryInput.SetText(mv.query)
-				queryInputApplyStyle()
-			}
+			//if mv.queryInput.GetText() != mv.query {
+			//mv.queryInput.SetText(mv.query)
+			//queryInputApplyStyle()
+			//}
+			mv.params.App.SetFocus(mv.logsTable)
 
 		case tcell.KeyTab:
 			mv.params.App.SetFocus(mv.queryEditBtn)
@@ -156,6 +157,9 @@ func NewMainView(params *MainViewParams) *MainView {
 		case tcell.KeyBacktab:
 			mv.params.App.SetFocus(mv.queryInput)
 			return nil
+
+		case tcell.KeyEsc:
+			mv.params.App.SetFocus(mv.logsTable)
 		}
 
 		return event
