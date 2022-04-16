@@ -648,9 +648,9 @@ func (mv *MainView) setTimeRange(from, to TimeOrDur) {
 
 	var timeStr string
 	if !mv.to.IsZero() {
-		timeStr = fmt.Sprintf("%s to %s (%s)", mv.from, mv.to, formatDuration(rangeDur))
+		timeStr = fmt.Sprintf("%s to %s (%s)", mv.from.Format(inputTimeLayout), mv.to.Format(inputTimeLayout), formatDuration(rangeDur))
 	} else if mv.from.IsAbsolute() {
-		timeStr = fmt.Sprintf("%s to now (%s)", mv.from, formatDuration(rangeDur))
+		timeStr = fmt.Sprintf("%s to now (%s)", mv.from.Format(inputTimeLayout), formatDuration(rangeDur))
 	} else {
 		timeStr = fmt.Sprintf("last %s", TimeOrDur{Dur: -mv.from.Dur})
 	}

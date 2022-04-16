@@ -15,7 +15,8 @@ import (
 )
 
 // TODO: make multiple of them
-const inputTimeLayout2 = "Jan02_15:04"
+const inputTimeLayout = "Jan02 15:04"
+const inputTimeLayoutMMHH = "15:04"
 
 var (
 	lastLogResp     *core.LogRespTotal

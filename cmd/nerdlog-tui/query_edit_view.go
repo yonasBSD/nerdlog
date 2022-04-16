@@ -19,7 +19,7 @@ in which case the current time will be used. Absolute time is in UTC.
 `
 */
 
-var timeLabelText = `Time range in the format "[yellow]<time>[ to <time>][-]", where [yellow]<time>[-] is either absolute like "[yellow]Mar27_12:00[-]"
+var timeLabelText = `Time range in the format "[yellow]<time>[ to <time>][-]", where [yellow]<time>[-] is either absolute like "[yellow]Mar27 12:00[-]"
 (in UTC), or relative like "[yellow]-2h30m[-]" (relative to current time). If the "to" part is omitted,
 current time is used.
 `

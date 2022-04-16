@@ -12,15 +12,17 @@ type FromToRange struct {
 }
 
 func ParseFromToRange(s string) (FromToRange, error) {
-	flds := strings.Fields(s)
-	if len(flds) < 1 {
+	flds := strings.Split(s, " to ")
+	if len(flds) == 0 {
 		return FromToRange{}, errors.New("time can't be empty. try -5h")
 	}
 
 	var from, to TimeOrDur
 	var err error
 
-	from, err = parseAndInferTimeOrDur(inputTimeLayout2, flds[0])
+	fromStr := flds[0]
+
+	from, err = parseAndInferTimeOrDur(inputTimeLayout, fromStr)
 	if err != nil {
 		return FromToRange{}, errors.Annotatef(err, "invalid 'from' duration")
 	}
@@ -28,12 +30,15 @@ func ParseFromToRange(s string) (FromToRange, error) {
 	to = TimeOrDur{}
 
 	if len(flds) > 1 {
-		if flds[1] != "to" || flds[2] == "" {
-			return FromToRange{}, errors.Errorf("invalid time format. try '-2h to -1h'")
+		toStr := flds[1]
+
+		// If there's no date, prepend date
+		if len(toStr) <= 5 {
+			toStr = fromStr[:5] + " " + toStr
 		}
 
 		var err error
-		to, err = parseAndInferTimeOrDur(inputTimeLayout2, flds[2])
+		to, err = parseAndInferTimeOrDur(inputTimeLayout, toStr)
 		if err != nil {
 			return FromToRange{}, errors.Annotatef(err, "invalid 'to' duration")
 		}
@@ -46,14 +51,20 @@ func ParseFromToRange(s string) (FromToRange, error) {
 }
 
 func (ftr *FromToRange) String() string {
-	// TODO: if both From and To are absolute and have the same day,
-	// then omit day for the To.
-	// It also needs to be supported by ParseFromToRange.
-	fromStr := ftr.From.Format(inputTimeLayout2)
+	fromStr := ftr.From.Format(inputTimeLayout)
 
 	if ftr.To.IsZero() {
 		return fromStr
 	}
 
-	return fromStr + " to " + ftr.To.Format(inputTimeLayout2)
+	// If both From and To are absolute and have the same day, then omit day for
+	// the To.
+	format := inputTimeLayout
+	_, fm, fd := ftr.From.Time.Date()
+	_, tm, td := ftr.To.Time.Date()
+	if fm == tm && fd == td {
+		format = inputTimeLayoutMMHH
+	}
+
+	return fromStr + " to " + ftr.To.Format(format)
 }
