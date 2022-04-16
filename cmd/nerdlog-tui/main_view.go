@@ -294,8 +294,8 @@ func NewMainView(params *MainViewParams) *MainView {
 		msg := timeCell.GetReference().(core.LogMsg)
 
 		s := fmt.Sprintf(
-			"%s %s (line %d)\n\n%s",
-			msg.Context["source"], msg.LogFilename, msg.LogLinenumber,
+			"ssh -t %s vim +%d %s\n\n%s",
+			msg.Context["source"], msg.LogLinenumber, msg.LogFilename,
 			msg.OrigLine,
 		)
 
