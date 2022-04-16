@@ -13,7 +13,7 @@ const (
 	// maxNumLines is how many log lines the nerdlog_query.sh will return at
 	// most.
 	// TODO: make it more configurable, perhaps
-	maxNumLines = 100
+	maxNumLines = 250
 )
 
 type HostsManager struct {
