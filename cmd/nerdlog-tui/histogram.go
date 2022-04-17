@@ -194,6 +194,7 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 		selScaleLines := h.fldDataToLines(fldData.selScaleDots)
 		// There should be exactly one line
 		line := selScaleLines[0]
+		lineLen := len(fldData.selScaleDots[0]) / 2
 
 		var selMark string
 		if !h.IsSelectionActive() {
@@ -203,7 +204,18 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 			selMark = fmt.Sprintf(" [%s - %s]", h.xFormat(selStart), h.xFormat(selEnd))
 		}
 
-		tview.Print(screen, line+selMark, x+fldMarginLeft+fldData.selScaleOffset/2, y+height-1, width-fldMarginLeft-fldData.selScaleOffset/2, tview.AlignLeft, tcell.ColorRed)
+		leftOffset := fldMarginLeft + fldData.selScaleOffset/2
+
+		tview.Print(screen, line+selMark, x+leftOffset, y+height-1, width-leftOffset, tview.AlignLeft, tcell.ColorGreen)
+
+		// Also print the bar value (or sum of all selected values, if selection is active)
+		var valToPrint string
+		if !h.IsSelectionActive() {
+			valToPrint = fmt.Sprintf("(%d)", fldData.cursorVal)
+		} else {
+			valToPrint = fmt.Sprintf("(total %d)", fldData.selectedValsSum)
+		}
+		tview.Print(screen, valToPrint, x+leftOffset+lineLen+1, y, width-leftOffset-lineLen-1, tview.AlignLeft, tcell.ColorGreen)
 	}
 }
 
@@ -412,8 +424,13 @@ type fieldData struct {
 	// drawn if we're in focus.
 	selScaleDots [][]bool
 	// selScaleOffset is the X offset of selScaleDots, from the left side.
-	selScaleOffset    int
-	selScaleOffsetEnd int
+	selScaleOffset int
+
+	// cursorVal is the value of the bar currently selected by the cursor
+	cursorVal int
+	// selectedValsSum is the sum of all bars selected currently (if selection is
+	// in progress)
+	selectedValsSum int
 }
 
 // genFieldData returns a 2-dimensional field as nested slices: [y][x].
@@ -497,11 +514,22 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 	selOffsetStart := -1
 	selOffsetEnd := -1
 
+	cursorVal := 0
+	selectedValsSum := 0
+
 	// Iterate over data and set dots to true
 	for xData, xChart := 0, 0; xData < rangeLen; xData, xChart = xData+dataBinsInChartDot, xChart+chartDotsInDataBin {
 		val := valAt(xData, dataBinsInChartDot)
 		sel := isSelectedAt(xData, dataBinsInChartDot)
 		crs := isCursorAt(xData, dataBinsInChartDot)
+
+		if crs {
+			cursorVal = val
+		}
+
+		if sel {
+			selectedValsSum += val
+		}
 
 		for y := 0; y < height; y++ {
 			on := val > y*dotYScale
@@ -576,9 +604,11 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 		effectiveWidthDots:  effectiveWidthDots,
 		effectiveWidthRunes: effectiveWidthRunes,
 
-		selScaleDots:      selScaleDots,
-		selScaleOffset:    selOffsetStart,
-		selScaleOffsetEnd: selOffsetEnd,
+		selScaleDots:   selScaleDots,
+		selScaleOffset: selOffsetStart,
+
+		cursorVal:       cursorVal,
+		selectedValsSum: selectedValsSum,
 	}
 
 	/*
