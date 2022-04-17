@@ -269,6 +269,14 @@ func (h *Histogram) InputHandler() func(event *tcell.EventKey, setFocus func(p t
 			}
 		}
 
+		moveBeginning := func() {
+			h.cursor = h.from
+		}
+
+		moveEnd := func() {
+			h.cursor = maxCursor
+		}
+
 		selectionEnd := func() {
 			h.selectionStart = 0
 		}
@@ -309,15 +317,36 @@ func (h *Histogram) InputHandler() func(event *tcell.EventKey, setFocus func(p t
 					moveLeftLong()
 				case 'w', 'e':
 					moveRightLong()
+				case 'g':
+					moveBeginning()
+				case 'G':
+					moveEnd()
 				case 'v', ' ':
 					selectionApplyIfActive()
 					selectionToggle()
+				case 'q':
+					selectionEnd()
 				case 'o':
 					if h.selectionStart > 0 {
 						h.cursor, h.selectionStart = h.selectionStart, h.cursor
 					}
 				}
 			}
+
+		case tcell.KeyLeft:
+			moveLeft()
+		case tcell.KeyRight:
+			moveRight()
+
+		case tcell.KeyPgUp:
+			moveLeftLong()
+		case tcell.KeyPgDn:
+			moveRightLong()
+
+		case tcell.KeyHome, tcell.KeyCtrlA:
+			moveBeginning()
+		case tcell.KeyEnd, tcell.KeyCtrlE:
+			moveEnd()
 
 		case tcell.KeyEnter:
 			selectionApplyIfActive()
