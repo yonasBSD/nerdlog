@@ -78,6 +78,11 @@ type MainView struct {
 	// and to, and they both can't be zero.
 	actualFrom, actualTo time.Time
 
+	// When doQueryOnceConnected is true, it means that whenever we get a new
+	// status update (ApplyHMState gets called), if Connected is true there,
+	// we'll call doQuery().
+	doQueryOnceConnected bool
+
 	curHMState *core.HostsManagerState
 	curLogResp *core.LogRespTotal
 	// statsFrom and statsTo represent the first and last element present
@@ -100,6 +105,8 @@ type OnCmdCallback func(cmd string)
 func NewMainView(params *MainViewParams) *MainView {
 	mv := &MainView{
 		params: *params,
+
+		doQueryOnceConnected: true,
 	}
 
 	mv.setHostsFilter(params.InitialHostsFilter)
@@ -419,22 +426,27 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mv.queryEditView = NewQueryEditView(mv, &QueryEditViewParams{
 		DoneFunc: func(data QueryEditData) error {
-			err := mv.params.OnHostsFilterChange(data.HostsFilter)
-			if err != nil {
-				return errors.Annotate(err, "hosts")
-			}
-
 			ftr, err := ParseFromToRange(data.Time)
 			if err != nil {
 				return errors.Annotatef(err, "time")
 			}
 
-			mv.bumpStatusLineLeft()
-
 			mv.setQuery(data.Query)
 			mv.setTimeRange(ftr.From, ftr.To)
 
-			mv.doQuery()
+			// Before we call OnHostsFilterChange, set this doQueryOnceConnected
+			// flag, so that once we receive a status update (which can happen any
+			// moment after OnHostsFilterChange is called), and if Connected is true
+			// there, we'll do the query.
+			mv.doQueryOnceConnected = true
+
+			err = mv.params.OnHostsFilterChange(data.HostsFilter)
+			if err != nil {
+				return errors.Annotate(err, "hosts")
+			}
+
+			mv.bumpStatusLineLeft()
+
 			queryInputApplyStyle()
 
 			return nil
@@ -454,6 +466,11 @@ func (mv *MainView) ApplyHMState(hmState *core.HostsManagerState) {
 	mv.curHMState = hmState
 	mv.params.App.QueueUpdateDraw(func() {
 		mv.bumpStatusLineLeft()
+
+		if mv.curHMState.Connected && mv.doQueryOnceConnected {
+			mv.doQuery()
+			mv.doQueryOnceConnected = false
+		}
 	})
 }
 

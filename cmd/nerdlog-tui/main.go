@@ -167,18 +167,12 @@ func initHostsManager(mainView *MainView, initialHostsFilter string) *core.Hosts
 	var hm *core.HostsManager
 
 	go func() {
-		doneInitialQuery := false
-
 		for {
 			upd := <-updatesCh
 
 			switch {
 			case upd.State != nil:
 				mainView.ApplyHMState(upd.State)
-				if !doneInitialQuery && upd.State.Connected {
-					mainView.DoQuery()
-					doneInitialQuery = true
-				}
 
 			case upd.LogResp != nil:
 				if len(upd.LogResp.Errs) > 0 {
