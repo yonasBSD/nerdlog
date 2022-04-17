@@ -56,7 +56,10 @@ type MainView struct {
 
 	queryEditView *QueryEditView
 
-	shownOverlayMsg string
+	// overlayMsgView is nil if there's no overlay msg.
+	overlayMsgView *MessageView
+	overlayText    string
+	overlaySpinner rune
 
 	// focusedBeforeCmd is a primitive which was focused before cmdInput was
 	// focused. Once the user is done editing command, focusedBeforeCmd
@@ -460,7 +463,52 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mv.rootPages.AddPage("mainFlex", mainFlex, true, true)
 
+	go mv.run()
+
 	return mv
+}
+
+func (mv *MainView) run() {
+	ticker := time.NewTicker(250 * time.Millisecond)
+
+	for {
+		select {
+		case <-ticker.C:
+			needDraw := false
+			mv.params.App.QueueUpdate(func() {
+				needDraw = mv.tick()
+			})
+
+			if needDraw {
+				mv.params.App.Draw()
+			}
+		}
+	}
+}
+
+func (mv *MainView) tick() (needDraw bool) {
+	if mv.overlayMsgView != nil {
+		switch mv.overlaySpinner {
+		case '-':
+			mv.overlaySpinner = '\\'
+		case '\\':
+			mv.overlaySpinner = '|'
+		case '|':
+			mv.overlaySpinner = '/'
+		case '/':
+			mv.overlaySpinner = '-'
+		}
+
+		mv.bumpOverlay()
+
+		needDraw = true
+	}
+
+	return needDraw
+}
+
+func (mv *MainView) bumpOverlay() {
+	mv.overlayMsgView.textView.SetText(string(mv.overlaySpinner) + " " + mv.overlayText)
 }
 
 func (mv *MainView) GetUIPrimitive() tview.Primitive {
@@ -478,15 +526,11 @@ func (mv *MainView) ApplyHMState(hmState *core.HostsManagerState) {
 			overlayMsg = "Updating search results..."
 		}
 
-		if mv.shownOverlayMsg != overlayMsg {
-			if mv.shownOverlayMsg != "" {
-				// TODO: using pageNameMessage here directly is too hacky
-				mv.hideModal(pageNameMessage+"overlay_msg", false)
-			}
-
-			if overlayMsg != "" {
-				mv.showMessagebox(
-					"overlay_msg", "", overlayMsg, &MessageboxParams{
+		if overlayMsg != "" {
+			// Need to show or update overlay message.
+			if mv.overlayMsgView == nil {
+				mv.overlayMsgView = mv.showMessagebox(
+					"overlay_msg", "", "", &MessageboxParams{
 						Buttons: []string{},
 						NoFocus: true,
 						Width:   40,
@@ -495,9 +539,19 @@ func (mv *MainView) ApplyHMState(hmState *core.HostsManagerState) {
 						BackgroundColor: tcell.ColorDarkGray,
 					},
 				)
+
+				mv.overlaySpinner = '-'
 			}
 
-			mv.shownOverlayMsg = overlayMsg
+			mv.overlayText = overlayMsg
+			mv.bumpOverlay()
+		} else if mv.overlayMsgView != nil {
+			// Need to hide overlay message.
+
+			// TODO: using pageNameMessage here directly is too hacky
+			mv.hideModal(pageNameMessage+"overlay_msg", false)
+			mv.overlayMsgView = nil
+			mv.overlayText = ""
 		}
 
 		mv.bumpStatusLineLeft()
@@ -886,8 +940,8 @@ type MessageboxParams struct {
 
 func (mv *MainView) showMessagebox(
 	msgID, title, message string, params *MessageboxParams,
-) {
-	var msgvErr *MessageView
+) *MessageView {
+	var msgv *MessageView
 
 	if params == nil {
 		params = &MessageboxParams{}
@@ -899,11 +953,11 @@ func (mv *MainView) showMessagebox(
 
 	if params.OnButtonPressed == nil {
 		params.OnButtonPressed = func(label string, idx int) {
-			msgvErr.Hide()
+			msgv.Hide()
 		}
 	}
 
-	msgvErr = NewMessageView(mv, &MessageViewParams{
+	msgv = NewMessageView(mv, &MessageViewParams{
 		MessageID:       msgID,
 		Title:           title,
 		Message:         message,
@@ -917,7 +971,9 @@ func (mv *MainView) showMessagebox(
 
 		BackgroundColor: params.BackgroundColor,
 	})
-	msgvErr.Show()
+	msgv.Show()
+
+	return msgv
 }
 
 func (mv *MainView) ShowMessagebox(
