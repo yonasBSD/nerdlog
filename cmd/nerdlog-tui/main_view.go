@@ -78,6 +78,7 @@ type MainView struct {
 	// and to, and they both can't be zero.
 	actualFrom, actualTo time.Time
 
+	curHMState *core.HostsManagerState
 	curLogResp *core.LogRespTotal
 	// statsFrom and statsTo represent the first and last element present
 	// in curLogResp.MinuteStats. Note that this range might be smaller than
@@ -428,8 +429,11 @@ func NewMainView(params *MainViewParams) *MainView {
 				return errors.Annotatef(err, "time")
 			}
 
+			mv.bumpStatusLineLeft()
+
 			mv.setQuery(data.Query)
 			mv.setTimeRange(ftr.From, ftr.To)
+
 			mv.doQuery()
 			queryInputApplyStyle()
 
@@ -447,30 +451,9 @@ func (mv *MainView) GetUIPrimitive() tview.Primitive {
 }
 
 func (mv *MainView) ApplyHMState(hmState *core.HostsManagerState) {
+	mv.curHMState = hmState
 	mv.params.App.QueueUpdateDraw(func() {
-		sb := strings.Builder{}
-
-		if !hmState.Connected {
-			sb.WriteString("connecting ")
-		} else if hmState.Busy {
-			sb.WriteString("busy ")
-		} else {
-			sb.WriteString("idle ")
-		}
-
-		numIdle := len(hmState.HostsByState[core.HostAgentStateConnectedIdle])
-		numBusy := len(hmState.HostsByState[core.HostAgentStateConnectedBusy])
-		numOther := hmState.NumHosts - numIdle - numBusy
-
-		sb.WriteString(getStatuslineNumStr("🖳", numIdle, "green"))
-		sb.WriteString(" ")
-		sb.WriteString(getStatuslineNumStr("🖳", numBusy, "orange"))
-		sb.WriteString(" ")
-		sb.WriteString(getStatuslineNumStr("🖳", numOther, "red"))
-		sb.WriteString(" ")
-		sb.WriteString(getStatuslineNumStr("🖳", hmState.NumUnused, "gray"))
-
-		mv.statusLineLeft.SetText(sb.String())
+		mv.bumpStatusLineLeft()
 	})
 }
 
@@ -597,6 +580,35 @@ func (mv *MainView) ApplyLogs(resp *core.LogRespTotal) {
 		mv.bumpStatusLineRight()
 		mv.bumpTimeRange(true)
 	})
+}
+
+func (mv *MainView) bumpStatusLineLeft() {
+	sb := strings.Builder{}
+
+	if !mv.curHMState.Connected {
+		sb.WriteString("connecting ")
+	} else if mv.curHMState.Busy {
+		sb.WriteString("busy ")
+	} else {
+		sb.WriteString("idle ")
+	}
+
+	numIdle := len(mv.curHMState.HostsByState[core.HostAgentStateConnectedIdle])
+	numBusy := len(mv.curHMState.HostsByState[core.HostAgentStateConnectedBusy])
+	numOther := mv.curHMState.NumHosts - numIdle - numBusy
+
+	sb.WriteString(getStatuslineNumStr("🖳", numIdle, "green"))
+	sb.WriteString(" ")
+	sb.WriteString(getStatuslineNumStr("🖳", numBusy, "orange"))
+	sb.WriteString(" ")
+	sb.WriteString(getStatuslineNumStr("🖳", numOther, "red"))
+	sb.WriteString(" ")
+	sb.WriteString(getStatuslineNumStr("🖳", mv.curHMState.NumUnused, "gray"))
+
+	sb.WriteString(" | ")
+	sb.WriteString(mv.hostsFilter)
+
+	mv.statusLineLeft.SetText(sb.String())
 }
 
 func (mv *MainView) bumpStatusLineRight() {
