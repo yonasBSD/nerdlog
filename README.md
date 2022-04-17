@@ -1,52 +1,44 @@
+# Nerdlog
 
-## TODO first
+A proof-of-concept log fetcher and viewer. Features terminal-based UI, works by
+ssh-ing directly to the nodes and analyzing syslog files using
+`bash` + `tail` + `head` + `awk` hacks.
 
-- :set numlines=100
-- Use https://github.com/benhoyt/goawk just to check the awk syntax before
-  submitting the query
-- Implement hosts filtering:
-  - Use https://github.com/benhoyt/goawk and have filters be defined like
-    "/my-host-/", or "/my-host-/ && !/01/ && !/02/"
-  - Implement logic in host manager which will take the filter like that, and
-    come up with relevant set of nodes (we'll also need to do that in realtime
-    while typing), and reconnect to the new ones etc
-- Implement getting all available hosts from ssh config
-  https://github.com/kevinburke/ssh_config , (it probably should be used by
-  main, and given to HostsManager as the same config). Also implement the nerdlog
-  own config, where we'll have again another awk filter for nodes which need
-  a jumphost, and the jumphost address itself
-- Implement state persistence (in a directory with the name based on profile id
-  above)
+I said, a proof of concept. Most of the code is hard to read, no tests, poor
+error handling, etc.
 
-## TODO next
+![Nerdlog](nerdlog.png)
 
-- Inputs with history (use for all inputs: command line, query line, all the
-  Edit form fields), with state being stored somewhere under profile dir
-- Proper shutdown, with connections being terminated
+## Installation
 
-## TODO
+To install `nerdlog` binary to your `/usr/local/bin`:
 
-- During bootstrap, don't overwrite file if it's up to date
-- Use some user-specific name for the resident bash file
-  /var/tmp/query_logs.sh, so that multiple users won't be overwriting the same
-  file
+```
+$ make && make install
+```
 
-- Implement configs, since locally I need jumphost but on worker I don't, and also
-  right now all nodes are hardcoded
+Or to build and run without installing:
 
-- Statusline: (green) * 21 (orange) * 3 (red) * 0 . When number is non-zero,
-  font is bold.
-- Searching and highlighting can be implemented using color tags like [:red]foo[:-]
+```
+$ make && bin/nerdlog
+```
 
-### Super important
+## Commands
 
-- Config (and have one ready with all our hosts)
-- Changing sources where to query from
+In addition to the UI which is self-discoverable, there is a vim-like command line
+with a few commands supported. No history or anything else fancy though.
 
------
+`:w[rite] [filename]` Write all currently loaded log lines to the filename.
+If filename is omitted, `/tmp/last_nerdlog` is used.
 
-- Showing full original raw message in a messagebox
-- Get tags out of the message
+`:set option=value` Set option to the new value
+
+`:set option?` Get current value of an option
+
+Currently supported options are:
+
+- `numlines`: the number of log messages loaded from every host on every
+  request. Default: 250.
 
 ## Limitations
 
