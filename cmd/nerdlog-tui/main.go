@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -19,8 +20,18 @@ const inputTimeLayout = "Jan02 15:04"
 const inputTimeLayoutMMHH = "15:04"
 
 var (
+	// TODO: implement in a better way, without locking like that
 	lastLogResp     *core.LogRespTotal
 	lastLogRespLock sync.Mutex
+)
+
+var (
+	// TODO: implement in a better way, without locking like that
+
+	// maxNumLines is how many log lines the nerdlog_query.sh will return at
+	// most.
+	maxNumLines     = 250
+	maxNumLinesLock sync.Mutex
 )
 
 func main() {
@@ -92,15 +103,55 @@ func main() {
 				mainView.ShowMessagebox("err", "Fyi", fmt.Sprintf("Saved to %s", fname), nil)
 
 			case "set":
-				if len(parts) < 2 {
+				if len(parts) < 2 || len(parts[1]) == 0 {
 					mainView.ShowMessagebox("err", "Error", "set requires an argument", nil)
 					continue
 				}
 
-				switch parts[1] {
-				case "numlines", "maxnumlines":
-					mainView.ShowMessagebox("err", "Error", "not implemented", nil)
+				// TODO: implement in a generic way
+
+				setParts := strings.Split(parts[1], "=")
+				if len(setParts) == 2 {
+					switch setParts[0] {
+					case "numlines", "maxnumlines":
+						val, err := strconv.Atoi(setParts[1])
+						if err != nil {
+							mainView.ShowMessagebox("err", "Error", "Can't parse "+setParts[1], nil)
+							continue
+						}
+
+						if val < 2 {
+							mainView.ShowMessagebox("err", "Error", "numlines must be at least 2", nil)
+							continue
+						}
+
+						maxNumLinesLock.Lock()
+						maxNumLines = val
+						maxNumLinesLock.Unlock()
+
+					default:
+						mainView.ShowMessagebox("err", "Error", "Unknown variable "+setParts[0], nil)
+						continue
+					}
+					continue
 				}
+
+				if parts[1][len(parts[1])-1] == '?' {
+					vn := parts[1][:len(parts[1])-1]
+					switch vn {
+					case "numlines", "maxnumlines":
+						maxNumLinesLock.Lock()
+						mainView.ShowMessagebox("err", "", "numlines is "+strconv.Itoa(maxNumLines), nil)
+						maxNumLinesLock.Unlock()
+
+					default:
+						mainView.ShowMessagebox("err", "Error", "Unknown variable "+vn, nil)
+						continue
+					}
+					continue
+				}
+
+				mainView.ShowMessagebox("err", "Error", "Invalid set command"+string(parts[1][len(parts)-1]), nil)
 
 			default:
 				mainView.ShowMessagebox("err", "Error", fmt.Sprintf("unknown command %q", parts[0]), nil)
@@ -115,6 +166,10 @@ func main() {
 
 		App: app,
 		OnLogQuery: func(params core.QueryLogsParams) {
+			maxNumLinesLock.Lock()
+			params.MaxNumLines = maxNumLines
+			maxNumLinesLock.Unlock()
+
 			hm.QueryLogs(params)
 		},
 		OnHostsFilterChange: func(hostsFilter string) error {

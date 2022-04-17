@@ -9,13 +9,6 @@ import (
 	"github.com/juju/errors"
 )
 
-const (
-	// maxNumLines is how many log lines the nerdlog_query.sh will return at
-	// most.
-	// TODO: make it more configurable, perhaps
-	maxNumLines = 250
-)
-
 type HostsManager struct {
 	params HostsManagerParams
 
@@ -57,7 +50,8 @@ type HostsManagerParams struct {
 func NewHostsManager(params HostsManagerParams) *HostsManager {
 	hm := &HostsManager{
 		params: params,
-		hcs:    make(map[string]ConfigHost, len(params.ConfigHosts)),
+
+		hcs: make(map[string]ConfigHost, len(params.ConfigHosts)),
 
 		hostsFilter: params.InitialHostsFilter,
 
@@ -175,10 +169,14 @@ func (hm *HostsManager) run() {
 					continue
 				}
 
+				if req.queryLogs.MaxNumLines == 0 {
+					panic("req.queryLogs.MaxNumLines is zero")
+				}
+
 				hm.curQueryLogsCtx = &manQueryLogsCtx{
-					loadEarlier: req.queryLogs.LoadEarlier,
-					resps:       make(map[string]*LogResp, len(hm.has)),
-					errs:        map[string]error{},
+					req:   req.queryLogs,
+					resps: make(map[string]*LogResp, len(hm.has)),
+					errs:  map[string]error{},
 				}
 
 				// sendStateUpdate must be done after setting curQueryLogsCtx.
@@ -214,6 +212,8 @@ func (hm *HostsManager) run() {
 					ha.EnqueueCmd(hostCmd{
 						respCh: hm.respCh,
 						queryLogs: &hostCmdQueryLogs{
+							maxNumLines: req.queryLogs.MaxNumLines,
+
 							from:  req.queryLogs.From,
 							to:    req.queryLogs.To,
 							query: req.queryLogs.Query,
@@ -329,9 +329,7 @@ func (hm *HostsManager) Ping() {
 }
 
 type manQueryLogsCtx struct {
-	// If loadEarlier is true, it means we're only loading the logs _before_ the ones
-	// we already had.
-	loadEarlier bool
+	req *QueryLogsParams
 
 	// resps is a map from host name to its response. Once all responses have
 	// been collected, we'll start merging them together.
@@ -434,7 +432,7 @@ func (hm *HostsManager) mergeLogRespsAndSend() {
 
 	// If we're not adding to already existing logs, reset w/e we've had already,
 	// and calculate minuteStats from the resps.
-	if !hm.curQueryLogsCtx.loadEarlier {
+	if !hm.curQueryLogsCtx.req.LoadEarlier {
 		hm.curLogs = manLogsCtx{
 			minuteStats: map[int64]MinuteStatsItem{},
 			perNode:     map[string]*manLogsNodeCtx{},
@@ -451,7 +449,7 @@ func (hm *HostsManager) mergeLogRespsAndSend() {
 
 			hm.curLogs.perNode[nodeName] = &manLogsNodeCtx{
 				logs:          resp.Logs,
-				isMaxNumLines: len(resp.Logs) == maxNumLines,
+				isMaxNumLines: len(resp.Logs) == hm.curQueryLogsCtx.req.MaxNumLines,
 			}
 		}
 	} else {
@@ -459,14 +457,14 @@ func (hm *HostsManager) mergeLogRespsAndSend() {
 		for nodeName, resp := range resps {
 			pn := hm.curLogs.perNode[nodeName]
 			pn.logs = append(resp.Logs, pn.logs...)
-			pn.isMaxNumLines = len(resp.Logs) == maxNumLines
+			pn.isMaxNumLines = len(resp.Logs) == hm.curQueryLogsCtx.req.MaxNumLines
 		}
 	}
 
 	ret := &LogRespTotal{
 		MinuteStats:   hm.curLogs.minuteStats,
 		NumMsgsTotal:  hm.curLogs.numMsgsTotal,
-		LoadedEarlier: hm.curQueryLogsCtx.loadEarlier,
+		LoadedEarlier: hm.curQueryLogsCtx.req.LoadEarlier,
 	}
 
 	var logsCoveredSince time.Time

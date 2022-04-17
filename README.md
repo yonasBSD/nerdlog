@@ -1,6 +1,9 @@
 
 ## TODO first
 
+- :set numlines=100
+- Use https://github.com/benhoyt/goawk just to check the awk syntax before
+  submitting the query
 - Implement hosts filtering:
   - Use https://github.com/benhoyt/goawk and have filters be defined like
     "/my-host-/", or "/my-host-/ && !/01/ && !/02/"
@@ -12,20 +15,14 @@
   main, and given to HostsManager as the same config). Also implement the nerdlog
   own config, where we'll have again another awk filter for nodes which need
   a jumphost, and the jumphost address itself
-- Implement profile id, combined from the OS user plus some optional custom string
-  given as a command line flag
 - Implement state persistence (in a directory with the name based on profile id
   above)
-- Implement better indication of the ongoing query (idk how to do that yet)
 
 ## TODO next
 
-- :w /path/to/file
 - Inputs with history (use for all inputs: command line, query line, all the
   Edit form fields), with state being stored somewhere under profile dir
-- Loading next portion of logs
 - Proper shutdown, with connections being terminated
-- Visual time selection on the histogram
 
 ## TODO
 

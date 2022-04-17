@@ -1,7 +1,5 @@
 package core
 
-import "strconv"
-
 // TODO: convert it to an embedded file
 var nerdlogQuerySh = `#/bin/bash
 
@@ -16,6 +14,8 @@ logfile1=/var/log/syslog.1
 logfile2=/var/log/syslog
 
 positional_args=()
+
+max_num_lines=100
 
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -36,6 +36,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     -u|--lines-until)
       lines_until="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -l|--max-num-lines)
+      max_num_lines="$2"
       shift # past argument
       shift # past value
       ;;
@@ -268,7 +273,7 @@ if [[ "$lines_until" != "" ]]; then
 fi
 
 awk_script='
-BEGIN { curline=0; maxlines=` + strconv.Itoa(maxNumLines) + ` }
+BEGIN { curline=0; maxlines='$max_num_lines' }
 '$awk_pattern'
 {
   stats[$1 "-" $2 "-" substr($3,1,5)]++;

@@ -45,6 +45,8 @@ type hostCmdCtxPing struct {
 }
 
 type hostCmdQueryLogs struct {
+	maxNumLines int
+
 	from time.Time
 	to   time.Time
 

@@ -2,7 +2,16 @@ package core
 
 import "time"
 
+const (
+	// MaxNumLinesDefault is a default for QueryLogsParams.MaxNumLines below.
+	MaxNumLinesDefault = 250
+)
+
 type QueryLogsParams struct {
+	// maxNumLines is how many log lines the nerdlog_query.sh will return at
+	// most.
+	MaxNumLines int
+
 	From time.Time
 	To   time.Time
 
