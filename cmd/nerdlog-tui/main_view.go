@@ -263,11 +263,11 @@ func NewMainView(params *MainViewParams) *MainView {
 	})
 	mv.histogram.SetSelectedFunc(func(from, to int) {
 		fromTime := TimeOrDur{
-			Time: time.Unix(int64(from), 0),
+			Time: time.Unix(int64(from), 0).UTC(),
 		}
 
 		toTime := TimeOrDur{
-			Time: time.Unix(int64(to), 0),
+			Time: time.Unix(int64(to), 0).UTC(),
 		}
 
 		mv.setTimeRange(fromTime, toTime)
