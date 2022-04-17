@@ -181,6 +181,12 @@ func NewMainView(params *MainViewParams) *MainView {
 
 		case tcell.KeyEsc:
 			mv.params.App.SetFocus(mv.logsTable)
+
+		case tcell.KeyRune:
+			switch event.Rune() {
+			case ':':
+				mv.focusCmdline()
+			}
 		}
 
 		return event
@@ -257,6 +263,12 @@ func NewMainView(params *MainViewParams) *MainView {
 				mv.params.App.SetFocus(mv.logsTable)
 				return nil
 			}
+
+		case tcell.KeyRune:
+			switch event.Rune() {
+			case ':':
+				mv.focusCmdline()
+			}
 		}
 
 		return event
@@ -303,9 +315,7 @@ func NewMainView(params *MainViewParams) *MainView {
 		case tcell.KeyRune:
 			switch event.Rune() {
 			case ':':
-				mv.cmdInput.SetText(":")
-				mv.focusedBeforeCmd = mv.params.App.GetFocus()
-				mv.params.App.SetFocus(mv.cmdInput)
+				mv.focusCmdline()
 			}
 		}
 
@@ -466,6 +476,12 @@ func NewMainView(params *MainViewParams) *MainView {
 	go mv.run()
 
 	return mv
+}
+
+func (mv *MainView) focusCmdline() {
+	mv.cmdInput.SetText(":")
+	mv.focusedBeforeCmd = mv.params.App.GetFocus()
+	mv.params.App.SetFocus(mv.cmdInput)
 }
 
 func (mv *MainView) run() {
