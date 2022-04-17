@@ -25,6 +25,8 @@ const (
 	rowIdxLoadOlder = 1
 )
 
+const histogramBinSize = 60 // 1 minute
+
 type MainViewParams struct {
 	InitialHostsFilter string
 
@@ -159,7 +161,7 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.queryEditBtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyTab:
-			mv.params.App.SetFocus(mv.logsTable)
+			mv.params.App.SetFocus(mv.histogram)
 		case tcell.KeyBacktab:
 			mv.params.App.SetFocus(mv.queryInput)
 			return nil
@@ -198,7 +200,7 @@ func NewMainView(params *MainViewParams) *MainView {
 	mainFlex.AddItem(mv.topFlex, 1, 0, true)
 
 	mv.histogram = NewHistogram()
-	mv.histogram.SetBinSize(60) // 1 minute
+	mv.histogram.SetBinSize(histogramBinSize) // 1 minute
 	mv.histogram.SetXFormatter(func(v int) string {
 		t := time.Unix(int64(v), 0).UTC()
 		return t.Format("15:04")
@@ -209,8 +211,8 @@ func NewMainView(params *MainViewParams) *MainView {
 		diff := to - from
 
 		var step int
-		if diff <= 10*60 {
-			step = 60
+		if diff <= 10*histogramBinSize {
+			step = histogramBinSize
 		} else {
 			step = diff / 6
 			if step == 0 {
@@ -218,8 +220,8 @@ func NewMainView(params *MainViewParams) *MainView {
 			}
 
 			// Snap to 1m grid: make sure our marks will be on minute boundaries
-			tmp := (step + 60/2) / 60
-			step = tmp * 60
+			tmp := (step + histogramBinSize/2) / histogramBinSize
+			step = tmp * histogramBinSize
 		}
 
 		ret := []int{}
@@ -229,6 +231,36 @@ func NewMainView(params *MainViewParams) *MainView {
 
 		return ret
 	})
+	mv.histogram.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyTab:
+			mv.params.App.SetFocus(mv.logsTable)
+		case tcell.KeyBacktab:
+			mv.params.App.SetFocus(mv.queryEditBtn)
+			return nil
+
+		case tcell.KeyEsc:
+			if !mv.histogram.IsSelectionActive() {
+				mv.params.App.SetFocus(mv.logsTable)
+				return nil
+			}
+		}
+
+		return event
+	})
+	mv.histogram.SetSelectedFunc(func(from, to int) {
+		fromTime := TimeOrDur{
+			Time: time.Unix(int64(from), 0),
+		}
+
+		toTime := TimeOrDur{
+			Time: time.Unix(int64(to), 0),
+		}
+
+		mv.setTimeRange(fromTime, toTime)
+		mv.doQuery()
+	})
+
 	mainFlex.AddItem(mv.histogram, 6, 0, false)
 
 	mv.logsTable = tview.NewTable()
@@ -278,7 +310,7 @@ func NewMainView(params *MainViewParams) *MainView {
 			mv.params.App.SetFocus(mv.queryInput)
 		}
 		if key == tcell.KeyBacktab {
-			mv.params.App.SetFocus(mv.queryEditBtn)
+			mv.params.App.SetFocus(mv.histogram)
 		}
 	}).SetSelectedFunc(func(row int, column int) {
 		if row == rowIdxLoadOlder {

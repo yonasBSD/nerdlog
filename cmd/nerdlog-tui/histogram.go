@@ -54,6 +54,26 @@ type Histogram struct {
 
 	// xFormat formats values for X axis
 	xFormat func(v int) string
+
+	// selected is a handler which is called when the user has finished selecting
+	// a range. The from is inclusive, the to is not.
+	selected func(from, to int)
+
+	// curMarks is returned from the last call to getXMarks
+	curMarks []int
+
+	// cursor is the current cursor position in seconds
+	// (same unit as from, to, etc). It must be divisible by the block size: if the
+	// block size is 120 (two minutes), it means cursor must be divisible by 120.
+	// It also means that resizing the window can change the cursor.
+	cursor int
+	// selectionStart, if not 0, is the position in seconds where selection has
+	// started. It can be either larger or smaller than cursor. If 0, it means
+	// there is no selection in progress.
+	selectionStart int
+
+	dataBinsInChartDot int
+	chartDotsInDataBin int
 }
 
 func NewHistogram() *Histogram {
@@ -66,6 +86,10 @@ func NewHistogram() *Histogram {
 func (h *Histogram) SetRange(from, to int) *Histogram {
 	h.from = from
 	h.to = to
+
+	// Reset cursor and selection too
+	h.cursor = h.to - h.binSize
+	h.selectionStart = 0
 
 	return h
 }
@@ -112,6 +136,9 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 		return
 	}
 
+	h.dataBinsInChartDot = fldData.dataBinsInChartDot
+	h.chartDotsInDataBin = fldData.chartDotsInDataBin
+
 	fldMarginLeft = (width - fldData.effectiveWidthRunes) / 2
 
 	lines := h.fldDataToLines(fldData.dots)
@@ -133,12 +160,12 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 	}
 	tview.Print(screen, maxLabel, x+maxLabelOffset, y, width-maxLabelOffset, tview.AlignLeft, tcell.ColorWhite)
 
-	marks := h.getXMarks(h.from, h.to, width-fldMarginLeft)
+	h.curMarks = h.getXMarks(h.from, h.to, width-fldMarginLeft)
 
 	sb := strings.Builder{}
 	numRunes := 0
 
-	for _, mark := range marks {
+	for _, mark := range h.curMarks {
 		markStr := h.xFormat(mark)
 		dotCoord := h.valToCoord(fldData, mark) / 60
 
@@ -165,6 +192,142 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 	tview.Print(screen, sb.String(), x+fldMarginLeft, y+height-1, width-fldMarginLeft, tview.AlignLeft, tcell.ColorWhite)
 }
 
+func (h *Histogram) InputHandler() func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
+	return h.WrapInputHandler(func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
+		maxCursor := h.to - h.binSize
+
+		moveLeft := func() {
+			h.cursor -= h.binSize
+			if h.cursor < h.from {
+				h.cursor = h.from
+			}
+		}
+
+		moveRight := func() {
+			h.cursor += h.binSize
+			if h.cursor > maxCursor {
+				h.cursor = maxCursor
+			}
+		}
+
+		moveLeftLong := func() {
+			moveLeft()
+
+			for h.cursor > h.from {
+				for _, mark := range h.curMarks {
+					if h.cursor == mark {
+						return
+					}
+				}
+
+				moveLeft()
+			}
+		}
+
+		moveRightLong := func() {
+			moveRight()
+
+			for h.cursor < maxCursor {
+				for _, mark := range h.curMarks {
+					if h.cursor == mark {
+						return
+					}
+				}
+
+				moveRight()
+			}
+		}
+
+		selectionEnd := func() {
+			h.selectionStart = 0
+		}
+
+		selectionToggle := func() {
+			if h.selectionStart == 0 {
+				// Start selection
+				h.selectionStart = h.cursor
+			} else {
+				// End selection
+				selectionEnd()
+			}
+		}
+
+		selectionApplyIfActive := func() {
+			if h.selectionStart != 0 && h.selected != nil {
+				from, to := h.GetSelection()
+				h.selected(from, to)
+			}
+		}
+
+		switch key := event.Key(); key {
+		case tcell.KeyRune: // Regular character.
+			if event.Modifiers()&tcell.ModAlt > 0 {
+				switch event.Rune() {
+				case 'b':
+					moveLeftLong()
+				case 'f':
+					moveRightLong()
+				}
+			} else {
+				switch event.Rune() {
+				case 'h':
+					moveLeft()
+				case 'l':
+					moveRight()
+				case 'b':
+					moveLeftLong()
+				case 'w', 'e':
+					moveRightLong()
+				case 'v', ' ':
+					selectionApplyIfActive()
+					selectionToggle()
+				case 'o':
+					if h.selectionStart > 0 {
+						h.cursor, h.selectionStart = h.selectionStart, h.cursor
+					}
+				}
+			}
+
+		case tcell.KeyEnter:
+			selectionApplyIfActive()
+			selectionToggle()
+
+		case tcell.KeyEsc:
+			selectionEnd()
+		}
+	})
+}
+
+// GetSelection, if selection is active, returns it, from being inclusive and
+// to being exclusive. The "direction" of the selection doesn't matter: from will
+// never be larger than to.
+//
+// If no selection is active, returns (0, 0).
+func (h *Histogram) GetSelection() (selStart, selEnd int) {
+	if h.selectionStart == 0 {
+		return 0, 0
+	}
+
+	selStart = h.selectionStart
+	selEnd = h.cursor
+	if selStart > selEnd {
+		selStart, selEnd = selEnd, selStart
+	}
+
+	selEnd += h.dataBinsInChartDot * h.binSize
+
+	return selStart, selEnd
+}
+
+func (h *Histogram) SetSelectedFunc(handler func(from, to int)) *Histogram {
+	h.selected = handler
+	return h
+}
+
+func (h *Histogram) IsSelectionActive() bool {
+	return h.selectionStart != 0
+}
+
 type fieldData struct {
 	dots [][]bool
 
@@ -188,6 +351,8 @@ type fieldData struct {
 // genFieldData returns a 2-dimensional field as nested slices: [y][x].
 // If the field is too small, returns nil.
 func (h *Histogram) genFieldData(width, height int) *fieldData {
+	foc := h.HasFocus()
+
 	rangeLen := (h.to - h.from + 1) / h.binSize
 
 	if rangeLen == 0 {
@@ -206,6 +371,35 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 			val += h.data[h.from+(idx+i)*h.binSize]
 		}
 		return val
+	}
+
+	/*
+		isCursorAt := func(idx, n int) bool {
+			for i := 0; i < n; i++ {
+				if h.cursor == h.from+(idx+i)*h.binSize {
+					return true
+				}
+			}
+
+			return false
+		}
+	*/
+
+	selStart, selEnd := h.GetSelection()
+	if selStart == 0 || selEnd == 0 {
+		selStart = h.cursor
+		selEnd = h.cursor + dataBinsInChartDot*h.binSize
+	}
+
+	isSelectedAt := func(idx, n int) bool {
+		for i := 0; i < n; i++ {
+			v := h.from + (idx+i)*h.binSize
+			if v >= selStart && v < selEnd {
+				return true
+			}
+		}
+
+		return false
 	}
 
 	//effectiveWidthDots := rangeLen
@@ -232,14 +426,28 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 	// Iterate over data and set dots to true
 	for xData, xChart := 0, 0; xData < rangeLen; xData, xChart = xData+dataBinsInChartDot, xChart+chartDotsInDataBin {
 		val := valAt(xData, dataBinsInChartDot)
+		crs := foc && isSelectedAt(xData, dataBinsInChartDot)
 
 		for y := 0; y < height; y++ {
-			if val <= y*dotYScale {
+			on := val > y*dotYScale
+
+			// As an optimization: if the dot is off and the cursor is not here, it
+			// means that all other dots in this column will be off, so we're done
+			// with this column.
+			if !on && !crs {
 				break
 			}
 
-			for i := 0; i < chartDotsInDataBin; i++ {
-				dots[height-y-1][xChart+i] = true
+			// If cursor is here, we need to inverse the dot.
+			if crs {
+				on = !on
+			}
+
+			// If the dots are on, set them to true.
+			if on {
+				for i := 0; i < chartDotsInDataBin; i++ {
+					dots[height-y-1][xChart+i] = true
+				}
 			}
 		}
 	}
