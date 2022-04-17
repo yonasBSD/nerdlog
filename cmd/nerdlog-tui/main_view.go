@@ -654,7 +654,7 @@ func (mv *MainView) ApplyLogs(resp *core.LogRespTotal) {
 
 		mv.logsTable.SetCell(
 			rowIdxLoadOlder, 0,
-			newTableCellButton("< LOAD OLDER >"),
+			newTableCellButton("< MOAR ! >"),
 		)
 
 		// Add all available logs
