@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -13,6 +14,10 @@ type MessageViewParams struct {
 
 	// Width and Height are 40 and 10 by default
 	Width, Height int
+
+	NoFocus bool
+
+	BackgroundColor tcell.Color
 }
 
 type MessageView struct {
@@ -48,6 +53,10 @@ func NewMessageView(
 	msgv.textView.SetText(params.Message)
 	msgv.textView.SetTextAlign(tview.AlignCenter)
 
+	if msgv.params.BackgroundColor != tcell.ColorDefault {
+		msgv.textView.SetBackgroundColor(msgv.params.BackgroundColor)
+	}
+
 	msgv.msgboxFlex.AddItem(msgv.textView, 0, 1, len(params.Buttons) == 0)
 
 	for i, b := range params.Buttons {
@@ -64,6 +73,9 @@ func NewMessageView(
 	msgv.frame = tview.NewFrame(msgv.msgboxFlex).SetBorders(0, 0, 0, 0, 0, 0)
 	msgv.frame.SetBorder(true).SetBorderPadding(1, 1, 1, 1)
 	msgv.frame.SetTitle(params.Title)
+	if msgv.params.BackgroundColor != tcell.ColorDefault {
+		msgv.frame.SetBackgroundColor(msgv.params.BackgroundColor)
+	}
 
 	return msgv
 }
@@ -73,9 +85,10 @@ func (msgv *MessageView) Show() {
 		pageNameMessage+msgv.params.MessageID, msgv.frame,
 		msgv.params.Width,
 		msgv.params.Height,
+		!msgv.params.NoFocus,
 	)
 }
 
 func (msgv *MessageView) Hide() {
-	msgv.mainView.hideModal(pageNameMessage + msgv.params.MessageID)
+	msgv.mainView.hideModal(pageNameMessage+msgv.params.MessageID, !msgv.params.NoFocus)
 }

@@ -192,9 +192,10 @@ func (qev *QueryEditView) Show(data QueryEditData) {
 		pageNameEditQueryParams, qev.frame,
 		101,
 		20,
+		true,
 	)
 }
 
 func (qev *QueryEditView) Hide() {
-	qev.mainView.hideModal(pageNameEditQueryParams)
+	qev.mainView.hideModal(pageNameEditQueryParams, true)
 }

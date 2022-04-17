@@ -56,6 +56,8 @@ type MainView struct {
 
 	queryEditView *QueryEditView
 
+	shownOverlayMsg string
+
 	// focusedBeforeCmd is a primitive which was focused before cmdInput was
 	// focused. Once the user is done editing command, focusedBeforeCmd
 	// normally resumes focus.
@@ -352,7 +354,10 @@ func NewMainView(params *MainViewParams) *MainView {
 			msg.OrigLine,
 		)
 
-		mv.showMessagebox("msg", "Message", s, nil)
+		mv.showMessagebox("msg", "Message", s, &MessageboxParams{
+			Width:  120,
+			Height: 20,
+		})
 	}).SetSelectionChangedFunc(func(row, column int) {
 		mv.bumpStatusLineRight()
 	})
@@ -465,6 +470,36 @@ func (mv *MainView) GetUIPrimitive() tview.Primitive {
 func (mv *MainView) ApplyHMState(hmState *core.HostsManagerState) {
 	mv.curHMState = hmState
 	mv.params.App.QueueUpdateDraw(func() {
+		var overlayMsg string
+
+		if !mv.curHMState.Connected {
+			overlayMsg = "Connecting to hosts..."
+		} else if mv.curHMState.Busy {
+			overlayMsg = "Updating search results..."
+		}
+
+		if mv.shownOverlayMsg != overlayMsg {
+			if mv.shownOverlayMsg != "" {
+				// TODO: using pageNameMessage here directly is too hacky
+				mv.hideModal(pageNameMessage+"overlay_msg", false)
+			}
+
+			if overlayMsg != "" {
+				mv.showMessagebox(
+					"overlay_msg", "", overlayMsg, &MessageboxParams{
+						Buttons: []string{},
+						NoFocus: true,
+						Width:   40,
+						Height:  6,
+
+						BackgroundColor: tcell.ColorDarkGray,
+					},
+				)
+			}
+
+			mv.shownOverlayMsg = overlayMsg
+		}
+
 		mv.bumpStatusLineLeft()
 
 		if mv.curHMState.Connected && mv.doQueryOnceConnected {
@@ -841,6 +876,12 @@ func formatDuration(dur time.Duration) string {
 type MessageboxParams struct {
 	Buttons         []string
 	OnButtonPressed func(label string, idx int)
+
+	Width, Height int
+
+	NoFocus bool
+
+	BackgroundColor tcell.Color
 }
 
 func (mv *MainView) showMessagebox(
@@ -849,11 +890,16 @@ func (mv *MainView) showMessagebox(
 	var msgvErr *MessageView
 
 	if params == nil {
-		params = &MessageboxParams{
-			Buttons: []string{"OK"},
-			OnButtonPressed: func(label string, idx int) {
-				msgvErr.Hide()
-			},
+		params = &MessageboxParams{}
+	}
+
+	if params.Buttons == nil {
+		params.Buttons = []string{"OK"}
+	}
+
+	if params.OnButtonPressed == nil {
+		params.OnButtonPressed = func(label string, idx int) {
+			msgvErr.Hide()
 		}
 	}
 
@@ -864,9 +910,12 @@ func (mv *MainView) showMessagebox(
 		Buttons:         params.Buttons,
 		OnButtonPressed: params.OnButtonPressed,
 
-		//Width: 60,
-		Width:  120, // TODO: from params
-		Height: 20,
+		Width:  params.Width,
+		Height: params.Height,
+
+		NoFocus: params.NoFocus,
+
+		BackgroundColor: params.BackgroundColor,
 	})
 	msgvErr.Show()
 }
@@ -879,13 +928,13 @@ func (mv *MainView) ShowMessagebox(
 	})
 }
 
-func (mv *MainView) HideMessagebox(msgID string) {
+func (mv *MainView) HideMessagebox(msgID string, popFocusStack bool) {
 	mv.params.App.QueueUpdateDraw(func() {
-		mv.hideModal(pageNameMessage + msgID)
+		mv.hideModal(pageNameMessage+msgID, popFocusStack)
 	})
 }
 
-func (mv *MainView) showModal(name string, primitive tview.Primitive, width, height int) {
+func (mv *MainView) showModal(name string, primitive tview.Primitive, width, height int, focus bool) {
 	mv.modalsFocusStack = append(mv.modalsFocusStack, mv.params.App.GetFocus())
 
 	// Returns a new primitive which puts the provided primitive in the center and
@@ -899,11 +948,28 @@ func (mv *MainView) showModal(name string, primitive tview.Primitive, width, hei
 
 	mv.rootPages.AddPage(name, modal(primitive, width, height), true, true)
 
-	mv.params.App.SetFocus(primitive)
+	if focus {
+		mv.params.App.SetFocus(primitive)
+	} else {
+		mv.popFocusStack()
+	}
 }
 
-func (mv *MainView) hideModal(name string) {
+func (mv *MainView) hideModal(name string, popFocusStack bool) {
+	prevFocused := mv.params.App.GetFocus()
+
 	mv.rootPages.RemovePage(name)
+	if popFocusStack {
+		mv.popFocusStack()
+	} else {
+		// Feels hacky, but I didn't find another way: apparently adding/removing
+		// pages inevitably messes with focus, and so if we want to keep it
+		// unchanged, we have to set it back manually.
+		mv.params.App.SetFocus(prevFocused)
+	}
+}
+
+func (mv *MainView) popFocusStack() {
 	l := len(mv.modalsFocusStack)
 	mv.params.App.SetFocus(mv.modalsFocusStack[l-1])
 	mv.modalsFocusStack = mv.modalsFocusStack[:l-1]
