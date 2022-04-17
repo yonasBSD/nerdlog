@@ -692,6 +692,7 @@ func (mv *MainView) ApplyLogs(resp *core.LogRespTotal) {
 			// Replaced all logs
 			mv.logsTable.Select(len(resp.Logs)+1, 0)
 			mv.logsTable.ScrollToEnd()
+			mv.bumpTimeRange(true)
 		} else {
 			// Loaded more (earlier) logs
 			numNewRows := mv.logsTable.GetRowCount() - oldNumRows
@@ -700,7 +701,6 @@ func (mv *MainView) ApplyLogs(resp *core.LogRespTotal) {
 		}
 
 		mv.bumpStatusLineRight()
-		mv.bumpTimeRange(true)
 	})
 }
 
