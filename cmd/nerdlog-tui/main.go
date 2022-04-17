@@ -194,9 +194,13 @@ func initHostsManager(mainView *MainView, initialHostsFilter string) *core.Hosts
 		}
 	}()
 
+	envUser := os.Getenv("USER")
+
 	hm = core.NewHostsManager(core.HostsManagerParams{
 		ConfigHosts:        makeConfigHosts(),
 		InitialHostsFilter: initialHostsFilter,
+
+		ClientID: envUser,
 
 		UpdatesCh: updatesCh,
 	})

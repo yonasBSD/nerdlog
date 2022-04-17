@@ -44,6 +44,13 @@ type HostsManagerParams struct {
 	ConfigHosts        []ConfigHost
 	InitialHostsFilter string
 
+	// ClientID is just an arbitrary string (should be filename-friendly though)
+	// which will be appended to the nerdlog_query.sh and its cache filenames.
+	//
+	// Needed to make sure that different clients won't get conflicts over those
+	// files when using the tool concurrently on the same nodes.
+	ClientID string
+
 	UpdatesCh chan<- HostsManagerUpdate
 }
 
@@ -117,6 +124,7 @@ func (hm *HostsManager) updateHAs() {
 		hc := hm.hcs[name]
 		ha := NewHostAgent(HostAgentParams{
 			Config:    hc,
+			ClientID:  hm.params.ClientID,
 			UpdatesCh: hm.hostUpdatesCh,
 		})
 		hm.has[hc.Name] = ha

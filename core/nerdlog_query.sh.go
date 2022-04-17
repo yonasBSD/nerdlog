@@ -19,6 +19,11 @@ positional_args=()
 
 while [[ $# -gt 0 ]]; do
   case $1 in
+    -c|--cache-file)
+      cachefile="$2"
+      shift # past argument
+      shift # past value
+      ;;
     -f|--from)
       from="$2"
       shift # past argument

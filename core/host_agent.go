@@ -108,6 +108,13 @@ type HostAgentUpdateState struct {
 type HostAgentParams struct {
 	Config ConfigHost
 
+	// ClientID is just an arbitrary string (should be filename-friendly though)
+	// which will be appended to the nerdlog_query.sh and its cache filenames.
+	//
+	// Needed to make sure that different clients won't get conflicts over those
+	// files when using the tool concurrently on the same nodes.
+	ClientID string
+
 	UpdatesCh chan<- *HostAgentUpdate
 }
 
@@ -855,7 +862,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 	case cmdCtx.cmd.bootstrap != nil:
 		cmdCtx.bootstrapCtx = &hostCmdCtxBootstrap{}
 
-		ha.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > /var/tmp/nerdlog_query.sh\n" + nerdlogQuerySh + "EOF\n"))
+		ha.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > /var/tmp/nerdlog_query_" + ha.params.ClientID + ".sh\n" + nerdlogQuerySh + "EOF\n"))
 		ha.conn.stdinBuf.Write([]byte("if [ $? == 0 ]; then echo 'bootstrap ok'; else echo 'bootstrap failed'; fi\n"))
 
 	case cmdCtx.cmd.ping != nil:
@@ -871,7 +878,8 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		}
 
 		parts := []string{
-			"bash /var/tmp/nerdlog_query.sh",
+			"bash /var/tmp/nerdlog_query_" + ha.params.ClientID + ".sh",
+			"--cache-file", "/tmp/nerdlog_query_cache_" + ha.params.ClientID,
 		}
 
 		if !cmdCtx.cmd.queryLogs.from.IsZero() {
