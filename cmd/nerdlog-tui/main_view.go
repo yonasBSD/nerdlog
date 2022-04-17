@@ -552,7 +552,7 @@ func (mv *MainView) ApplyHMState(hmState *core.HostsManagerState) {
 						Width:   40,
 						Height:  6,
 
-						BackgroundColor: tcell.ColorDarkGray,
+						BackgroundColor: tcell.ColorDarkBlue,
 					},
 				)
 
