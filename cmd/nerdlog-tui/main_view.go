@@ -661,6 +661,14 @@ func (mv *MainView) ApplyLogs(resp *core.LogRespTotal) {
 		for i, rowIdx := 0, 2; i < len(resp.Logs); i, rowIdx = i+1, rowIdx+1 {
 			msg := resp.Logs[i]
 
+			msgColor := tcell.ColorWhite
+			switch msg.Context["level_name"] {
+			case "warn":
+				msgColor = tcell.ColorYellow
+			case "error":
+				msgColor = tcell.ColorPink
+			}
+
 			timeStr := msg.Time.Format(logsTableTimeLayout)
 			if msg.DecreasedTimestamp {
 				timeStr = ""
@@ -668,18 +676,18 @@ func (mv *MainView) ApplyLogs(resp *core.LogRespTotal) {
 
 			mv.logsTable.SetCell(
 				rowIdx, 0,
-				newTableCellLogmsg(timeStr).SetTextColor(tcell.ColorYellow),
+				newTableCellLogmsg(timeStr).SetTextColor(tcell.ColorLightBlue),
 			)
 
 			mv.logsTable.SetCell(
 				rowIdx, 1,
-				newTableCellLogmsg(msg.Msg),
+				newTableCellLogmsg(msg.Msg).SetTextColor(msgColor),
 			)
 
 			for i, colName := range colNames[2:] {
 				mv.logsTable.SetCell(
 					rowIdx, 2+i,
-					newTableCellLogmsg(msg.Context[colName]),
+					newTableCellLogmsg(msg.Context[colName]).SetTextColor(msgColor),
 				)
 			}
 
@@ -752,7 +760,8 @@ func (mv *MainView) bumpStatusLineRight() {
 
 func newTableCellHeader(text string) *tview.TableCell {
 	return tview.NewTableCell(text).
-		SetTextColor(tcell.ColorYellow).
+		SetTextColor(tcell.ColorLightBlue).
+		SetAttributes(tcell.AttrBold).
 		SetAlign(tview.AlignLeft).
 		SetSelectable(false)
 }

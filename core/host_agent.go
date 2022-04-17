@@ -476,6 +476,20 @@ func (ha *HostAgent) run() {
 							ctxMap[key] = val
 						}
 
+						// Another hack: often our messages contain a prefix like
+						// "[ foo.bar.baz.info ]", but this is redundant since
+						// "foo.bar.baz" is already present as a namespace, and "info"
+						// is present as level_name. So we check if such redundant prefix
+						// exists, and strip it.
+						if strings.HasPrefix(msg, "[ ") {
+							if idx := strings.Index(msg, " ] "); idx >= 0 {
+								if msg[2:idx] == ctxMap["namespace"]+"."+ctxMap["level_name"] {
+									// Prefix exists and is redundant, strip it.
+									msg = msg[idx+3:]
+								}
+							}
+						}
+
 						resp.Logs = append(resp.Logs, LogMsg{
 							Time:               t,
 							DecreasedTimestamp: decreasedTimestamp,
