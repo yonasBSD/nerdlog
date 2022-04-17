@@ -474,7 +474,12 @@ func (hm *HostsManager) mergeLogRespsAndSend() {
 	}
 
 	sort.SliceStable(ret.Logs, func(i, j int) bool {
-		return ret.Logs[i].Time.Before(ret.Logs[j].Time)
+		if !ret.Logs[i].Time.Equal(ret.Logs[j].Time) {
+			return ret.Logs[i].Time.Before(ret.Logs[j].Time)
+		}
+
+		// TODO: make it less hacky, store source somewhere outside of Context as well.
+		return ret.Logs[i].Context["source"] < ret.Logs[j].Context["source"]
 	})
 
 	// Cut all potentially incomplete logs, only leave timespan that we're sure
