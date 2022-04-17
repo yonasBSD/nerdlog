@@ -72,8 +72,7 @@ type Histogram struct {
 	// there is no selection in progress.
 	selectionStart int
 
-	dataBinsInChartDot int
-	chartDotsInDataBin int
+	fldData *fieldData
 }
 
 func NewHistogram() *Histogram {
@@ -88,7 +87,7 @@ func (h *Histogram) SetRange(from, to int) *Histogram {
 	h.to = to
 
 	// Reset cursor and selection too
-	h.cursor = h.to - h.binSize
+	h.cursor = h.to - h.binSize*h.getDataBinsInChartDot()
 	h.selectionStart = 0
 
 	return h
@@ -136,8 +135,7 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 		return
 	}
 
-	h.dataBinsInChartDot = fldData.dataBinsInChartDot
-	h.chartDotsInDataBin = fldData.chartDotsInDataBin
+	h.fldData = fldData
 
 	fldMarginLeft = (width - fldData.effectiveWidthRunes) / 2
 
@@ -167,7 +165,7 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 
 	for _, mark := range h.curMarks {
 		markStr := h.xFormat(mark)
-		dotCoord := h.valToCoord(fldData, mark) / 60
+		dotCoord := h.valToCoord(mark)
 
 		charCoord := dotCoord / 2
 		remaining := charCoord - numRunes
@@ -190,21 +188,54 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 	}
 
 	tview.Print(screen, sb.String(), x+fldMarginLeft, y+height-1, width-fldMarginLeft, tview.AlignLeft, tcell.ColorWhite)
+
+	// If we're in the focus, then also draw the cursor and maybe selection marks.
+	if h.HasFocus() {
+		selScaleLines := h.fldDataToLines(fldData.selScaleDots)
+		// There should be exactly one line
+		line := selScaleLines[0]
+
+		var selMark string
+		if !h.IsSelectionActive() {
+			selMark = fmt.Sprintf(" [%s]", h.xFormat(h.cursor))
+		} else {
+			selStart, selEnd := h.GetSelection()
+			selMark = fmt.Sprintf(" [%s - %s]", h.xFormat(selStart), h.xFormat(selEnd))
+		}
+
+		tview.Print(screen, line+selMark, x+fldMarginLeft+fldData.selScaleOffset/2, y+height-1, width-fldMarginLeft-fldData.selScaleOffset/2, tview.AlignLeft, tcell.ColorRed)
+	}
+}
+
+func (h *Histogram) getDataBinsInChartDot() int {
+	if h.fldData == nil {
+		return 1
+	}
+
+	return h.fldData.dataBinsInChartDot
+}
+
+func (h *Histogram) getChartDotsInDataBin() int {
+	if h.fldData == nil {
+		return 1
+	}
+
+	return h.fldData.chartDotsInDataBin
 }
 
 func (h *Histogram) InputHandler() func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
 	return h.WrapInputHandler(func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
-		maxCursor := h.to - h.binSize
+		maxCursor := h.to - h.binSize*h.getDataBinsInChartDot()
 
 		moveLeft := func() {
-			h.cursor -= h.binSize
+			h.cursor -= h.binSize * h.getDataBinsInChartDot()
 			if h.cursor < h.from {
 				h.cursor = h.from
 			}
 		}
 
 		moveRight := func() {
-			h.cursor += h.binSize
+			h.cursor += h.binSize * h.getDataBinsInChartDot()
 			if h.cursor > maxCursor {
 				h.cursor = maxCursor
 			}
@@ -314,7 +345,7 @@ func (h *Histogram) GetSelection() (selStart, selEnd int) {
 		selStart, selEnd = selEnd, selStart
 	}
 
-	selEnd += h.dataBinsInChartDot * h.binSize
+	selEnd += h.binSize * h.getDataBinsInChartDot()
 
 	return selStart, selEnd
 }
@@ -346,6 +377,14 @@ type fieldData struct {
 
 	effectiveWidthDots  int
 	effectiveWidthRunes int
+
+	// selScaleDots is another small field (height 2, width depends on the size
+	// of the selection) representing the selection scale below. It's only actually
+	// drawn if we're in focus.
+	selScaleDots [][]bool
+	// selScaleOffset is the X offset of selScaleDots, from the left side.
+	selScaleOffset    int
+	selScaleOffsetEnd int
 }
 
 // genFieldData returns a 2-dimensional field as nested slices: [y][x].
@@ -373,17 +412,15 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 		return val
 	}
 
-	/*
-		isCursorAt := func(idx, n int) bool {
-			for i := 0; i < n; i++ {
-				if h.cursor == h.from+(idx+i)*h.binSize {
-					return true
-				}
+	isCursorAt := func(idx, n int) bool {
+		for i := 0; i < n; i++ {
+			if h.cursor == h.from+(idx+i)*h.binSize {
+				return true
 			}
-
-			return false
 		}
-	*/
+
+		return false
+	}
 
 	selStart, selEnd := h.GetSelection()
 	if selStart == 0 || selEnd == 0 {
@@ -423,10 +460,19 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 		dots[y] = make([]bool, width)
 	}
 
+	selScaleDots := make([][]bool, 2)
+	for y := 0; y < 2; y++ {
+		selScaleDots[y] = make([]bool, width)
+	}
+
+	selOffsetStart := -1
+	selOffsetEnd := -1
+
 	// Iterate over data and set dots to true
 	for xData, xChart := 0, 0; xData < rangeLen; xData, xChart = xData+dataBinsInChartDot, xChart+chartDotsInDataBin {
 		val := valAt(xData, dataBinsInChartDot)
-		crs := foc && isSelectedAt(xData, dataBinsInChartDot)
+		sel := isSelectedAt(xData, dataBinsInChartDot)
+		crs := isCursorAt(xData, dataBinsInChartDot)
 
 		for y := 0; y < height; y++ {
 			on := val > y*dotYScale
@@ -434,12 +480,12 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 			// As an optimization: if the dot is off and the cursor is not here, it
 			// means that all other dots in this column will be off, so we're done
 			// with this column.
-			if !on && !crs {
+			if !on && !(foc && sel) {
 				break
 			}
 
 			// If cursor is here, we need to inverse the dot.
-			if crs {
+			if foc && sel {
 				on = !on
 			}
 
@@ -450,6 +496,37 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 				}
 			}
 		}
+
+		for i := 0; i < chartDotsInDataBin; i++ {
+			if sel {
+				// When selection starts, remember its offset
+				// (and also make sure it's even)
+				if selOffsetStart == -1 {
+					selOffsetStart = (xChart + i)
+					if (selOffsetStart & 0x01) != 0 {
+						selOffsetStart -= 1
+					}
+				}
+				selScaleDots[0][xChart+i] = true
+			} else if selOffsetStart != -1 && selOffsetEnd == -1 {
+				selOffsetEnd = (xChart + i)
+				if (selOffsetEnd & 0x01) != 0 {
+					selOffsetEnd += 1
+				}
+			}
+
+			if crs {
+				selScaleDots[1][xChart+i] = true
+			}
+		}
+	}
+
+	// Cut the empty data from selScaleDots
+	for i := range selScaleDots {
+		if selOffsetEnd != -1 {
+			selScaleDots[i] = selScaleDots[i][:selOffsetEnd]
+		}
+		selScaleDots[i] = selScaleDots[i][selOffsetStart:]
 	}
 
 	effectiveWidthDots := rangeLen / dataBinsInChartDot * chartDotsInDataBin
@@ -469,6 +546,10 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 
 		effectiveWidthDots:  effectiveWidthDots,
 		effectiveWidthRunes: effectiveWidthRunes,
+
+		selScaleDots:      selScaleDots,
+		selScaleOffset:    selOffsetStart,
+		selScaleOffsetEnd: selOffsetEnd,
 	}
 
 	/*
@@ -528,6 +609,6 @@ func (h *Histogram) fldDataToLines(dots [][]bool) []string {
 	return ret
 }
 
-func (h *Histogram) valToCoord(fldData *fieldData, v int) int {
-	return (v - h.from) / fldData.dataBinsInChartDot * fldData.chartDotsInDataBin
+func (h *Histogram) valToCoord(v int) int {
+	return (v - h.from) / h.getDataBinsInChartDot() * h.getChartDotsInDataBin() / h.binSize
 }
