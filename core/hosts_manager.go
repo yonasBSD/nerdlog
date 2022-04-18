@@ -53,8 +53,6 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 
 		hcs: make(map[string]ConfigHost, len(params.ConfigHosts)),
 
-		hostsFilter: params.InitialHostsFilter,
-
 		has:      map[string]*HostAgent{},
 		haStates: map[string]HostAgentState{},
 
@@ -68,7 +66,10 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 		hm.hcs[hc.Name] = hc
 	}
 
-	hm.filterHANames()
+	if err := hm.setHostsFilter(params.InitialHostsFilter); err != nil {
+		panic("setHostsFilter didn't like the initial filter: " + err.Error())
+	}
+
 	hm.updateHAs()
 	hm.updateHostsByState()
 	hm.sendStateUpdate()
@@ -78,19 +79,41 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 	return hm
 }
 
-func (hm *HostsManager) filterHANames() {
-	hm.matchingHANames = map[string]struct{}{}
+func (hm *HostsManager) setHostsFilter(hostsFilter string) error {
+	matchingHANames := map[string]struct{}{}
 
-	for _, hc := range hm.params.ConfigHosts {
-		// TODO: proper filtering
-		if hm.hostsFilter == "" {
-			// pass
-		} else if !strings.Contains(hc.Name, hm.hostsFilter) {
-			continue
+	parts := strings.Split(hostsFilter, ",")
+	for _, part := range parts {
+		// Empty filter means "allow everything", which is A TON of hosts, and some
+		// of which the client is likely to not have access to, and nerdlog doesn't
+		// handle this situation gracefully, so for now just not allow it.
+		if part == "" {
+			return errors.Errorf("for now, empty filters are not allowed")
 		}
 
-		hm.matchingHANames[hc.Name] = struct{}{}
+		numMatchedPart := 0
+
+		for _, hc := range hm.params.ConfigHosts {
+			if part == "" {
+				// pass
+			} else if !strings.Contains(hc.Name, part) {
+				continue
+			}
+
+			matchingHANames[hc.Name] = struct{}{}
+			numMatchedPart++
+		}
+
+		if numMatchedPart == 0 {
+			return errors.Errorf("%q didn't match anything", part)
+		}
 	}
+
+	// All went well, remember the filter
+	hm.hostsFilter = hostsFilter
+	hm.matchingHANames = matchingHANames
+
+	return nil
 }
 
 func (hm *HostsManager) updateHAs() {
@@ -235,8 +258,11 @@ func (hm *HostsManager) run() {
 					continue
 				}
 
-				hm.hostsFilter = r.filter
-				hm.filterHANames()
+				if err := hm.setHostsFilter(r.filter); err != nil {
+					r.resCh <- errors.Trace(err)
+					continue
+				}
+
 				hm.updateHAs()
 				hm.updateHostsByState()
 				hm.sendStateUpdate()

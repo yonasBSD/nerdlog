@@ -173,17 +173,12 @@ func main() {
 			hm.QueryLogs(params)
 		},
 		OnHostsFilterChange: func(hostsFilter string) error {
-			mainView.setHostsFilter(hostsFilter)
 			err := hm.SetHostsFilter(hostsFilter)
 			if err != nil {
 				return errors.Trace(err)
 			}
 
-			// NOTE: we can't simply call doQuery right here because due to the hosts
-			// change, some hosts might not be connected yet. We need to make sure that
-			// it's being done after the connection has succeeded somehow (similarly
-			// to the initial)
-			//mainView.doQuery()
+			mainView.setHostsFilter(hostsFilter)
 
 			return nil
 		},

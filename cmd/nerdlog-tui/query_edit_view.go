@@ -24,8 +24,8 @@ var timeLabelText = `Time range in the format "[yellow]<time>[ to <time>][-]", w
 current time is used.
 `
 
-var hostsLabelText = `Hosts. For now, just a substring, e.g. "[yellow]my-host-[-]"
-`
+var hostsLabelText = `Hosts. Comma-separated substrings, e.g. "[yellow]my-host-,my-host-[-]" matches
+all staging redacted and redacted nodes.`
 
 type QueryEditViewParams struct {
 	// DoneFunc is called when the user submits the form. If it returns a non-nil
@@ -140,7 +140,7 @@ func NewQueryEditView(
 	hostsLabel := tview.NewTextView()
 	hostsLabel.SetText(hostsLabelText)
 	hostsLabel.SetDynamicColors(true)
-	qev.flex.AddItem(hostsLabel, 1, 0, false)
+	qev.flex.AddItem(hostsLabel, 2, 0, false)
 
 	qev.hostsInput = tview.NewInputField()
 	qev.hostsInput.SetDoneFunc(getDoneFunc(qev.hostsInput))
