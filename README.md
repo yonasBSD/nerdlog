@@ -7,6 +7,8 @@ ssh-ing directly to the nodes and analyzing syslog files using
 I said, a proof of concept. Most of the code is hard to read, no tests, poor
 error handling, etc.
 
+But it works. It's pretty usable and surprisingly fast.
+
 ![Nerdlog](nerdlog.png)
 
 ## Installation
