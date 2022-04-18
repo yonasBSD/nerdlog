@@ -756,10 +756,14 @@ func (mv *MainView) bumpStatusLineRight() {
 		selectedRowStr = "-"
 	}
 
-	mv.statusLineRight.SetText(fmt.Sprintf(
-		"%s / %d / %d",
-		selectedRowStr, len(mv.curLogResp.Logs), mv.curLogResp.NumMsgsTotal,
-	))
+	if mv.curLogResp != nil {
+		mv.statusLineRight.SetText(fmt.Sprintf(
+			"%s / %d / %d",
+			selectedRowStr, len(mv.curLogResp.Logs), mv.curLogResp.NumMsgsTotal,
+		))
+	} else {
+		mv.statusLineRight.SetText("-")
+	}
 }
 
 func newTableCellHeader(text string) *tview.TableCell {
