@@ -24,7 +24,7 @@ var timeLabelText = `Time range in the format "[yellow]<time>[ to <time>][-]", w
 current time is used.
 `
 
-var hostsLabelText = `Hosts. Comma-separated substrings, e.g. "[yellow]my-host-,my-host-[-]" matches
+var hostsLabelText = `Hosts. Comma-separated glob patterns, e.g. "[yellow]my-host-*,my-host-*[-]" matches
 all staging redacted and redacted nodes.`
 
 type QueryEditViewParams struct {

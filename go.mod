@@ -6,6 +6,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
 	github.com/juju/errors v0.0.0-20220324005906-d8c5072c94ab
 	github.com/kevinburke/ssh_config v1.1.0
+	github.com/komem3/glob v0.0.0-20220120054719-652adce4de0a
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
 	golang.org/x/crypto v0.0.0-20220321153916-2c7772ba3064
 )

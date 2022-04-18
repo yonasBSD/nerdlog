@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/juju/errors"
+	"github.com/komem3/glob"
 )
 
 type HostsManager struct {
@@ -93,10 +94,15 @@ func (hm *HostsManager) setHostsFilter(hostsFilter string) error {
 			continue
 		}
 
+		matcher, err := glob.Compile(part)
+		if err != nil {
+			return errors.Annotatef(err, "pattern %q", part)
+		}
+
 		numMatchedPart := 0
 
 		for _, hc := range hm.params.ConfigHosts {
-			if !strings.Contains(hc.Name, part) {
+			if !matcher.MatchString(hc.Name) {
 				continue
 			}
 

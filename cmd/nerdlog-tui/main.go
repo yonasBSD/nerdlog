@@ -159,7 +159,7 @@ func main() {
 		}
 	}()
 
-	initialHostsFilter := "my-host-"
+	initialHostsFilter := "my-host-*"
 
 	mainView = NewMainView(&MainViewParams{
 		InitialQueryData: QueryEditData{
