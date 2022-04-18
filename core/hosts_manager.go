@@ -403,8 +403,16 @@ type HostsManagerState struct {
 	// NumUnused is the number of hosts available in the config but filtered out.
 	NumUnused int
 
-	// Connected is true when all hosts are connected.
+	// NumConnected is how many nodes are actually connected
+	NumConnected int
+
+	// NoMatchingHosts is true when there are no matching hosts.
+	NoMatchingHosts bool
+
+	// Connected is true when all matching hosts (which should be more than 0)
+	// are connected.
 	Connected bool
+
 	// Busy is true when a query is in progress.
 	Busy bool
 }
@@ -431,13 +439,22 @@ func (hm *HostsManager) updateHostsByState() {
 }
 
 func (hm *HostsManager) sendStateUpdate() {
+	numConnected := 0
+	for _, state := range hm.haStates {
+		if isStateConnected(state) {
+			numConnected++
+		}
+	}
+
 	hm.params.UpdatesCh <- HostsManagerUpdate{
 		State: &HostsManagerState{
-			NumHosts:     len(hm.has),
-			HostsByState: hm.hostsByState,
-			Connected:    hm.numNotConnected == 0,
-			NumUnused:    hm.numUnused,
-			Busy:         hm.curQueryLogsCtx != nil,
+			NumHosts:        len(hm.has),
+			HostsByState:    hm.hostsByState,
+			NumConnected:    numConnected,
+			NoMatchingHosts: hm.numNotConnected == 0 && numConnected == 0,
+			Connected:       hm.numNotConnected == 0 && numConnected > 0,
+			NumUnused:       hm.numUnused,
+			Busy:            hm.curQueryLogsCtx != nil,
 		},
 	}
 }

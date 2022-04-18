@@ -28,8 +28,6 @@ const (
 const histogramBinSize = 60 // 1 minute
 
 type MainViewParams struct {
-	InitialQueryData QueryEditData
-
 	App *tview.Application
 
 	// OnLogQuery is called by MainView whenever the user submits a query to get
@@ -107,38 +105,26 @@ type OnLogQueryCallback func(params core.QueryLogsParams)
 type OnHostsFilterChange func(hostsFilter string) error
 type OnCmdCallback func(cmd string)
 
+var (
+	queryInputStaleMatch = tcell.Style{}.
+				Background(tcell.ColorBlue).
+				Foreground(tcell.ColorWhite).
+				Bold(true)
+
+	queryInputStaleMismatch = tcell.Style{}.
+				Background(tcell.ColorDarkRed).
+				Foreground(tcell.ColorWhite).
+				Bold(true)
+)
+
 func NewMainView(params *MainViewParams) *MainView {
 	mv := &MainView{
 		params: *params,
-
-		// TODO: add a param to force execution of the query right away
-		// (which should be set when some cli flags were given), and
-		// then set doQueryOnceConnected to true in this case too.
-		//doQueryOnceConnected: true,
 	}
 
 	mv.rootPages = tview.NewPages()
 
 	mainFlex := tview.NewFlex().SetDirection(tview.FlexRow)
-
-	queryInputStaleMatch := tcell.Style{}.
-		Background(tcell.ColorBlue).
-		Foreground(tcell.ColorWhite).
-		Bold(true)
-
-	queryInputStaleMismatch := tcell.Style{}.
-		Background(tcell.ColorDarkRed).
-		Foreground(tcell.ColorWhite).
-		Bold(true)
-
-	queryInputApplyStyle := func() {
-		style := queryInputStaleMatch
-		if mv.queryInput.GetText() != mv.query {
-			style = queryInputStaleMismatch
-		}
-
-		mv.queryInput.SetFieldStyle(style)
-	}
 
 	mv.queryInput = tview.NewInputField()
 	mv.queryInput.SetDoneFunc(func(key tcell.Key) {
@@ -148,12 +134,12 @@ func NewMainView(params *MainViewParams) *MainView {
 			mv.setQuery(mv.queryInput.GetText())
 			mv.bumpTimeRange(false)
 			mv.doQuery()
-			queryInputApplyStyle()
+			mv.queryInputApplyStyle()
 
 		case tcell.KeyEsc:
 			//if mv.queryInput.GetText() != mv.query {
 			//mv.queryInput.SetText(mv.query)
-			//queryInputApplyStyle()
+			//mv.queryInputApplyStyle()
 			//}
 			mv.params.App.SetFocus(mv.logsTable)
 
@@ -166,10 +152,10 @@ func NewMainView(params *MainViewParams) *MainView {
 	})
 
 	mv.queryInput.SetChangedFunc(func(text string) {
-		queryInputApplyStyle()
+		mv.queryInputApplyStyle()
 	})
 
-	queryInputApplyStyle()
+	mv.queryInputApplyStyle()
 
 	mv.queryEditBtn = tview.NewButton("Edit")
 	mv.queryEditBtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -444,40 +430,16 @@ func NewMainView(params *MainViewParams) *MainView {
 	mainFlex.AddItem(mv.cmdInput, 1, 0, false)
 
 	mv.queryEditView = NewQueryEditView(mv, &QueryEditViewParams{
-		DoneFunc: func(data QueryEditData) error {
-			ftr, err := ParseFromToRange(data.Time)
-			if err != nil {
-				return errors.Annotatef(err, "time")
-			}
-
-			mv.setQuery(data.Query)
-			mv.setTimeRange(ftr.From, ftr.To)
-
-			// Before we call OnHostsFilterChange, set this doQueryOnceConnected
-			// flag, so that once we receive a status update (which can happen any
-			// moment after OnHostsFilterChange is called), and if Connected is true
-			// there, we'll do the query.
-			mv.doQueryOnceConnected = true
-
-			err = mv.params.OnHostsFilterChange(data.HostsFilter)
-			if err != nil {
-				return errors.Annotate(err, "hosts")
-			}
-
-			mv.bumpStatusLineLeft()
-
-			queryInputApplyStyle()
-
-			return nil
-		},
+		DoneFunc: mv.applyQueryEditData,
 	})
 
 	mv.rootPages.AddPage("mainFlex", mainFlex, true, true)
 
-	go mv.run()
+	// Set default time range, just to have anything there.
+	from, to := TimeOrDur{Dur: -1 * time.Hour}, TimeOrDur{}
+	mv.setTimeRange(from, to)
 
-	mv.params.App.SetFocus(mv.logsTable)
-	mv.queryEditView.Show(mv.params.InitialQueryData)
+	go mv.run()
 
 	return mv
 }
@@ -531,6 +493,44 @@ func (mv *MainView) bumpOverlay() {
 	mv.overlayMsgView.textView.SetText(string(mv.overlaySpinner) + " " + mv.overlayText)
 }
 
+func (mv *MainView) queryInputApplyStyle() {
+	style := queryInputStaleMatch
+	if mv.queryInput.GetText() != mv.query {
+		style = queryInputStaleMismatch
+	}
+
+	mv.queryInput.SetFieldStyle(style)
+}
+
+func (mv *MainView) applyQueryEditData(data QueryEditData) error {
+	ftr, err := ParseFromToRange(data.Time)
+	if err != nil {
+		return errors.Annotatef(err, "time")
+	}
+
+	mv.setQuery(data.Query)
+	mv.setTimeRange(ftr.From, ftr.To)
+
+	// Before we call OnHostsFilterChange, set this doQueryOnceConnected
+	// flag, so that once we receive a status update (which can happen any
+	// moment after OnHostsFilterChange is called), and if Connected is true
+	// there, we'll do the query.
+	mv.doQueryOnceConnected = true
+
+	err = mv.params.OnHostsFilterChange(data.HostsFilter)
+	if err != nil {
+		return errors.Annotate(err, "hosts")
+	}
+
+	mv.setHostsFilter(data.HostsFilter)
+
+	mv.bumpStatusLineLeft()
+
+	mv.queryInputApplyStyle()
+
+	return nil
+}
+
 func (mv *MainView) GetUIPrimitive() tview.Primitive {
 	return mv.rootPages
 }
@@ -540,7 +540,7 @@ func (mv *MainView) ApplyHMState(hmState *core.HostsManagerState) {
 	mv.params.App.QueueUpdateDraw(func() {
 		var overlayMsg string
 
-		if !mv.curHMState.Connected {
+		if !mv.curHMState.Connected && !mv.curHMState.NoMatchingHosts {
 			overlayMsg = "Connecting to hosts..."
 		} else if mv.curHMState.Busy {
 			overlayMsg = "Updating search results..."
@@ -719,7 +719,7 @@ func (mv *MainView) ApplyLogs(resp *core.LogRespTotal) {
 func (mv *MainView) bumpStatusLineLeft() {
 	sb := strings.Builder{}
 
-	if !mv.curHMState.Connected {
+	if !mv.curHMState.Connected && !mv.curHMState.NoMatchingHosts {
 		sb.WriteString("connecting ")
 	} else if mv.curHMState.Busy {
 		sb.WriteString("busy ")

@@ -8,6 +8,7 @@ require (
 	github.com/kevinburke/ssh_config v1.1.0
 	github.com/komem3/glob v0.0.0-20220120054719-652adce4de0a
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
+	github.com/spf13/pflag v1.0.5
 	golang.org/x/crypto v0.0.0-20220321153916-2c7772ba3064
 )
 

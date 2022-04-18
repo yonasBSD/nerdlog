@@ -7,12 +7,12 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/juju/errors"
 	"github.com/kevinburke/ssh_config"
 	"github.com/rivo/tview"
+	"github.com/spf13/pflag"
 )
 
 // TODO: make multiple of them
@@ -34,7 +34,35 @@ var (
 	maxNumLinesLock sync.Mutex
 )
 
+var (
+	flagTime  = pflag.StringP("time", "t", "", "Time range in the same format as accepted by the UI. Examples: '1h', 'Mar27 12:00'")
+	flagHosts = pflag.StringP("hosts", "h", "", "Hosts to connect to, as comma-separated glob patterns, e.g. 'my-host-*,my-host-*'")
+	flagQuery = pflag.StringP("query", "q", "", "Initial query to execute, using awk syntax")
+)
+
 func main() {
+	pflag.Parse()
+
+	initialTime := "-1h"
+	initialHosts := "my-host-*"
+	initialQuery := ""
+	connectRightAway := false
+
+	if *flagTime != "" {
+		initialTime = *flagTime
+		connectRightAway = true
+	}
+
+	if *flagHosts != "" {
+		initialHosts = *flagHosts
+		connectRightAway = true
+	}
+
+	if *flagQuery != "" {
+		initialQuery = *flagQuery
+		connectRightAway = true
+	}
+
 	var hm *core.HostsManager
 	var mainView *MainView
 
@@ -159,15 +187,7 @@ func main() {
 		}
 	}()
 
-	initialHostsFilter := "my-host-*"
-
 	mainView = NewMainView(&MainViewParams{
-		InitialQueryData: QueryEditData{
-			Time:        "-1h",
-			Query:       "",
-			HostsFilter: initialHostsFilter,
-		},
-
 		App: app,
 		OnLogQuery: func(params core.QueryLogsParams) {
 			maxNumLinesLock.Lock()
@@ -182,8 +202,6 @@ func main() {
 				return errors.Trace(err)
 			}
 
-			mainView.setHostsFilter(hostsFilter)
-
 			return nil
 		},
 		OnCmd: func(cmd string) {
@@ -191,11 +209,25 @@ func main() {
 		},
 	})
 
-	// Set default time range
-	from, to := TimeOrDur{Dur: -1 * time.Hour}, TimeOrDur{}
-	mainView.setTimeRange(from, to)
-
 	hm = initHostsManager(mainView, "")
+
+	// Now either show the query edit form, or, if any details have been passed
+	// as cli arguments, initiate the query right away.
+
+	initialQueryData := QueryEditData{
+		Time:        initialTime,
+		Query:       initialQuery,
+		HostsFilter: initialHosts,
+	}
+
+	if !connectRightAway {
+		mainView.params.App.SetFocus(mainView.logsTable)
+		mainView.queryEditView.Show(initialQueryData)
+	} else {
+		if err := mainView.applyQueryEditData(initialQueryData); err != nil {
+			panic(err.Error())
+		}
+	}
 
 	fmt.Println("Starting UI ...")
 	if err := app.SetRoot(mainView.GetUIPrimitive(), true).Run(); err != nil {
