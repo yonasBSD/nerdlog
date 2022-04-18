@@ -162,7 +162,11 @@ func main() {
 	initialHostsFilter := "my-host-"
 
 	mainView = NewMainView(&MainViewParams{
-		InitialHostsFilter: initialHostsFilter,
+		InitialQueryData: QueryEditData{
+			Time:        "-1h",
+			Query:       "",
+			HostsFilter: initialHostsFilter,
+		},
 
 		App: app,
 		OnLogQuery: func(params core.QueryLogsParams) {
@@ -191,7 +195,7 @@ func main() {
 	from, to := TimeOrDur{Dur: -1 * time.Hour}, TimeOrDur{}
 	mainView.setTimeRange(from, to)
 
-	hm = initHostsManager(mainView, initialHostsFilter)
+	hm = initHostsManager(mainView, "")
 
 	fmt.Println("Starting UI ...")
 	if err := app.SetRoot(mainView.GetUIPrimitive(), true).Run(); err != nil {

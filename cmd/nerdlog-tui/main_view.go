@@ -28,7 +28,7 @@ const (
 const histogramBinSize = 60 // 1 minute
 
 type MainViewParams struct {
-	InitialHostsFilter string
+	InitialQueryData QueryEditData
 
 	App *tview.Application
 
@@ -111,10 +111,11 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv := &MainView{
 		params: *params,
 
-		doQueryOnceConnected: true,
+		// TODO: add a param to force execution of the query right away
+		// (which should be set when some cli flags were given), and
+		// then set doQueryOnceConnected to true in this case too.
+		//doQueryOnceConnected: true,
 	}
-
-	mv.setHostsFilter(params.InitialHostsFilter)
 
 	mv.rootPages = tview.NewPages()
 
@@ -474,6 +475,9 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.rootPages.AddPage("mainFlex", mainFlex, true, true)
 
 	go mv.run()
+
+	mv.params.App.SetFocus(mv.logsTable)
+	mv.queryEditView.Show(mv.params.InitialQueryData)
 
 	return mv
 }

@@ -84,19 +84,19 @@ func (hm *HostsManager) setHostsFilter(hostsFilter string) error {
 
 	parts := strings.Split(hostsFilter, ",")
 	for _, part := range parts {
-		// Empty filter means "allow everything", which is A TON of hosts, and some
-		// of which the client is likely to not have access to, and nerdlog doesn't
-		// handle this situation gracefully, so for now just not allow it.
 		if part == "" {
-			return errors.Errorf("for now, empty filters are not allowed")
+			// Normally, empty filter means permissive filter, but in this case
+			// it's safer not to allow just connecting to everything. Maybe we can
+			// change it at some point (and then the initial filter also needs to
+			// change, since on startup nerdlog shouldn't connect to anything right
+			// away, and so we use the empty filter there)
+			continue
 		}
 
 		numMatchedPart := 0
 
 		for _, hc := range hm.params.ConfigHosts {
-			if part == "" {
-				// pass
-			} else if !strings.Contains(hc.Name, part) {
+			if !strings.Contains(hc.Name, part) {
 				continue
 			}
 
@@ -178,6 +178,13 @@ func (hm *HostsManager) run() {
 		case req := <-hm.reqCh:
 			switch {
 			case req.queryLogs != nil:
+				if len(hm.has) == 0 {
+					hm.sendLogRespUpdate(&LogRespTotal{
+						Errs: []error{errors.Errorf("no matching hosts to get logs from")},
+					})
+					continue
+				}
+
 				if hm.numNotConnected > 0 {
 					hm.sendLogRespUpdate(&LogRespTotal{
 						Errs: []error{errors.Errorf("not connected to all hosts yet")},
