@@ -407,7 +407,7 @@ func NewMainView(params *MainViewParams) *MainView {
 	statusLineFlex.
 		AddItem(mv.statusLineLeft, 0, 1, false).
 		AddItem(nil, 1, 0, false).
-		AddItem(mv.statusLineRight, 0, 1, true)
+		AddItem(mv.statusLineRight, 30, 0, true)
 
 	mainFlex.AddItem(statusLineFlex, 1, 0, false)
 
