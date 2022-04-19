@@ -348,9 +348,17 @@ func NewMainView(params *MainViewParams) *MainView {
 		timeCell := mv.logsTable.GetCell(row, 0)
 		msg := timeCell.GetReference().(core.LogMsg)
 
+		lnOffsetUp := 1000   // How many surrounding lines to show, up
+		lnOffsetDown := 1000 // How many surrounding lines to show, down
+		lnBegin := msg.LogLinenumber - lnOffsetUp
+		if lnBegin <= 0 {
+			lnOffsetUp += lnBegin - 1
+			lnBegin = 1
+		}
+
 		s := fmt.Sprintf(
-			"ssh -t %s vim +%d %s\n\n%s",
-			msg.Context["source"], msg.LogLinenumber, msg.LogFilename,
+			"ssh -t %s 'vim +\"set ft=messages\" +%d <(tail -n +%d %s | head -n %d)'\n\n%s",
+			msg.Context["source"], lnOffsetUp+1, lnBegin, msg.LogFilename, lnOffsetUp+lnOffsetDown,
 			msg.OrigLine,
 		)
 
