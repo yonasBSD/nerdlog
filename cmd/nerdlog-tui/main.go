@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/pflag"
+	"golang.design/x/clipboard"
 )
 
 // TODO: make multiple of them
@@ -46,9 +47,16 @@ func main() {
 		HostsFilter: initialHosts,
 	}
 
+	enableClipboard := true
+	if err := clipboard.Init(); err != nil {
+		enableClipboard = false
+		fmt.Println("NOTE: X Clipboard is not available")
+	}
+
 	app := newNerdlogApp(nerdlogAppParams{
 		initialQueryData: initialQueryData,
 		connectRightAway: connectRightAway,
+		enableClipboard:  enableClipboard,
 	})
 
 	fmt.Println("Starting UI ...")

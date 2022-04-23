@@ -182,12 +182,7 @@ func NewMainView(params *MainViewParams) *MainView {
 		return event
 	})
 	mv.queryEditBtn.SetSelectedFunc(func() {
-		ftr := FromToRange{mv.from, mv.to}
-		mv.queryEditView.Show(QueryFull{
-			Time:        ftr.String(),
-			Query:       mv.query,
-			HostsFilter: mv.hostsFilter,
-		})
+		mv.queryEditView.Show(mv.getQueryFull())
 	})
 
 	queryLabel := tview.NewTextView()
@@ -1103,4 +1098,13 @@ func (mv *MainView) popFocusStack() {
 	l := len(mv.modalsFocusStack)
 	mv.params.App.SetFocus(mv.modalsFocusStack[l-1])
 	mv.modalsFocusStack = mv.modalsFocusStack[:l-1]
+}
+
+func (mv *MainView) getQueryFull() QueryFull {
+	ftr := FromToRange{mv.from, mv.to}
+	return QueryFull{
+		Time:        ftr.String(),
+		Query:       mv.query,
+		HostsFilter: mv.hostsFilter,
+	}
 }

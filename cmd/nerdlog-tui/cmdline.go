@@ -5,6 +5,9 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/juju/errors"
+	"golang.design/x/clipboard"
 )
 
 // NOTE: handleCmd is always called from the tview's event loop, so it's safe
@@ -107,6 +110,29 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 		}
 
 		app.printError("Invalid set command" + string(parts[1][len(parts)-1]))
+
+	case "xc", "xclip":
+		qf := app.mainView.getQueryFull()
+		shellCmd := qf.MarshalShellCmd()
+		if app.params.enableClipboard {
+			clipboard.Write(clipboard.FmtText, []byte(shellCmd))
+			app.printMsg("Copied to clipboard")
+		} else {
+			app.printMsg("Clipboard is not available, command: " + shellCmd)
+		}
+
+	case "nerdlog":
+		// Mimic as if it was called from a shell
+
+		var qf QueryFull
+		if err := qf.UnmarshalShellCmd(cmd); err != nil {
+			app.printError(errors.Annotatef(err, "parsing").Error())
+			return
+		}
+
+		if err := app.mainView.applyQueryEditData(qf); err != nil {
+			app.printError(errors.Annotatef(err, "applying").Error())
+		}
 
 	default:
 		app.printError(fmt.Sprintf("unknown command %q", parts[0]))

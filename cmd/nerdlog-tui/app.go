@@ -30,6 +30,7 @@ type nerdlogApp struct {
 type nerdlogAppParams struct {
 	initialQueryData QueryFull
 	connectRightAway bool
+	enableClipboard  bool
 }
 
 func newNerdlogApp(params nerdlogAppParams) *nerdlogApp {
