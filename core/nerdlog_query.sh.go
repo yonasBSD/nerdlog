@@ -211,10 +211,6 @@ if [[ "$from" != "" || "$to" != "" ]]; then
 
   # First try to find it in cache without refreshing the cache
 
-  # NOTE: as of now, it doesn't support a case when there were no messages
-  # during whole minute at all. We just assume all our services do log
-  # something at least once a minute.
-
   if [[ "$from" != "" ]]; then
     from_nr=$(get_from_cache $from)
     if [[ "$from_nr" == "" ]]; then

@@ -4,8 +4,8 @@ A proof-of-concept log fetcher and viewer. Features terminal-based UI, works by
 ssh-ing directly to the nodes and analyzing syslog files using
 `bash` + `tail` + `head` + `awk` hacks.
 
-I said, a proof of concept. Most of the code is hard to read, no tests, poor
-error handling, etc.
+I said, a proof of concept. Implemented as fast as possible, a lot of code is
+hard to read, no tests, poor error handling, etc.
 
 But it works. It's pretty usable and surprisingly fast.
 

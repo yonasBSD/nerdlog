@@ -38,6 +38,21 @@
   font is bold.
 - Searching and highlighting can be implemented using color tags like [:red]foo[:-]
 
+- :xc[lip] [q[uery]|t[ime]|h[osts]] : if no argument is given, it just copies
+  the command like "nerdlog --query foo --hosts bar --time baz", which is usable
+  in the shell AND in the nerdlog command line as well, see:
+- :nerdlog ..... : parses the command as if it was the shell command, with flags
+  like --query foo etc, and applies those changes
+
+^ this way, it'll be really easy to share the "links" to the logs with each other
+
+- In the query edit form, on the top, have like:
+  "History: <prev> <next>"
+  And clicking those buttons would go through the history; every history item
+  contains all 3 elements: query, hosts, time; and it should be stored in some
+  file like a command line history. When a new request is made, a new line is
+  added there.
+
 ### Super important
 
 - Config (and have one ready with all our hosts)
