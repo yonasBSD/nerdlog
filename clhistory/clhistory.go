@@ -108,7 +108,7 @@ func (h *CLHistory) Reset() {
 }
 
 // Prev returns what it considers the previous item.
-func (h *CLHistory) Prev(s string) Item {
+func (h *CLHistory) Prev(s string) (item Item, hasMore bool) {
 	if h.curHistIdx == -1 {
 		h.startHistoryNavigation(s)
 	}
@@ -119,15 +119,17 @@ func (h *CLHistory) Prev(s string) Item {
 			h.curHistIdx = 0
 		}
 
+		hasMore := h.curHistIdx > 0
+
 		item := h.getItem(h.curHistIdx)
-		if item.Str != s || h.curHistIdx == 0 {
-			return item
+		if item.Str != s || !hasMore {
+			return item, hasMore
 		}
 	}
 }
 
 // Next returns what it considers the next item.
-func (h *CLHistory) Next(s string) Item {
+func (h *CLHistory) Next(s string) (item Item, hasMore bool) {
 	if h.curHistIdx == -1 {
 		h.startHistoryNavigation(s)
 	}
@@ -140,13 +142,13 @@ func (h *CLHistory) Next(s string) Item {
 			h.curHistIdx = len(h.items)
 		}
 
+		hasMore := h.curHistIdx < len(h.items)
+
 		item := h.getItem(h.curHistIdx)
-		if item.Str != s || h.curHistIdx == len(h.items) {
-			return item
+		if item.Str != s || !hasMore {
+			return item, hasMore
 		}
 	}
-
-	return h.getItem(h.curHistIdx)
 }
 
 func (h *CLHistory) startHistoryNavigation(s string) {

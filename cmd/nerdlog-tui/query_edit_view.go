@@ -172,7 +172,11 @@ func NewQueryEditView(
 	qev.frame.SetTitle("Edit query params")
 
 	qev.timeInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		event = qev.genericHistoryInputHandler(event)
+		event = qev.genericHistoryInputHandler(
+			event,
+			func(qf QueryFull) string { return qf.Time },
+			func(qf *QueryFull, part string) { qf.Time = part },
+		)
 		if event == nil {
 			return nil
 		}
@@ -181,7 +185,11 @@ func NewQueryEditView(
 	})
 
 	qev.hostsInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		event = qev.genericHistoryInputHandler(event)
+		event = qev.genericHistoryInputHandler(
+			event,
+			func(qf QueryFull) string { return qf.HostsFilter },
+			func(qf *QueryFull, part string) { qf.HostsFilter = part },
+		)
 		if event == nil {
 			return nil
 		}
@@ -190,7 +198,11 @@ func NewQueryEditView(
 	})
 
 	qev.queryInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		event = qev.genericHistoryInputHandler(event)
+		event = qev.genericHistoryInputHandler(
+			event,
+			func(qf QueryFull) string { return qf.Query },
+			func(qf *QueryFull, part string) { qf.Query = part },
+		)
 		if event == nil {
 			return nil
 		}
@@ -229,25 +241,68 @@ func (qev *QueryEditView) SetQueryFull(qf QueryFull) {
 	qev.queryInput.SetText(qf.Query)
 }
 
-func (qev *QueryEditView) genericHistoryInputHandler(event *tcell.EventKey) *tcell.EventKey {
+func (qev *QueryEditView) genericHistoryInputHandler(
+	event *tcell.EventKey,
+	getQFPart func(qf QueryFull) string,
+	setQFPart func(qf *QueryFull, part string),
+) *tcell.EventKey {
 	qf := qev.GetQueryFull()
 	cmd := qf.MarshalShellCmd()
+
+	qfPart := getQFPart(qf)
 
 	var itemToUse *clhistory.Item
 
 	switch event.Key() {
+
+	// On Ctrl+K, Ctrl+J list history over all fields.
+
 	case tcell.KeyCtrlK:
-		item := qev.params.History.Prev(cmd)
+		item, _ := qev.params.History.Prev(cmd)
 		itemToUse = &item
 
 	case tcell.KeyCtrlJ:
-		item := qev.params.History.Next(cmd)
+		item, _ := qev.params.History.Next(cmd)
+		itemToUse = &item
+
+	// On Ctrl+P, Ctrl+N list history over only the current field.  This is kind
+	// of a hack since we're still using the common history, and manually
+	// skipping the items with the same values for this particular field.  Maybe
+	// it'd be easier to just keep separate history files for every field, idk.
+
+	case tcell.KeyCtrlP, tcell.KeyCtrlN:
+		var item clhistory.Item
+
+		for {
+			var hasMore bool
+			if event.Key() == tcell.KeyCtrlP {
+				item, hasMore = qev.params.History.Prev(cmd)
+			} else {
+				item, hasMore = qev.params.History.Next(cmd)
+			}
+
+			var tmp QueryFull
+			if err := tmp.UnmarshalShellCmd(item.Str); err != nil {
+				qev.mainView.showMessagebox("err", "Broken query history", err.Error(), nil)
+				return nil
+			}
+
+			curQFPart := getQFPart(tmp)
+			if (curQFPart != "" && curQFPart != qfPart) || !hasMore {
+				// Either we found a different value for this field, or ran out of
+				// history. Set this value in the original QueryFull, and use it.
+				setQFPart(&qf, curQFPart)
+				item.Str = qf.MarshalShellCmd()
+				break
+			}
+		}
+
 		itemToUse = &item
 	}
 
 	if itemToUse != nil {
 		if err := qf.UnmarshalShellCmd(itemToUse.Str); err != nil {
-			qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
+			qev.mainView.showMessagebox("err", "Broken query history", err.Error(), nil)
 			return nil
 		}
 
