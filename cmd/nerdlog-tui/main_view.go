@@ -183,6 +183,8 @@ func NewMainView(params *MainViewParams) *MainView {
 		return event
 	})
 	mv.queryEditBtn.SetSelectedFunc(func() {
+		mv.params.QueryHistory.Load()
+		mv.params.QueryHistory.Reset()
 		mv.queryEditView.Show(mv.getQueryFull())
 	})
 
@@ -467,7 +469,6 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mainFlex.AddItem(mv.cmdInput, 1, 0, false)
 
-	mv.params.QueryHistory.Reset()
 	mv.queryEditView = NewQueryEditView(mv, &QueryEditViewParams{
 		DoneFunc: mv.applyQueryEditData,
 		History:  mv.params.QueryHistory,

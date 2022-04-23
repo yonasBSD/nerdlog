@@ -256,5 +256,14 @@ func (qev *QueryEditView) genericHistoryInputHandler(event *tcell.EventKey) *tce
 		return nil
 	}
 
+	// If the field was edited by the user, reset the history current position.
+	switch event.Key() {
+	case tcell.KeyRune, tcell.KeyBackspace, tcell.KeyBackspace2,
+		tcell.KeyDelete, tcell.KeyCtrlD,
+		tcell.KeyCtrlW, tcell.KeyCtrlU, tcell.KeyCtrlK:
+
+		qev.params.History.Reset()
+	}
+
 	return event
 }

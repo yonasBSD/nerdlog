@@ -46,7 +46,21 @@ type nerdlogAppParams struct {
 	enableClipboard  bool
 }
 
-func newNerdlogApp(params nerdlogAppParams) *nerdlogApp {
+func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
+	cmdLineHistory, err := clhistory.New(clhistory.CLHistoryParams{
+		Filename: "/tmp/herdlog_history", // TODO: store it in home directory
+	})
+	if err != nil {
+		return nil, errors.Annotatef(err, "initializing cmdline history")
+	}
+
+	queryCLHistory, err := clhistory.New(clhistory.CLHistoryParams{
+		Filename: "/tmp/herdlog_query_history", // TODO: store it in home directory
+	})
+	if err != nil {
+		return nil, errors.Annotatef(err, "initializing query history")
+	}
+
 	app := &nerdlogApp{
 		params: params,
 
@@ -54,13 +68,9 @@ func newNerdlogApp(params nerdlogAppParams) *nerdlogApp {
 
 		maxNumLines: 250,
 
-		cmdLineHistory: clhistory.New(clhistory.CLHistoryParams{
-			Filename: "/tmp/herdlog_history", // TODO: store it in home directory
-		}),
+		cmdLineHistory: cmdLineHistory,
 		queryBLHistory: blhistory.New(),
-		queryCLHistory: clhistory.New(clhistory.CLHistoryParams{
-			Filename: "/tmp/herdlog_query_history", // TODO: store it in home directory
-		}),
+		queryCLHistory: queryCLHistory,
 	}
 
 	cmdCh := make(chan string, 8)
@@ -117,7 +127,7 @@ func newNerdlogApp(params nerdlogAppParams) *nerdlogApp {
 
 	go app.handleCmdLine(cmdCh)
 
-	return app
+	return app, nil
 }
 
 func (app *nerdlogApp) runTViewApp() error {

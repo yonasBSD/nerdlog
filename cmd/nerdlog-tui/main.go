@@ -53,11 +53,15 @@ func main() {
 		fmt.Println("NOTE: X Clipboard is not available")
 	}
 
-	app := newNerdlogApp(nerdlogAppParams{
+	app, err := newNerdlogApp(nerdlogAppParams{
 		initialQueryData: initialQueryData,
 		connectRightAway: connectRightAway,
 		enableClipboard:  enableClipboard,
 	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		os.Exit(1)
+	}
 
 	fmt.Println("Starting UI ...")
 	if err := app.runTViewApp(); err != nil {
