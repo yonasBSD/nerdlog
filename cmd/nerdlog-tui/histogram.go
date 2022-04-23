@@ -329,9 +329,9 @@ func (h *Histogram) InputHandler() func(event *tcell.EventKey, setFocus func(p t
 					moveLeftLong()
 				case 'w', 'e':
 					moveRightLong()
-				case 'g':
+				case 'g', '^':
 					moveBeginning()
-				case 'G':
+				case 'G', '$':
 					moveEnd()
 				case 'v', ' ':
 					selectionApplyIfActive()
