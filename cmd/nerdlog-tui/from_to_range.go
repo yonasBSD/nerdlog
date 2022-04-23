@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 
+	"github.com/dimonomid/nerdlog/core"
 	"github.com/juju/errors"
 )
 
@@ -67,4 +68,17 @@ func (ftr *FromToRange) String() string {
 	}
 
 	return fromStr + " to " + ftr.To.Format(format)
+}
+
+func parseAndInferTimeOrDur(layout, s string) (TimeOrDur, error) {
+	t, err := ParseTimeOrDur(layout, s)
+	if err != nil {
+		return TimeOrDur{}, err
+	}
+
+	if t.IsAbsolute() {
+		t.Time = core.InferYear(t.Time)
+	}
+
+	return t, nil
 }

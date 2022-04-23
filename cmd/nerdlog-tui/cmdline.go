@@ -19,7 +19,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 	case "time":
 		ftr, err := ParseFromToRange(strings.Join(parts[1:], " "))
 		if err != nil {
-			app.mainView.showMessagebox("err", "Error", err.Error(), nil)
+			app.printError(err.Error())
 			return
 		}
 
@@ -28,7 +28,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 
 	case "w", "write":
 		//if len(parts) < 2 {
-		//mainView.ShowMessagebox("err", "Error", ":write requires an argument: the filename to write", nil)
+		//app.printError(":write requires an argument: the filename to write")
 		//return
 		//}
 
@@ -40,13 +40,13 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 		}
 
 		if app.lastLogResp == nil {
-			app.mainView.showMessagebox("err", "Error", "No logs yet", nil)
+			app.printError("No logs yet")
 			return
 		}
 
 		lfile, err := os.Create(fname)
 		if err != nil {
-			app.mainView.showMessagebox("err", "Error", fmt.Sprintf("Failed to open %s for writing: %s", fname, err), nil)
+			app.printError(fmt.Sprintf("Failed to open %s for writing: %s", fname, err))
 			return
 		}
 
@@ -59,12 +59,11 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 
 		lfile.Close()
 
-		// TODO: make it less intrusive, just a message over command line like in vim.
-		app.mainView.showMessagebox("err", "Fyi", fmt.Sprintf("Saved to %s", fname), nil)
+		app.printMsg(fmt.Sprintf("Saved to %s", fname))
 
 	case "set":
 		if len(parts) < 2 || len(parts[1]) == 0 {
-			app.mainView.showMessagebox("err", "Error", "set requires an argument", nil)
+			app.printError("set requires an argument")
 			return
 		}
 
@@ -76,19 +75,19 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 			case "numlines", "maxnumlines":
 				val, err := strconv.Atoi(setParts[1])
 				if err != nil {
-					app.mainView.showMessagebox("err", "Error", "Can't parse "+setParts[1], nil)
+					app.printError("Can't parse " + setParts[1])
 					return
 				}
 
 				if val < 2 {
-					app.mainView.showMessagebox("err", "Error", "numlines must be at least 2", nil)
+					app.printError("numlines must be at least 2")
 					return
 				}
 
 				app.maxNumLines = val
 
 			default:
-				app.mainView.showMessagebox("err", "Error", "Unknown variable "+setParts[0], nil)
+				app.printError("Unknown variable " + setParts[0])
 				return
 			}
 			return
@@ -98,18 +97,18 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 			vn := parts[1][:len(parts[1])-1]
 			switch vn {
 			case "numlines", "maxnumlines":
-				app.mainView.showMessagebox("err", "", "numlines is "+strconv.Itoa(app.maxNumLines), nil)
+				app.printError("numlines is " + strconv.Itoa(app.maxNumLines))
 
 			default:
-				app.mainView.showMessagebox("err", "Error", "Unknown variable "+vn, nil)
+				app.printError("Unknown variable " + vn)
 				return
 			}
 			return
 		}
 
-		app.mainView.showMessagebox("err", "Error", "Invalid set command"+string(parts[1][len(parts)-1]), nil)
+		app.printError("Invalid set command" + string(parts[1][len(parts)-1]))
 
 	default:
-		app.mainView.showMessagebox("err", "Error", fmt.Sprintf("unknown command %q", parts[0]), nil)
+		app.printError(fmt.Sprintf("unknown command %q", parts[0]))
 	}
 }

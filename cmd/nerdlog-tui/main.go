@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dimonomid/nerdlog/core"
 	"github.com/spf13/pflag"
 )
 
@@ -64,17 +63,4 @@ func main() {
 	fmt.Println("Closing connections...")
 
 	fmt.Println("Have a nice day.")
-}
-
-func parseAndInferTimeOrDur(layout, s string) (TimeOrDur, error) {
-	t, err := ParseTimeOrDur(layout, s)
-	if err != nil {
-		return TimeOrDur{}, err
-	}
-
-	if t.IsAbsolute() {
-		t.Time = core.InferYear(t.Time)
-	}
-
-	return t, nil
 }

@@ -130,3 +130,16 @@ func (app *nerdlogApp) handleCmdLine(cmdCh <-chan string) {
 		})
 	}
 }
+
+// printError lets user know that there is an error. For now it just uses the
+// showMessagebox, but I don't like it since it's too intrusive; at some point
+// I want to refactor it to print a simple error message over the command line,
+// like in Vim: this way it won't be getting in the way.
+func (app *nerdlogApp) printError(msg string) {
+	app.mainView.showMessagebox("err", "Error", msg, nil)
+}
+
+// printMsg prints a FYI kind of message. Also see notes for printError.
+func (app *nerdlogApp) printMsg(msg string) {
+	app.mainView.showMessagebox("err", "Fyi", msg, nil)
+}
