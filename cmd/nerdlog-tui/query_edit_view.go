@@ -270,12 +270,12 @@ func (qev *QueryEditView) genericHistoryInputHandler(
 	// skipping the items with the same values for this particular field.  Maybe
 	// it'd be easier to just keep separate history files for every field, idk.
 
-	case tcell.KeyCtrlP, tcell.KeyCtrlN:
+	case tcell.KeyCtrlP, tcell.KeyUp, tcell.KeyCtrlN, tcell.KeyDown:
 		var item clhistory.Item
 
 		for {
 			var hasMore bool
-			if event.Key() == tcell.KeyCtrlP {
+			if event.Key() == tcell.KeyCtrlP || event.Key() == tcell.KeyUp {
 				item, hasMore = qev.params.History.Prev(cmd)
 			} else {
 				item, hasMore = qev.params.History.Next(cmd)

@@ -423,12 +423,12 @@ func NewMainView(params *MainViewParams) *MainView {
 		cmd = cmd[1:]
 
 		switch event.Key() {
-		case tcell.KeyCtrlP:
+		case tcell.KeyCtrlP, tcell.KeyUp:
 			item, _ := mv.params.CmdHistory.Prev(cmd)
 			mv.cmdInput.SetText(":" + item.Str)
 			return nil
 
-		case tcell.KeyCtrlN:
+		case tcell.KeyCtrlN, tcell.KeyDown:
 			item, _ := mv.params.CmdHistory.Next(cmd)
 			mv.cmdInput.SetText(":" + item.Str)
 			return nil
