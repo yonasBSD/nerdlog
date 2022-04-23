@@ -763,7 +763,7 @@ func (mv *MainView) bumpStatusLineLeft() {
 	}
 
 	if !hmState.Connected && !hmState.NoMatchingHosts {
-		sb.WriteString("connecting ")
+		sb.WriteString("conn ")
 	} else if hmState.Busy {
 		sb.WriteString("busy ")
 	} else {
