@@ -95,12 +95,17 @@ func (h *CLHistory) Prev(s string) Item {
 		h.startHistoryNavigation(s)
 	}
 
-	h.curHistIdx--
-	if h.curHistIdx < 0 {
-		h.curHistIdx = 0
-	}
+	for {
+		h.curHistIdx--
+		if h.curHistIdx < 0 {
+			h.curHistIdx = 0
+		}
 
-	return h.getItem(h.curHistIdx)
+		item := h.getItem(h.curHistIdx)
+		if item.Str != s || h.curHistIdx == 0 {
+			return item
+		}
+	}
 }
 
 // Next returns what it considers the next item.
@@ -109,11 +114,18 @@ func (h *CLHistory) Next(s string) Item {
 		h.startHistoryNavigation(s)
 	}
 
-	h.curHistIdx++
-	if h.curHistIdx > len(h.items) {
-		// We do allow it to exceed the data by 1 item, which means just returning
-		// lastEphemeralItem; thus we use len(h.items) and not len(h.items)-1.
-		h.curHistIdx = len(h.items)
+	for {
+		h.curHistIdx++
+		if h.curHistIdx > len(h.items) {
+			// We do allow it to exceed the data by 1 item, which means just returning
+			// lastEphemeralItem; thus we use len(h.items) and not len(h.items)-1.
+			h.curHistIdx = len(h.items)
+		}
+
+		item := h.getItem(h.curHistIdx)
+		if item.Str != s || h.curHistIdx == len(h.items) {
+			return item
+		}
 	}
 
 	return h.getItem(h.curHistIdx)
