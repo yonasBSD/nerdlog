@@ -84,10 +84,10 @@ type MainView struct {
 	// and to, and they both can't be zero.
 	actualFrom, actualTo time.Time
 
-	// When doQueryOnceConnected is true, it means that whenever we get a new
-	// status update (ApplyHMState gets called), if Connected is true there,
-	// we'll call doQuery().
-	doQueryOnceConnected bool
+	// When doQueryParamsOnceConnected is not nil, it means that whenever we get
+	// a new status update (ApplyHMState gets called), if Connected is true
+	// there, we'll call doQuery().
+	doQueryParamsOnceConnected *doQueryParams
 
 	curHMState *core.HostsManagerState
 	curLogResp *core.LogRespTotal
@@ -136,7 +136,7 @@ func NewMainView(params *MainViewParams) *MainView {
 		case tcell.KeyEnter:
 			mv.setQuery(mv.queryInput.GetText())
 			mv.bumpTimeRange(false)
-			mv.doQuery()
+			mv.doQuery(doQueryParams{})
 			mv.queryInputApplyStyle()
 
 		case tcell.KeyEsc:
@@ -268,7 +268,7 @@ func NewMainView(params *MainViewParams) *MainView {
 		}
 
 		mv.setTimeRange(fromTime, toTime)
-		mv.doQuery()
+		mv.doQuery(doQueryParams{})
 	})
 
 	mainFlex.AddItem(mv.histogram, 6, 0, false)
@@ -536,7 +536,7 @@ func (mv *MainView) queryInputApplyStyle() {
 	mv.queryInput.SetFieldStyle(style)
 }
 
-func (mv *MainView) applyQueryEditData(data QueryFull) error {
+func (mv *MainView) applyQueryEditData(data QueryFull, dqp doQueryParams) error {
 	ftr, err := ParseFromToRange(data.Time)
 	if err != nil {
 		return errors.Annotatef(err, "time")
@@ -545,11 +545,11 @@ func (mv *MainView) applyQueryEditData(data QueryFull) error {
 	mv.setQuery(data.Query)
 	mv.setTimeRange(ftr.From, ftr.To)
 
-	// Before we call OnHostsFilterChange, set this doQueryOnceConnected
+	// Before we call OnHostsFilterChange, set this doQueryParamsOnceConnected
 	// flag, so that once we receive a status update (which can happen any
 	// moment after OnHostsFilterChange is called), and if Connected is true
 	// there, we'll do the query.
-	mv.doQueryOnceConnected = true
+	mv.doQueryParamsOnceConnected = &dqp
 
 	err = mv.params.OnHostsFilterChange(data.HostsFilter)
 	if err != nil {
@@ -609,9 +609,9 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 
 	mv.bumpStatusLineLeft()
 
-	if mv.curHMState.Connected && mv.doQueryOnceConnected {
-		mv.doQuery()
-		mv.doQueryOnceConnected = false
+	if mv.curHMState.Connected && mv.doQueryParamsOnceConnected != nil {
+		mv.doQuery(*mv.doQueryParamsOnceConnected)
+		mv.doQueryParamsOnceConnected = nil
 	}
 }
 
@@ -969,17 +969,26 @@ func (mv *MainView) setHostsFilter(s string) {
 	mv.hostsFilter = s
 }
 
-func (mv *MainView) doQuery() {
+type doQueryParams struct {
+	// If dontAddHistoryItem is true, the browser-like history will not be
+	// populated with a new item (it should be used exactly when we're navigating
+	// this browser-like history back and forth)
+	dontAddHistoryItem bool
+}
+
+func (mv *MainView) doQuery(params doQueryParams) {
 	mv.params.OnLogQuery(core.QueryLogsParams{
 		From:  mv.actualFrom,
 		To:    mv.actualTo,
 		Query: mv.query,
+
+		DontAddHistoryItem: params.dontAddHistoryItem,
 	})
 }
 
-func (mv *MainView) DoQuery() {
+func (mv *MainView) DoQuery(dqp doQueryParams) {
 	mv.params.App.QueueUpdateDraw(func() {
-		mv.doQuery()
+		mv.doQuery(dqp)
 	})
 }
 

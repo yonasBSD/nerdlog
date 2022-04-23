@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/dimonomid/nerdlog/blhistory"
 	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/juju/errors"
@@ -21,7 +22,15 @@ type nerdlogApp struct {
 	// most. Initially it's set to 250.
 	maxNumLines int
 
+	// cmdLineHistory is the command line history
 	cmdLineHistory *clhistory.CLHistory
+
+	// queryBLHistory is the history of queries, as shell strings like this:
+	// - nerdlog --hosts 'my-host-*' --time -10h --query '/series_ids_string=.*\|1\|/'
+	// - nerdlog --hosts 'my-host-*' --time -2h --query '/ping/'
+	queryBLHistory *blhistory.BLHistory
+
+	lastQueryFull QueryFull
 
 	// lastLogResp contains the last response from HostsManager.
 	lastLogResp *core.LogRespTotal
@@ -44,6 +53,7 @@ func newNerdlogApp(params nerdlogAppParams) *nerdlogApp {
 		cmdLineHistory: clhistory.New(clhistory.CLHistoryParams{
 			Filename: "/tmp/herdlog_history", // TODO: store it in home directory
 		}),
+		queryBLHistory: blhistory.New(),
 	}
 
 	cmdCh := make(chan string, 8)
@@ -52,6 +62,14 @@ func newNerdlogApp(params nerdlogAppParams) *nerdlogApp {
 		App: app.tviewApp,
 		OnLogQuery: func(params core.QueryLogsParams) {
 			params.MaxNumLines = app.maxNumLines
+
+			qf := app.mainView.getQueryFull()
+			if qf != app.lastQueryFull {
+				app.lastQueryFull = qf
+				if !params.DontAddHistoryItem {
+					app.queryBLHistory.Add(qf.MarshalShellCmd())
+				}
+			}
 
 			app.hm.QueryLogs(params)
 		},
@@ -77,7 +95,7 @@ func newNerdlogApp(params nerdlogAppParams) *nerdlogApp {
 		app.mainView.params.App.SetFocus(app.mainView.logsTable)
 		app.mainView.queryEditView.Show(params.initialQueryData)
 	} else {
-		if err := app.mainView.applyQueryEditData(params.initialQueryData); err != nil {
+		if err := app.mainView.applyQueryEditData(params.initialQueryData, doQueryParams{}); err != nil {
 			panic(err.Error())
 		}
 	}

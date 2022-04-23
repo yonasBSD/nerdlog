@@ -30,7 +30,7 @@ all staging redacted and redacted nodes.`
 type QueryEditViewParams struct {
 	// DoneFunc is called when the user submits the form. If it returns a non-nil
 	// error, the form will show that error and will not be submitted.
-	DoneFunc func(data QueryFull) error
+	DoneFunc func(data QueryFull, dqp doQueryParams) error
 
 	// TODO: callback for editing nodes, to show in realtime how many nodes matched
 }
@@ -102,11 +102,14 @@ func NewQueryEditView(
 				qev.Hide()
 
 			case tcell.KeyEnter:
-				err := qev.params.DoneFunc(QueryFull{
-					Time:        qev.timeInput.GetText(),
-					Query:       qev.queryInput.GetText(),
-					HostsFilter: qev.hostsInput.GetText(),
-				})
+				err := qev.params.DoneFunc(
+					QueryFull{
+						Time:        qev.timeInput.GetText(),
+						Query:       qev.queryInput.GetText(),
+						HostsFilter: qev.hostsInput.GetText(),
+					},
+					doQueryParams{},
+				)
 				if err != nil {
 					qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
 					break

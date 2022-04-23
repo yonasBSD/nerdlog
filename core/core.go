@@ -20,6 +20,11 @@ type QueryLogsParams struct {
 	// If LoadEarlier is true, it means we're only loading the logs _before_ the ones
 	// we already had.
 	LoadEarlier bool
+
+	// If DontAddHistoryItem is true, the browser-like history will not be
+	// populated with a new item (it should be used exactly when we're navigating
+	// this browser-like history back and forth)
+	DontAddHistoryItem bool
 }
 
 // LogResp is a log response from a single host

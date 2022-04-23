@@ -27,7 +27,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 		}
 
 		app.mainView.setTimeRange(ftr.From, ftr.To)
-		app.mainView.doQuery()
+		app.mainView.doQuery(doQueryParams{})
 
 	case "w", "write":
 		//if len(parts) < 2 {
@@ -124,17 +124,59 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 	case "nerdlog":
 		// Mimic as if it was called from a shell
 
-		var qf QueryFull
-		if err := qf.UnmarshalShellCmd(cmd); err != nil {
-			app.printError(errors.Annotatef(err, "parsing").Error())
+		if err := app.unmarshalAndApplyQuery(cmd, doQueryParams{}); err != nil {
+			app.printError(err.Error())
 			return
 		}
 
-		if err := app.mainView.applyQueryEditData(qf); err != nil {
-			app.printError(errors.Annotatef(err, "applying").Error())
+	case "prev", "bac", "bck", "back":
+		item := app.queryBLHistory.Prev()
+		if item == nil {
+			app.printError("No more history items")
+			return
 		}
+
+		if err := app.unmarshalAndApplyQuery(item.Str, doQueryParams{
+			dontAddHistoryItem: true,
+		}); err != nil {
+			// This shouldn't happen really provided a sane history.
+			app.printError(err.Error())
+			return
+		}
+
+		// TODO: print history item stats
+
+	case "next", "fwd", "forward":
+		item := app.queryBLHistory.Next()
+		if item == nil {
+			app.printError("No more history items")
+			return
+		}
+
+		if err := app.unmarshalAndApplyQuery(item.Str, doQueryParams{
+			dontAddHistoryItem: true,
+		}); err != nil {
+			// This shouldn't happen really provided a sane history.
+			app.printError(err.Error())
+			return
+		}
+
+		// TODO: print history item stats
 
 	default:
 		app.printError(fmt.Sprintf("unknown command %q", parts[0]))
 	}
+}
+
+func (app *nerdlogApp) unmarshalAndApplyQuery(cmd string, dqp doQueryParams) error {
+	var qf QueryFull
+	if err := qf.UnmarshalShellCmd(cmd); err != nil {
+		return errors.Annotatef(err, "parsing")
+	}
+
+	if err := app.mainView.applyQueryEditData(qf, dqp); err != nil {
+		return errors.Annotatef(err, "applying")
+	}
+
+	return nil
 }
