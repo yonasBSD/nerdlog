@@ -754,17 +754,23 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 func (mv *MainView) bumpStatusLineLeft() {
 	sb := strings.Builder{}
 
-	if !mv.curHMState.Connected && !mv.curHMState.NoMatchingHosts {
+	hmState := mv.curHMState
+	if hmState == nil {
+		// We haven't received a single HMState update, so just use the zero value.
+		hmState = &core.HostsManagerState{}
+	}
+
+	if !hmState.Connected && !hmState.NoMatchingHosts {
 		sb.WriteString("connecting ")
-	} else if mv.curHMState.Busy {
+	} else if hmState.Busy {
 		sb.WriteString("busy ")
 	} else {
 		sb.WriteString("idle ")
 	}
 
-	numIdle := len(mv.curHMState.HostsByState[core.HostAgentStateConnectedIdle])
-	numBusy := len(mv.curHMState.HostsByState[core.HostAgentStateConnectedBusy])
-	numOther := mv.curHMState.NumHosts - numIdle - numBusy
+	numIdle := len(hmState.HostsByState[core.HostAgentStateConnectedIdle])
+	numBusy := len(hmState.HostsByState[core.HostAgentStateConnectedBusy])
+	numOther := hmState.NumHosts - numIdle - numBusy
 
 	sb.WriteString(getStatuslineNumStr("🖳", numIdle, "green"))
 	sb.WriteString(" ")
@@ -772,7 +778,7 @@ func (mv *MainView) bumpStatusLineLeft() {
 	sb.WriteString(" ")
 	sb.WriteString(getStatuslineNumStr("🖳", numOther, "red"))
 	sb.WriteString(" ")
-	sb.WriteString(getStatuslineNumStr("🖳", mv.curHMState.NumUnused, "gray"))
+	sb.WriteString(getStatuslineNumStr("🖳", hmState.NumUnused, "gray"))
 
 	sb.WriteString(" | ")
 	sb.WriteString(mv.hostsFilter)
