@@ -30,22 +30,16 @@ all staging redacted and redacted nodes.`
 type QueryEditViewParams struct {
 	// DoneFunc is called when the user submits the form. If it returns a non-nil
 	// error, the form will show that error and will not be submitted.
-	DoneFunc func(data QueryEditData) error
+	DoneFunc func(data QueryFull) error
 
 	// TODO: callback for editing nodes, to show in realtime how many nodes matched
-}
-
-type QueryEditData struct {
-	Time        string
-	HostsFilter string
-	Query       string
 }
 
 type QueryEditView struct {
 	params   QueryEditViewParams
 	mainView *MainView
 
-	data QueryEditData
+	data QueryFull
 
 	flex *tview.Flex
 
@@ -108,7 +102,7 @@ func NewQueryEditView(
 				qev.Hide()
 
 			case tcell.KeyEnter:
-				err := qev.params.DoneFunc(QueryEditData{
+				err := qev.params.DoneFunc(QueryFull{
 					Time:        qev.timeInput.GetText(),
 					Query:       qev.queryInput.GetText(),
 					HostsFilter: qev.hostsInput.GetText(),
@@ -183,7 +177,7 @@ func NewQueryEditView(
 	return qev
 }
 
-func (qev *QueryEditView) Show(data QueryEditData) {
+func (qev *QueryEditView) Show(data QueryFull) {
 	qev.data = data
 	qev.timeInput.SetText(qev.data.Time)
 	qev.hostsInput.SetText(qev.data.HostsFilter)

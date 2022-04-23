@@ -28,7 +28,7 @@ type nerdlogApp struct {
 }
 
 type nerdlogAppParams struct {
-	initialQueryData QueryEditData
+	initialQueryData QueryFull
 	connectRightAway bool
 }
 

@@ -183,7 +183,7 @@ func NewMainView(params *MainViewParams) *MainView {
 	})
 	mv.queryEditBtn.SetSelectedFunc(func() {
 		ftr := FromToRange{mv.from, mv.to}
-		mv.queryEditView.Show(QueryEditData{
+		mv.queryEditView.Show(QueryFull{
 			Time:        ftr.String(),
 			Query:       mv.query,
 			HostsFilter: mv.hostsFilter,
@@ -541,7 +541,7 @@ func (mv *MainView) queryInputApplyStyle() {
 	mv.queryInput.SetFieldStyle(style)
 }
 
-func (mv *MainView) applyQueryEditData(data QueryEditData) error {
+func (mv *MainView) applyQueryEditData(data QueryFull) error {
 	ftr, err := ParseFromToRange(data.Time)
 	if err != nil {
 		return errors.Annotatef(err, "time")

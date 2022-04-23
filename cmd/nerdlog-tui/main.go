@@ -40,7 +40,7 @@ func main() {
 		connectRightAway = true
 	}
 
-	initialQueryData := QueryEditData{
+	initialQueryData := QueryFull{
 		Time:        initialTime,
 		Query:       initialQuery,
 		HostsFilter: initialHosts,
