@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/gdamore/tcell/v2"
 	"github.com/juju/errors"
@@ -38,6 +39,8 @@ type MainViewParams struct {
 
 	// TODO: support command history
 	OnCmd OnCmdCallback
+
+	CmdHistory *clhistory.CLHistory
 }
 
 type MainView struct {
@@ -413,6 +416,28 @@ func NewMainView(params *MainViewParams) *MainView {
 		}
 	})
 
+	mv.cmdInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		cmd := mv.cmdInput.GetText()
+		// Remove the ":" prefix
+		cmd = cmd[1:]
+
+		switch event.Key() {
+		case tcell.KeyCtrlP:
+			item := mv.params.CmdHistory.Prev(cmd)
+			mv.cmdInput.SetText(":" + item.Str)
+			return nil
+
+		case tcell.KeyCtrlN:
+			item := mv.params.CmdHistory.Next(cmd)
+			mv.cmdInput.SetText(":" + item.Str)
+			return nil
+		}
+
+		mv.params.CmdHistory.Reset()
+
+		return event
+	})
+
 	mv.cmdInput.SetDoneFunc(func(key tcell.Key) {
 		switch key {
 		case tcell.KeyEnter:
@@ -423,6 +448,11 @@ func NewMainView(params *MainViewParams) *MainView {
 
 			if cmd != "" {
 				mv.params.OnCmd(cmd)
+			} else {
+				// Similarly to zsh, make it so that an empty command causes history to
+				// be reloaded.  TODO: maybe make it so that we reload it after any
+				// command, actually.
+				mv.params.CmdHistory.Load()
 			}
 
 		case tcell.KeyEsc:
@@ -433,6 +463,7 @@ func NewMainView(params *MainViewParams) *MainView {
 		}
 
 		mv.cmdInput.SetText("")
+		mv.params.CmdHistory.Reset()
 	})
 
 	mainFlex.AddItem(mv.cmdInput, 1, 0, false)

@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/juju/errors"
 	"github.com/rivo/tview"
@@ -20,6 +21,8 @@ type nerdlogApp struct {
 	// most. Initially it's set to 250.
 	maxNumLines int
 
+	cmdLineHistory *clhistory.CLHistory
+
 	// lastLogResp contains the last response from HostsManager.
 	lastLogResp *core.LogRespTotal
 }
@@ -36,6 +39,10 @@ func newNerdlogApp(params nerdlogAppParams) *nerdlogApp {
 		tviewApp: tview.NewApplication(),
 
 		maxNumLines: 250,
+
+		cmdLineHistory: clhistory.New(clhistory.CLHistoryParams{
+			Filename: "/tmp/herdlog_history", // TODO: store it in home directory
+		}),
 	}
 
 	cmdCh := make(chan string, 8)
@@ -58,6 +65,8 @@ func newNerdlogApp(params nerdlogAppParams) *nerdlogApp {
 		OnCmd: func(cmd string) {
 			cmdCh <- cmd
 		},
+
+		CmdHistory: app.cmdLineHistory,
 	})
 
 	// NOTE: initHostsManager has to be called _after_ app.mainView is initialized.
@@ -126,6 +135,7 @@ func (app *nerdlogApp) handleCmdLine(cmdCh <-chan string) {
 	for {
 		cmd := <-cmdCh
 		app.tviewApp.QueueUpdateDraw(func() {
+			app.cmdLineHistory.Add(cmd)
 			app.handleCmd(cmd)
 		})
 	}
