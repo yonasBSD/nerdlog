@@ -29,6 +29,10 @@ type nerdlogApp struct {
 	// - nerdlog --hosts 'my-host-*' --time -10h --query '/series_ids_string=.*\|1\|/'
 	// - nerdlog --hosts 'my-host-*' --time -2h --query '/ping/'
 	queryBLHistory *blhistory.BLHistory
+	// queryCLHistory is tracking the same data as queryBLHistory (queries like
+	// nerdlog --hosts .....), but it's command-line-like, and it can be
+	// navigated on the query edit form.
+	queryCLHistory *clhistory.CLHistory
 
 	lastQueryFull QueryFull
 
@@ -54,6 +58,9 @@ func newNerdlogApp(params nerdlogAppParams) *nerdlogApp {
 			Filename: "/tmp/herdlog_history", // TODO: store it in home directory
 		}),
 		queryBLHistory: blhistory.New(),
+		queryCLHistory: clhistory.New(clhistory.CLHistoryParams{
+			Filename: "/tmp/herdlog_query_history", // TODO: store it in home directory
+		}),
 	}
 
 	cmdCh := make(chan string, 8)
@@ -63,11 +70,18 @@ func newNerdlogApp(params nerdlogAppParams) *nerdlogApp {
 		OnLogQuery: func(params core.QueryLogsParams) {
 			params.MaxNumLines = app.maxNumLines
 
+			// Get the current QueryFull and marshal it to a shell command.
 			qf := app.mainView.getQueryFull()
+			qfStr := qf.MarshalShellCmd()
+
+			// Add this query shell command to the commandline-like history.
+			app.queryCLHistory.Add(qfStr)
+
+			// If needed, also add it to the browser-like history.
 			if qf != app.lastQueryFull {
 				app.lastQueryFull = qf
 				if !params.DontAddHistoryItem {
-					app.queryBLHistory.Add(qf.MarshalShellCmd())
+					app.queryBLHistory.Add(qfStr)
 				}
 			}
 
@@ -85,7 +99,8 @@ func newNerdlogApp(params nerdlogAppParams) *nerdlogApp {
 			cmdCh <- cmd
 		},
 
-		CmdHistory: app.cmdLineHistory,
+		CmdHistory:   app.cmdLineHistory,
+		QueryHistory: app.queryCLHistory,
 	})
 
 	// NOTE: initHostsManager has to be called _after_ app.mainView is initialized.

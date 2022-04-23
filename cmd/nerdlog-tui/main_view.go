@@ -40,7 +40,8 @@ type MainViewParams struct {
 	// TODO: support command history
 	OnCmd OnCmdCallback
 
-	CmdHistory *clhistory.CLHistory
+	CmdHistory   *clhistory.CLHistory
+	QueryHistory *clhistory.CLHistory
 }
 
 type MainView struct {
@@ -239,6 +240,7 @@ func NewMainView(params *MainViewParams) *MainView {
 		switch event.Key() {
 		case tcell.KeyTab:
 			mv.params.App.SetFocus(mv.logsTable)
+			return nil
 		case tcell.KeyBacktab:
 			mv.params.App.SetFocus(mv.queryEditBtn)
 			return nil
@@ -253,6 +255,7 @@ func NewMainView(params *MainViewParams) *MainView {
 			switch event.Rune() {
 			case ':':
 				mv.focusCmdline()
+				return nil
 			}
 		}
 
@@ -301,6 +304,7 @@ func NewMainView(params *MainViewParams) *MainView {
 			switch event.Rune() {
 			case ':':
 				mv.focusCmdline()
+				return nil
 			}
 		}
 
@@ -463,8 +467,10 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mainFlex.AddItem(mv.cmdInput, 1, 0, false)
 
+	mv.params.QueryHistory.Reset()
 	mv.queryEditView = NewQueryEditView(mv, &QueryEditViewParams{
 		DoneFunc: mv.applyQueryEditData,
+		History:  mv.params.QueryHistory,
 	})
 
 	mv.rootPages.AddPage("mainFlex", mainFlex, true, true)

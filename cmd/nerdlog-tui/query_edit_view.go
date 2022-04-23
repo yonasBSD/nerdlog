@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -33,13 +34,13 @@ type QueryEditViewParams struct {
 	DoneFunc func(data QueryFull, dqp doQueryParams) error
 
 	// TODO: callback for editing nodes, to show in realtime how many nodes matched
+
+	History *clhistory.CLHistory
 }
 
 type QueryEditView struct {
 	params   QueryEditViewParams
 	mainView *MainView
-
-	data QueryFull
 
 	flex *tview.Flex
 
@@ -102,14 +103,7 @@ func NewQueryEditView(
 				qev.Hide()
 
 			case tcell.KeyEnter:
-				err := qev.params.DoneFunc(
-					QueryFull{
-						Time:        qev.timeInput.GetText(),
-						Query:       qev.queryInput.GetText(),
-						HostsFilter: qev.hostsInput.GetText(),
-					},
-					doQueryParams{},
-				)
+				err := qev.params.DoneFunc(qev.GetQueryFull(), doQueryParams{})
 				if err != nil {
 					qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
 					break
@@ -177,14 +171,38 @@ func NewQueryEditView(
 	qev.frame.SetBorder(true).SetBorderPadding(1, 1, 1, 1)
 	qev.frame.SetTitle("Edit query params")
 
+	qev.timeInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		event = qev.genericHistoryInputHandler(event)
+		if event == nil {
+			return nil
+		}
+
+		return event
+	})
+
+	qev.hostsInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		event = qev.genericHistoryInputHandler(event)
+		if event == nil {
+			return nil
+		}
+
+		return event
+	})
+
+	qev.queryInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		event = qev.genericHistoryInputHandler(event)
+		if event == nil {
+			return nil
+		}
+
+		return event
+	})
+
 	return qev
 }
 
 func (qev *QueryEditView) Show(data QueryFull) {
-	qev.data = data
-	qev.timeInput.SetText(qev.data.Time)
-	qev.hostsInput.SetText(qev.data.HostsFilter)
-	qev.queryInput.SetText(qev.data.Query)
+	qev.SetQueryFull(data)
 	qev.mainView.showModal(
 		pageNameEditQueryParams, qev.frame,
 		101,
@@ -195,4 +213,48 @@ func (qev *QueryEditView) Show(data QueryFull) {
 
 func (qev *QueryEditView) Hide() {
 	qev.mainView.hideModal(pageNameEditQueryParams, true)
+}
+
+func (qev *QueryEditView) GetQueryFull() QueryFull {
+	return QueryFull{
+		Time:        qev.timeInput.GetText(),
+		Query:       qev.queryInput.GetText(),
+		HostsFilter: qev.hostsInput.GetText(),
+	}
+}
+
+func (qev *QueryEditView) SetQueryFull(qf QueryFull) {
+	qev.timeInput.SetText(qf.Time)
+	qev.hostsInput.SetText(qf.HostsFilter)
+	qev.queryInput.SetText(qf.Query)
+}
+
+func (qev *QueryEditView) genericHistoryInputHandler(event *tcell.EventKey) *tcell.EventKey {
+	qf := qev.GetQueryFull()
+	cmd := qf.MarshalShellCmd()
+
+	var itemToUse *clhistory.Item
+
+	switch event.Key() {
+	case tcell.KeyCtrlK:
+		item := qev.params.History.Prev(cmd)
+		itemToUse = &item
+
+	case tcell.KeyCtrlJ:
+		item := qev.params.History.Next(cmd)
+		itemToUse = &item
+	}
+
+	if itemToUse != nil {
+		if err := qf.UnmarshalShellCmd(itemToUse.Str); err != nil {
+			qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
+			return nil
+		}
+
+		qev.SetQueryFull(qf)
+
+		return nil
+	}
+
+	return event
 }
