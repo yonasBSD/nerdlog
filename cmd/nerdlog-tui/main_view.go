@@ -543,52 +543,50 @@ func (mv *MainView) GetUIPrimitive() tview.Primitive {
 	return mv.rootPages
 }
 
-func (mv *MainView) ApplyHMState(hmState *core.HostsManagerState) {
+func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 	mv.curHMState = hmState
-	mv.params.App.QueueUpdateDraw(func() {
-		var overlayMsg string
+	var overlayMsg string
 
-		if !mv.curHMState.Connected && !mv.curHMState.NoMatchingHosts {
-			overlayMsg = "Connecting to hosts..."
-		} else if mv.curHMState.Busy {
-			overlayMsg = "Updating search results..."
+	if !mv.curHMState.Connected && !mv.curHMState.NoMatchingHosts {
+		overlayMsg = "Connecting to hosts..."
+	} else if mv.curHMState.Busy {
+		overlayMsg = "Updating search results..."
+	}
+
+	if overlayMsg != "" {
+		// Need to show or update overlay message.
+		if mv.overlayMsgView == nil {
+			mv.overlayMsgView = mv.showMessagebox(
+				"overlay_msg", "", "", &MessageboxParams{
+					Buttons: []string{},
+					NoFocus: true,
+					Width:   40,
+					Height:  6,
+
+					BackgroundColor: tcell.ColorDarkBlue,
+				},
+			)
+
+			mv.overlaySpinner = '-'
 		}
 
-		if overlayMsg != "" {
-			// Need to show or update overlay message.
-			if mv.overlayMsgView == nil {
-				mv.overlayMsgView = mv.showMessagebox(
-					"overlay_msg", "", "", &MessageboxParams{
-						Buttons: []string{},
-						NoFocus: true,
-						Width:   40,
-						Height:  6,
+		mv.overlayText = overlayMsg
+		mv.bumpOverlay()
+	} else if mv.overlayMsgView != nil {
+		// Need to hide overlay message.
 
-						BackgroundColor: tcell.ColorDarkBlue,
-					},
-				)
+		// TODO: using pageNameMessage here directly is too hacky
+		mv.hideModal(pageNameMessage+"overlay_msg", false)
+		mv.overlayMsgView = nil
+		mv.overlayText = ""
+	}
 
-				mv.overlaySpinner = '-'
-			}
+	mv.bumpStatusLineLeft()
 
-			mv.overlayText = overlayMsg
-			mv.bumpOverlay()
-		} else if mv.overlayMsgView != nil {
-			// Need to hide overlay message.
-
-			// TODO: using pageNameMessage here directly is too hacky
-			mv.hideModal(pageNameMessage+"overlay_msg", false)
-			mv.overlayMsgView = nil
-			mv.overlayText = ""
-		}
-
-		mv.bumpStatusLineLeft()
-
-		if mv.curHMState.Connected && mv.doQueryOnceConnected {
-			mv.doQuery()
-			mv.doQueryOnceConnected = false
-		}
-	})
+	if mv.curHMState.Connected && mv.doQueryOnceConnected {
+		mv.doQuery()
+		mv.doQueryOnceConnected = false
+	}
 }
 
 func getStatuslineNumStr(icon string, num int, color string) string {
@@ -645,83 +643,81 @@ func (mv *MainView) updateTableHeader(msgs []core.LogMsg) (colNames []string) {
 	return colNames
 }
 
-func (mv *MainView) ApplyLogs(resp *core.LogRespTotal) {
-	mv.params.App.QueueUpdateDraw(func() {
-		mv.curLogResp = resp
+func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
+	mv.curLogResp = resp
 
-		histogramData := make(map[int]int, len(resp.MinuteStats))
-		for k, v := range resp.MinuteStats {
-			histogramData[int(k)] = v.NumMsgs
+	histogramData := make(map[int]int, len(resp.MinuteStats))
+	for k, v := range resp.MinuteStats {
+		histogramData[int(k)] = v.NumMsgs
+	}
+
+	mv.histogram.SetData(histogramData)
+
+	// TODO: perhaps optimize it, instead of clearing and repopulating whole table
+	oldNumRows := mv.logsTable.GetRowCount()
+	selectedRow, _ := mv.logsTable.GetSelection()
+	offsetRow, offsetCol := mv.logsTable.GetOffset()
+	mv.logsTable.Clear()
+
+	colNames := mv.updateTableHeader(resp.Logs)
+
+	mv.logsTable.SetCell(
+		rowIdxLoadOlder, 0,
+		newTableCellButton("< MOAR ! >"),
+	)
+
+	// Add all available logs
+	for i, rowIdx := 0, 2; i < len(resp.Logs); i, rowIdx = i+1, rowIdx+1 {
+		msg := resp.Logs[i]
+
+		msgColor := tcell.ColorWhite
+		switch msg.Context["level_name"] {
+		case "warn":
+			msgColor = tcell.ColorYellow
+		case "error":
+			msgColor = tcell.ColorPink
 		}
 
-		mv.histogram.SetData(histogramData)
-
-		// TODO: perhaps optimize it, instead of clearing and repopulating whole table
-		oldNumRows := mv.logsTable.GetRowCount()
-		selectedRow, _ := mv.logsTable.GetSelection()
-		offsetRow, offsetCol := mv.logsTable.GetOffset()
-		mv.logsTable.Clear()
-
-		colNames := mv.updateTableHeader(resp.Logs)
+		timeStr := msg.Time.Format(logsTableTimeLayout)
+		if msg.DecreasedTimestamp {
+			timeStr = ""
+		}
 
 		mv.logsTable.SetCell(
-			rowIdxLoadOlder, 0,
-			newTableCellButton("< MOAR ! >"),
+			rowIdx, 0,
+			newTableCellLogmsg(timeStr).SetTextColor(tcell.ColorLightBlue),
 		)
 
-		// Add all available logs
-		for i, rowIdx := 0, 2; i < len(resp.Logs); i, rowIdx = i+1, rowIdx+1 {
-			msg := resp.Logs[i]
+		mv.logsTable.SetCell(
+			rowIdx, 1,
+			newTableCellLogmsg(msg.Msg).SetTextColor(msgColor),
+		)
 
-			msgColor := tcell.ColorWhite
-			switch msg.Context["level_name"] {
-			case "warn":
-				msgColor = tcell.ColorYellow
-			case "error":
-				msgColor = tcell.ColorPink
-			}
-
-			timeStr := msg.Time.Format(logsTableTimeLayout)
-			if msg.DecreasedTimestamp {
-				timeStr = ""
-			}
-
+		for i, colName := range colNames[2:] {
 			mv.logsTable.SetCell(
-				rowIdx, 0,
-				newTableCellLogmsg(timeStr).SetTextColor(tcell.ColorLightBlue),
+				rowIdx, 2+i,
+				newTableCellLogmsg(msg.Context[colName]).SetTextColor(msgColor),
 			)
-
-			mv.logsTable.SetCell(
-				rowIdx, 1,
-				newTableCellLogmsg(msg.Msg).SetTextColor(msgColor),
-			)
-
-			for i, colName := range colNames[2:] {
-				mv.logsTable.SetCell(
-					rowIdx, 2+i,
-					newTableCellLogmsg(msg.Context[colName]).SetTextColor(msgColor),
-				)
-			}
-
-			mv.logsTable.GetCell(rowIdx, 0).SetReference(msg)
-
-			//msg.
 		}
 
-		if !resp.LoadedEarlier {
-			// Replaced all logs
-			mv.logsTable.Select(len(resp.Logs)+1, 0)
-			mv.logsTable.ScrollToEnd()
-			mv.bumpTimeRange(true)
-		} else {
-			// Loaded more (earlier) logs
-			numNewRows := mv.logsTable.GetRowCount() - oldNumRows
-			mv.logsTable.SetOffset(offsetRow+numNewRows, offsetCol)
-			mv.logsTable.Select(selectedRow+numNewRows, 0)
-		}
+		mv.logsTable.GetCell(rowIdx, 0).SetReference(msg)
 
-		mv.bumpStatusLineRight()
-	})
+		//msg.
+	}
+
+	if !resp.LoadedEarlier {
+		// Replaced all logs
+		mv.logsTable.Select(len(resp.Logs)+1, 0)
+		mv.logsTable.ScrollToEnd()
+		mv.bumpTimeRange(true)
+	} else {
+		// Loaded more (earlier) logs
+		numNewRows := mv.logsTable.GetRowCount() - oldNumRows
+		mv.logsTable.SetOffset(offsetRow+numNewRows, offsetCol)
+		mv.logsTable.Select(selectedRow+numNewRows, 0)
+	}
+
+	mv.bumpStatusLineRight()
 }
 
 func (mv *MainView) bumpStatusLineLeft() {
