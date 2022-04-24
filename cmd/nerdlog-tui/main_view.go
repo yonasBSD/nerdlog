@@ -240,6 +240,11 @@ func NewMainView(params *MainViewParams) *MainView {
 			switch event.Rune() {
 			case ':':
 				mv.focusCmdline()
+				return nil
+
+			case 'i', 'a':
+				mv.params.App.SetFocus(mv.queryInput)
+				return nil
 			}
 		}
 
@@ -333,13 +338,20 @@ func NewMainView(params *MainViewParams) *MainView {
 				switch event.Rune() {
 				case ':':
 					mv.focusCmdline()
+					return nil
+
+				case 'i', 'a':
+					mv.params.App.SetFocus(mv.queryInput)
+					return nil
 
 				case 'j':
 					mv.menuDropdown.OpenList(mv.setFocus)
 					list.SetCurrentItem(0)
+					return nil
 				case 'k':
 					mv.menuDropdown.OpenList(mv.setFocus)
 					list.SetCurrentItem(list.GetItemCount() - 1)
+					return nil
 				}
 			}
 
@@ -414,6 +426,10 @@ func NewMainView(params *MainViewParams) *MainView {
 			switch event.Rune() {
 			case ':':
 				mv.focusCmdline()
+				return nil
+
+			case 'i', 'a':
+				mv.params.App.SetFocus(mv.queryInput)
 				return nil
 			}
 		}

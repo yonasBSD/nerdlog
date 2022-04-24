@@ -19,6 +19,11 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 	}
 
 	switch parts[0] {
+	case "h", "help":
+		app.mainView.showMessagebox("err", "Fyi", "The only help for now is the README.md in the repo, so check it out", &MessageboxParams{
+			Width: 49,
+		})
+
 	case "time":
 		ftr, err := ParseFromToRange(strings.Join(parts[1:], " "))
 		if err != nil {
