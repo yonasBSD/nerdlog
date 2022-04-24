@@ -46,6 +46,11 @@ type nerdlogAppParams struct {
 	enableClipboard  bool
 }
 
+type cmdWithOpts struct {
+	cmd  string
+	opts CmdOpts
+}
+
 func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 	cmdLineHistory, err := clhistory.New(clhistory.CLHistoryParams{
 		Filename: "/tmp/herdlog_history", // TODO: store it in home directory
@@ -73,7 +78,7 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 		queryCLHistory: queryCLHistory,
 	}
 
-	cmdCh := make(chan string, 8)
+	cmdCh := make(chan cmdWithOpts, 8)
 
 	app.mainView = NewMainView(&MainViewParams{
 		App: app.tviewApp,
@@ -105,8 +110,11 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 
 			return nil
 		},
-		OnCmd: func(cmd string) {
-			cmdCh <- cmd
+		OnCmd: func(cmd string, opts CmdOpts) {
+			cmdCh <- cmdWithOpts{
+				cmd:  cmd,
+				opts: opts,
+			}
 		},
 
 		CmdHistory:   app.cmdLineHistory,
@@ -175,12 +183,14 @@ func (app *nerdlogApp) initHostsManager(initialHostsFilter string) {
 	})
 }
 
-func (app *nerdlogApp) handleCmdLine(cmdCh <-chan string) {
+func (app *nerdlogApp) handleCmdLine(cmdCh <-chan cmdWithOpts) {
 	for {
-		cmd := <-cmdCh
+		cwo := <-cmdCh
 		app.tviewApp.QueueUpdateDraw(func() {
-			app.cmdLineHistory.Add(cmd)
-			app.handleCmd(cmd)
+			if !cwo.opts.Internal {
+				app.cmdLineHistory.Add(cwo.cmd)
+			}
+			app.handleCmd(cwo.cmd)
 		})
 	}
 }

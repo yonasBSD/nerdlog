@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dimonomid/nerdlog/clhistory"
+	"github.com/dimonomid/nerdlog/cmd/nerdlog-tui/ui"
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/gdamore/tcell/v2"
 	"github.com/juju/errors"
@@ -55,6 +56,8 @@ type MainView struct {
 	topFlex      *tview.Flex
 	queryEditBtn *tview.Button
 	timeLabel    *tview.TextView
+
+	menuDropdown *ui.DropDown
 
 	queryEditView *QueryEditView
 
@@ -105,9 +108,16 @@ type MainView struct {
 	modalsFocusStack []tview.Primitive
 }
 
+type CmdOpts struct {
+	// If Internal is true, it means the user didn't actually type the command,
+	// it was generated using some other way; so e.g. it shouldn't be added to the
+	// command line history.
+	Internal bool
+}
+
 type OnLogQueryCallback func(params core.QueryLogsParams)
 type OnHostsFilterChange func(hostsFilter string) error
-type OnCmdCallback func(cmd string)
+type OnCmdCallback func(cmd string, opts CmdOpts)
 
 var (
 	queryInputStaleMatch = tcell.Style{}.
@@ -119,6 +129,16 @@ var (
 				Background(tcell.ColorDarkRed).
 				Foreground(tcell.ColorWhite).
 				Bold(true)
+
+	menuUnselected = tcell.Style{}.
+			Background(tcell.ColorBlue).
+			Foreground(tcell.ColorWhite).
+			Bold(true)
+
+	menuSelected = tcell.Style{}.
+			Background(tcell.ColorWhite).
+			Foreground(tcell.ColorBlue).
+			Bold(true)
 )
 
 func NewMainView(params *MainViewParams) *MainView {
@@ -165,7 +185,7 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.queryEditBtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyTab:
-			mv.params.App.SetFocus(mv.histogram)
+			mv.params.App.SetFocus(mv.menuDropdown)
 		case tcell.KeyBacktab:
 			mv.params.App.SetFocus(mv.queryInput)
 			return nil
@@ -194,6 +214,100 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.timeLabel = tview.NewTextView()
 	mv.timeLabel.SetScrollable(false)
 
+	mv.menuDropdown = ui.NewDropDown()
+	mv.menuDropdown.SetOptions(getMainMenuTitles(), nil)
+	mv.menuDropdown.SetListStyles(menuUnselected, menuSelected)
+	mv.menuDropdown.SetTextOptions(" ", " ", " ", " ", " Menu ")
+	mv.menuDropdown.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyTab:
+			if mv.menuDropdown.IsListOpen() {
+				mv.menuDropdown.SetCurrentOption(-1)
+				mv.menuDropdown.CloseList(mv.setFocus)
+			}
+			mv.params.App.SetFocus(mv.histogram)
+			return nil
+		case tcell.KeyBacktab:
+			if mv.menuDropdown.IsListOpen() {
+				mv.menuDropdown.SetCurrentOption(-1)
+				mv.menuDropdown.CloseList(mv.setFocus)
+			}
+			mv.params.App.SetFocus(mv.queryEditBtn)
+			return nil
+
+		case tcell.KeyEsc:
+			if mv.menuDropdown.IsListOpen() {
+				mv.menuDropdown.SetCurrentOption(-1)
+				mv.menuDropdown.CloseList(mv.setFocus)
+			} else {
+				mv.params.App.SetFocus(mv.logsTable)
+			}
+			return nil
+
+		case tcell.KeyEnter:
+			if mv.menuDropdown.IsListOpen() {
+				list := mv.menuDropdown.GetList()
+				idx := list.GetCurrentItem()
+
+				mv.menuDropdown.SetCurrentOption(-1)
+				mv.menuDropdown.CloseList(mv.setFocus)
+
+				// NOTE: the CloseList MUST be called before invoking the handler,
+				// because if the handler calls e.g. showMessagebox which remembers
+				// which primitive is focused, then without calling CloseList first,
+				// the list would be focused, and when the messagebox is finally
+				// closed, focusing this list again means getting to a focus trap.
+
+				mainMenu[idx].Handler(mv)
+
+				return nil
+			}
+
+		case tcell.KeyRune:
+			list := mv.menuDropdown.GetList()
+			if mv.menuDropdown.IsListOpen() {
+
+				switch event.Rune() {
+				case 'j', 'l':
+					idx := list.GetCurrentItem()
+					idx++
+					if idx >= list.GetItemCount() {
+						idx = 0
+					}
+					list.SetCurrentItem(idx)
+				case 'k', 'h':
+					idx := list.GetCurrentItem()
+					idx--
+					if idx < 0 {
+						idx = list.GetItemCount() - 1
+					}
+					list.SetCurrentItem(idx)
+				case 'g':
+					list.SetCurrentItem(0)
+				case 'G':
+					list.SetCurrentItem(list.GetItemCount() - 1)
+				}
+
+			} else {
+				switch event.Rune() {
+				case ':':
+					mv.focusCmdline()
+
+				case 'j':
+					mv.menuDropdown.OpenList(mv.setFocus)
+					list.SetCurrentItem(0)
+				case 'k':
+					mv.menuDropdown.OpenList(mv.setFocus)
+					list.SetCurrentItem(list.GetItemCount() - 1)
+				}
+			}
+
+			return nil
+		}
+
+		return event
+	})
+
 	mv.topFlex = tview.NewFlex().SetDirection(tview.FlexColumn)
 	mv.topFlex.
 		AddItem(queryLabel, 6, 0, false).
@@ -202,7 +316,9 @@ func NewMainView(params *MainViewParams) *MainView {
 		AddItem(nil, 1, 0, false).
 		AddItem(mv.timeLabel, 1, 0, false).
 		AddItem(nil, 1, 0, false).
-		AddItem(mv.queryEditBtn, 6, 0, false)
+		AddItem(mv.queryEditBtn, 6, 0, false).
+		AddItem(nil, 1, 0, false).
+		AddItem(mv.menuDropdown, 6, 0, false)
 
 	mainFlex.AddItem(mv.topFlex, 1, 0, true)
 
@@ -244,7 +360,7 @@ func NewMainView(params *MainViewParams) *MainView {
 			mv.params.App.SetFocus(mv.logsTable)
 			return nil
 		case tcell.KeyBacktab:
-			mv.params.App.SetFocus(mv.queryEditBtn)
+			mv.params.App.SetFocus(mv.menuDropdown)
 			return nil
 
 		case tcell.KeyEsc:
@@ -448,7 +564,7 @@ func NewMainView(params *MainViewParams) *MainView {
 			cmd = cmd[1:]
 
 			if cmd != "" {
-				mv.params.OnCmd(cmd)
+				mv.params.OnCmd(cmd, CmdOpts{})
 			} else {
 				// Similarly to zsh, make it so that an empty command causes history to
 				// be reloaded.  TODO: maybe make it so that we reload it after any
@@ -1123,4 +1239,30 @@ func (mv *MainView) getQueryFull() QueryFull {
 		Query:       mv.query,
 		HostsFilter: mv.hostsFilter,
 	}
+}
+
+func (mv *MainView) setFocus(p tview.Primitive) {
+	mv.params.App.SetFocus(p)
+}
+
+// queueUpdateLater is a hackish helper, it's useful when we are IN the UI
+// event loop, and we want to queue another update to the event loop which will
+// fire after the current handler is done.
+//
+// We sometimes want this due to hackery with focusing widgets: e.g. if we're
+// handling the update from DropDown when its list is open, so the current
+// focus is this internal dropdown's list. If we try to show the messagebox
+// right from the handler which will later also hide the list, then the
+// messagebox will remember that when it's closed it needs to set the focus to
+// the list, and when that finally happens, the list isn't visible anymore, so
+// we're in a focus trap.
+//
+// If we use this hack with queueUpdateLater, then it's guaranteed to be called
+// only after the current handler (for the dropdown) is done already and the
+// focus is removed from the internal list, so the messagebox correctly remembers
+// to focus the dropdown itself.
+func (mv *MainView) queueUpdateLater(f func()) {
+	go func() {
+		mv.params.App.QueueUpdateDraw(f)
+	}()
 }
