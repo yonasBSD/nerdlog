@@ -910,7 +910,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		}
 
 		if cmdCtx.cmd.queryLogs.query != "" {
-			parts = append(parts, "'"+cmdCtx.cmd.queryLogs.query+"'")
+			parts = append(parts, "'"+strings.Replace(cmdCtx.cmd.queryLogs.query, "'", "'\"'\"'", -1)+"'")
 		}
 
 		cmd := strings.Join(parts, " ") + "\n"
