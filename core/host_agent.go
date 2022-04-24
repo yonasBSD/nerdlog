@@ -2,6 +2,8 @@ package core
 
 import (
 	"bufio"
+	"bytes"
+	"compress/gzip"
 	"fmt"
 	"io"
 	"net"
@@ -18,6 +20,24 @@ import (
 )
 
 const connectionTimeout = 5 * time.Second
+
+// Setting useGzip to false is just a simple way to disable gzip, for debugging
+// purposes or w/e, since it's still experimental. Maybe we need to add a flag
+// for it, we'll see.
+const useGzip = true
+
+const (
+	// gzipStartMarker and gzipEndMarker are echoed in the beginning and the end
+	// of the gzipped output. Effectively we're doing this:
+	//
+	//   $ echo gzip_start && whatever command we need to run | gzip && echo gzip_end
+	//
+	// and the scanner func (returned by getScannerFunc) sees those markers and
+	// buffers gzipped output until it's done, then gunzips it and sends to the
+	// clients, so it's totally opaque for them.
+	gzipStartMarker = "gzip_start"
+	gzipEndMarker   = "gzip_end"
+)
 
 // It's pretty messy, but to keep things optimized for speed as much as we can,
 // we have to use different time formats.
@@ -825,6 +845,26 @@ func dialWithTimeout(client *ssh.Client, protocol, hostAddr string, timeout time
 	}
 }
 
+// scanLinesPreserveCarriageReturn is the same as bufio.ScanLines, but it does
+// not strip the \r characters: it's just a hack to support gzipping. In fact,
+// since we sometimes read text lines and sometimes gzipped data, we'd better
+// use some other custom scanner, but for now just this simple hack.
+func scanLinesPreserveCarriageReturn(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	if i := bytes.IndexByte(data, '\n'); i >= 0 {
+		// We have a full newline-terminated line.
+		return i + 1, data[0:i], nil
+	}
+	// If we're at EOF, we have a final, non-terminated line. Return it.
+	if atEOF {
+		return len(data), data, nil
+	}
+	// Request more data.
+	return 0, nil, nil
+}
+
 func getScannerFunc(name string, reader io.Reader, linesCh chan<- string) func() {
 	return func() {
 		defer func() {
@@ -832,10 +872,69 @@ func getScannerFunc(name string, reader io.Reader, linesCh chan<- string) func()
 		}()
 
 		scanner := bufio.NewScanner(reader)
+
+		// See comments for scanLinesPreserveCarriageReturn for details why we need
+		// this custom split function.
+		scanner.Split(scanLinesPreserveCarriageReturn)
+
 		// TODO: also defer signal to reconnect
 
+		// inGzip is true when we're receiving gzipped data.
+		// gzipBuf accumulates that data, and once we receive the gzipEndMarker,
+		// we gunzip all this data and feed the lines to the channel.
+		//
+		// TODO: instead of accumulating it and then unpacking all at once, do it
+		// gradually as we receive data. Idk how much of an improvement it'd be in
+		// practice though, since we're not receiving some huge chunks of data,
+		// just a bit nicer.
+		inGzip := false
+		var gzipBuf bytes.Buffer
+
 		for scanner.Scan() {
-			linesCh <- scanner.Text()
+			lineBytes := scanner.Bytes()
+			line := string(lineBytes)
+
+			if !inGzip && line == gzipStartMarker {
+				// Gzipped data begins
+				inGzip = true
+				gzipBuf.Reset()
+
+				// We also need to continue loop iteration now so that we don't
+				// add this gzipStartMarker line to the gzipBuf below.
+				continue
+			} else if inGzip && strings.HasSuffix(line, gzipEndMarker) {
+				// We just reached the end of the gzipped data
+				inGzip = false
+
+				// Append this last piece
+				gzipBuf.Write(lineBytes[:len(lineBytes)-len(gzipEndMarker)])
+
+				var err error
+
+				// Gunzip the data and feed all the lines to linesCh
+				var r io.Reader
+				r, err = gzip.NewReader(&gzipBuf)
+				if err != nil {
+					panic(err.Error())
+				}
+
+				scanner := bufio.NewScanner(r)
+				for scanner.Scan() {
+					linesCh <- scanner.Text()
+				}
+
+				continue
+			}
+
+			if !inGzip {
+				// We're not in gzipped data, so just feed this line directly.
+				linesCh <- line
+			} else {
+				// We're reading gzipped data now, so for now just add it to the
+				// gzipBuf (together with the \n which was stripped by the scanner).
+				gzipBuf.Write(lineBytes)
+				gzipBuf.WriteByte('\n')
+			}
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -891,11 +990,18 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 			},
 		}
 
-		parts := []string{
-			"bash /var/tmp/nerdlog_query_" + ha.params.ClientID + ".sh",
-			"--cache-file", "/tmp/nerdlog_query_cache_" + ha.params.ClientID,
-			"--max-num-lines", strconv.Itoa(cmdCtx.cmd.queryLogs.maxNumLines),
+		var parts []string
+
+		if useGzip {
+			parts = append(parts, "echo", gzipStartMarker, "&&")
 		}
+
+		parts = append(
+			parts,
+			"bash", "/var/tmp/nerdlog_query_"+ha.params.ClientID+".sh",
+			"--cache-file", "/tmp/nerdlog_query_cache_"+ha.params.ClientID,
+			"--max-num-lines", strconv.Itoa(cmdCtx.cmd.queryLogs.maxNumLines),
+		)
 
 		if !cmdCtx.cmd.queryLogs.from.IsZero() {
 			parts = append(parts, "--from", cmdCtx.cmd.queryLogs.from.UTC().Format(queryLogsArgsTimeLayout))
@@ -911,6 +1017,10 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 
 		if cmdCtx.cmd.queryLogs.query != "" {
 			parts = append(parts, "'"+strings.Replace(cmdCtx.cmd.queryLogs.query, "'", "'\"'\"'", -1)+"'")
+		}
+
+		if useGzip {
+			parts = append(parts, "|", "gzip", "&&", "echo", gzipEndMarker)
 		}
 
 		cmd := strings.Join(parts, " ") + "\n"
