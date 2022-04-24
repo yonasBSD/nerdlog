@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/gdamore/tcell/v2"
+	"github.com/juju/errors"
 	"github.com/rivo/tview"
 )
 
@@ -44,6 +45,9 @@ type QueryEditView struct {
 
 	flex *tview.Flex
 
+	backBtn *tview.Button
+	fwdBtn  *tview.Button
+
 	timeInput  *tview.InputField
 	hostsInput *tview.InputField
 	queryInput *tview.InputField
@@ -71,8 +75,10 @@ func NewQueryEditView(
 	//}
 
 	var focusers []tview.Primitive
-	getDoneFunc := func(curPrimitive tview.Primitive) func(key tcell.Key) {
-		return func(key tcell.Key) {
+	getGenericTabHandler := func(curPrimitive tview.Primitive) func(event *tcell.EventKey) *tcell.EventKey {
+		return func(event *tcell.EventKey) *tcell.EventKey {
+			key := event.Key()
+
 			nextIdx := 0
 			prevIdx := 0
 
@@ -95,26 +101,42 @@ func NewQueryEditView(
 			switch key {
 			case tcell.KeyTab:
 				qev.mainView.params.App.SetFocus(focusers[nextIdx])
+				return nil
 
 			case tcell.KeyBacktab:
 				qev.mainView.params.App.SetFocus(focusers[prevIdx])
-
-			case tcell.KeyEsc:
-				qev.Hide()
-
-			case tcell.KeyEnter:
-				err := qev.params.DoneFunc(qev.GetQueryFull(), doQueryParams{})
-				if err != nil {
-					qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
-					break
-				}
-
-				qev.Hide()
+				return nil
 			}
+
+			return event
 		}
 	}
 
 	qev.flex = tview.NewFlex().SetDirection(tview.FlexRow)
+
+	historyLabel := tview.NewTextView()
+	historyLabel.SetText("Query history:")
+
+	qev.backBtn = tview.NewButton("Back <Ctrl+K>")
+	focusers = append(focusers, qev.backBtn)
+
+	andLabel := tview.NewTextView()
+	andLabel.SetText("and")
+
+	qev.fwdBtn = tview.NewButton("Forth <Ctrl+J>")
+	focusers = append(focusers, qev.fwdBtn)
+
+	topFlex := tview.NewFlex().SetDirection(tview.FlexColumn)
+	topFlex.
+		AddItem(historyLabel, 15, 0, false).
+		AddItem(qev.backBtn, 15, 0, false).
+		AddItem(nil, 1, 0, false).
+		AddItem(andLabel, 3, 0, false).
+		AddItem(nil, 1, 0, false).
+		AddItem(qev.fwdBtn, 16, 0, false).
+		AddItem(nil, 0, 1, false)
+	qev.flex.AddItem(topFlex, 1, 0, false)
+	qev.flex.AddItem(nil, 1, 0, false)
 
 	timeLabel := tview.NewTextView()
 	timeLabel.SetText(timeLabelText)
@@ -122,7 +144,6 @@ func NewQueryEditView(
 	qev.flex.AddItem(timeLabel, 3, 0, false)
 
 	qev.timeInput = tview.NewInputField()
-	qev.timeInput.SetDoneFunc(getDoneFunc(qev.timeInput))
 	qev.flex.AddItem(qev.timeInput, 1, 0, true)
 	focusers = append(focusers, qev.timeInput)
 
@@ -134,7 +155,6 @@ func NewQueryEditView(
 	qev.flex.AddItem(hostsLabel, 2, 0, false)
 
 	qev.hostsInput = tview.NewInputField()
-	qev.hostsInput.SetDoneFunc(getDoneFunc(qev.hostsInput))
 	qev.flex.AddItem(qev.hostsInput, 1, 0, false)
 	focusers = append(focusers, qev.hostsInput)
 
@@ -146,7 +166,6 @@ func NewQueryEditView(
 	qev.flex.AddItem(queryLabel, 5, 0, false)
 
 	qev.queryInput = tview.NewInputField()
-	qev.queryInput.SetDoneFunc(getDoneFunc(qev.queryInput))
 	qev.flex.AddItem(qev.queryInput, 1, 0, false)
 	focusers = append(focusers, qev.queryInput)
 
@@ -171,9 +190,40 @@ func NewQueryEditView(
 	qev.frame.SetBorder(true).SetBorderPadding(1, 1, 1, 1)
 	qev.frame.SetTitle("Edit query params")
 
+	qev.backBtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEnter:
+			// Just pretent it was a Ctrl+K, and let the genericInputHandler handle it.
+			event = tcell.NewEventKey(tcell.KeyCtrlK, 0, tcell.ModNone)
+		}
+
+		event = qev.genericInputHandler(event, getGenericTabHandler(qev.backBtn), nil, nil)
+		if event == nil {
+			return nil
+		}
+
+		return event
+	})
+
+	qev.fwdBtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEnter:
+			// Just pretent it was a Ctrl+J, and let the genericInputHandler handle it.
+			event = tcell.NewEventKey(tcell.KeyCtrlJ, 0, tcell.ModNone)
+		}
+
+		event = qev.genericInputHandler(event, getGenericTabHandler(qev.fwdBtn), nil, nil)
+		if event == nil {
+			return nil
+		}
+
+		return event
+	})
+
 	qev.timeInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		event = qev.genericHistoryInputHandler(
+		event = qev.genericInputHandler(
 			event,
+			getGenericTabHandler(qev.timeInput),
 			func(qf QueryFull) string { return qf.Time },
 			func(qf *QueryFull, part string) { qf.Time = part },
 		)
@@ -181,12 +231,21 @@ func NewQueryEditView(
 			return nil
 		}
 
+		switch event.Key() {
+		case tcell.KeyEnter:
+			if err := qev.applyQuery(); err != nil {
+				qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
+			}
+			return nil
+		}
+
 		return event
 	})
 
 	qev.hostsInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		event = qev.genericHistoryInputHandler(
+		event = qev.genericInputHandler(
 			event,
+			getGenericTabHandler(qev.hostsInput),
 			func(qf QueryFull) string { return qf.HostsFilter },
 			func(qf *QueryFull, part string) { qf.HostsFilter = part },
 		)
@@ -194,16 +253,33 @@ func NewQueryEditView(
 			return nil
 		}
 
+		switch event.Key() {
+		case tcell.KeyEnter:
+			if err := qev.applyQuery(); err != nil {
+				qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
+			}
+			return nil
+		}
+
 		return event
 	})
 
 	qev.queryInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		event = qev.genericHistoryInputHandler(
+		event = qev.genericInputHandler(
 			event,
+			getGenericTabHandler(qev.queryInput),
 			func(qf QueryFull) string { return qf.Query },
 			func(qf *QueryFull, part string) { qf.Query = part },
 		)
 		if event == nil {
+			return nil
+		}
+
+		switch event.Key() {
+		case tcell.KeyEnter:
+			if err := qev.applyQuery(); err != nil {
+				qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
+			}
 			return nil
 		}
 
@@ -218,7 +294,7 @@ func (qev *QueryEditView) Show(data QueryFull) {
 	qev.mainView.showModal(
 		pageNameEditQueryParams, qev.frame,
 		101,
-		20,
+		21,
 		true,
 	)
 }
@@ -241,15 +317,19 @@ func (qev *QueryEditView) SetQueryFull(qf QueryFull) {
 	qev.queryInput.SetText(qf.Query)
 }
 
-func (qev *QueryEditView) genericHistoryInputHandler(
+func (qev *QueryEditView) genericInputHandler(
 	event *tcell.EventKey,
+	genericTabHandler func(event *tcell.EventKey) *tcell.EventKey,
 	getQFPart func(qf QueryFull) string,
 	setQFPart func(qf *QueryFull, part string),
 ) *tcell.EventKey {
+	event = genericTabHandler(event)
+	if event == nil {
+		return nil
+	}
+
 	qf := qev.GetQueryFull()
 	cmd := qf.MarshalShellCmd()
-
-	qfPart := getQFPart(qf)
 
 	var itemToUse *clhistory.Item
 
@@ -271,33 +351,40 @@ func (qev *QueryEditView) genericHistoryInputHandler(
 	// it'd be easier to just keep separate history files for every field, idk.
 
 	case tcell.KeyCtrlP, tcell.KeyUp, tcell.KeyCtrlN, tcell.KeyDown:
-		var item clhistory.Item
+		if getQFPart != nil && setQFPart != nil {
+			var item clhistory.Item
+			qfPart := getQFPart(qf)
 
-		for {
-			var hasMore bool
-			if event.Key() == tcell.KeyCtrlP || event.Key() == tcell.KeyUp {
-				item, hasMore = qev.params.History.Prev(cmd)
-			} else {
-				item, hasMore = qev.params.History.Next(cmd)
+			for {
+				var hasMore bool
+				if event.Key() == tcell.KeyCtrlP || event.Key() == tcell.KeyUp {
+					item, hasMore = qev.params.History.Prev(cmd)
+				} else {
+					item, hasMore = qev.params.History.Next(cmd)
+				}
+
+				var tmp QueryFull
+				if err := tmp.UnmarshalShellCmd(item.Str); err != nil {
+					qev.mainView.showMessagebox("err", "Broken query history", err.Error(), nil)
+					return nil
+				}
+
+				curQFPart := getQFPart(tmp)
+				if (curQFPart != "" && curQFPart != qfPart) || !hasMore {
+					// Either we found a different value for this field, or ran out of
+					// history. Set this value in the original QueryFull, and use it.
+					setQFPart(&qf, curQFPart)
+					item.Str = qf.MarshalShellCmd()
+					break
+				}
 			}
 
-			var tmp QueryFull
-			if err := tmp.UnmarshalShellCmd(item.Str); err != nil {
-				qev.mainView.showMessagebox("err", "Broken query history", err.Error(), nil)
-				return nil
-			}
-
-			curQFPart := getQFPart(tmp)
-			if (curQFPart != "" && curQFPart != qfPart) || !hasMore {
-				// Either we found a different value for this field, or ran out of
-				// history. Set this value in the original QueryFull, and use it.
-				setQFPart(&qf, curQFPart)
-				item.Str = qf.MarshalShellCmd()
-				break
-			}
+			itemToUse = &item
 		}
 
-		itemToUse = &item
+	case tcell.KeyEsc:
+		qev.Hide()
+		return nil
 	}
 
 	if itemToUse != nil {
@@ -321,4 +408,15 @@ func (qev *QueryEditView) genericHistoryInputHandler(
 	}
 
 	return event
+}
+
+func (qev *QueryEditView) applyQuery() error {
+	err := qev.params.DoneFunc(qev.GetQueryFull(), doQueryParams{})
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	qev.Hide()
+
+	return nil
 }
