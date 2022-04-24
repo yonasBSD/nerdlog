@@ -281,8 +281,8 @@ func (ha *HostAgent) run() {
 
 			lastUpdTime = time.Now()
 
-			//if ha.params.Config.Name == "my-host-10" {
-			//fmt.Fprintln(ha.debugFile, "rx:", line)
+			//if ha.params.Config.Name == "my-host-01" {
+			//fmt.Fprintln(ha.debugFile, time.Now(), "rx:", line)
 			//}
 
 			switch ha.state {
@@ -981,7 +981,12 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 	case cmdCtx.cmd.ping != nil:
 		cmdCtx.pingCtx = &hostCmdCtxPing{}
 
-		ha.conn.stdinBuf.Write([]byte("whoami\n"))
+		cmd := "whoami\n"
+		ha.conn.stdinBuf.Write([]byte(cmd))
+
+		//if ha.params.Config.Name == "my-host-01" {
+		//fmt.Fprintln(ha.debugFile, time.Now(), "cmd:", ha.params.Config.Name, ":", cmd)
+		//}
 
 	case cmdCtx.cmd.queryLogs != nil:
 		cmdCtx.queryLogsCtx = &hostCmdCtxQueryLogs{
@@ -1026,8 +1031,8 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		cmd := strings.Join(parts, " ") + "\n"
 		//fmt.Println("hey", ha.params.Config.Name, "cmd:", cmd)
 
-		//if ha.params.Config.Name == "my-host-10" {
-		//fmt.Fprintln(ha.debugFile, "cmd:", ha.params.Config.Name, ":", cmd)
+		//if ha.params.Config.Name == "my-host-01" {
+		//fmt.Fprintln(ha.debugFile, time.Now(), "cmd:", ha.params.Config.Name, ":", cmd)
 		//}
 
 		ha.conn.stdinBuf.Write([]byte(cmd))
