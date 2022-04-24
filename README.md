@@ -4,12 +4,12 @@ A proof-of-concept log fetcher and viewer. Features terminal-based UI, works by
 ssh-ing directly to the nodes and analyzing syslog files using
 `bash` + `tail` + `head` + `awk` hacks.
 
-I said, a proof of concept. Implemented as fast as possible, a lot of code is
-hard to read, no tests, poor error handling, etc.
+I said, a proof of concept. Implemented as fast as possible, spaghetti code
+abounds, almost no tests, poor error handling, etc.
 
 But it works. It's pretty usable and surprisingly fast.
 
-![Nerdlog](nerdlog.png)
+![Nerdlog](images/nerdlog.png)
 
 ## Installation
 
@@ -28,7 +28,35 @@ $ make && bin/nerdlog
 ## Commands
 
 In addition to the UI which is self-discoverable, there is a vim-like command line
-with a few commands supported. No history or anything else fancy though.
+with a few commands supported.
+
+`:xc[lip]` Copies to clipboard a command string which would open nerdlog with
+the current hosts filter, time range and query. This can also be done from the
+menu in the UI:
+
+![Menu -> Copy query command](images/nerdlog_menu_copy.png)
+
+This is the equivalent of URL sharing for web-based logging tools: when you'd
+normally copy the graylog URL and paste it in slack somewhere, with nerdlog you
+can do the same by sharing this string.
+
+The string would look like this:
+
+```
+nerdlog --hosts 'my-host-*' --time -3h --query '/redacted_symbol_str=kucoin/'
+```
+
+And it can be used in either the shell (which would open a new instance of
+nerdlog), OR it can also be used in a currently running nerdlog instance: just
+type `:` to go to the command mode, copypaste this command above, and nerdlog
+will parse it and apply the query.
+
+`:back` or `:prev` Go to the previous query, just like in the browser.
+
+`:fwd` or `:next` Go to the next query, just like in the browser.
+
+`:e[dit]` Open query edit form; you can do the same if you just use Tab to navigate
+to the Edit button in the UI.
 
 `:w[rite] [filename]` Write all currently loaded log lines to the filename.
 If filename is omitted, `/tmp/last_nerdlog` is used.
