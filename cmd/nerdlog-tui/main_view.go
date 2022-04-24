@@ -203,9 +203,7 @@ func NewMainView(params *MainViewParams) *MainView {
 		return event
 	})
 	mv.queryEditBtn.SetSelectedFunc(func() {
-		mv.params.QueryHistory.Load()
-		mv.params.QueryHistory.Reset()
-		mv.queryEditView.Show(mv.getQueryFull())
+		mv.openQueryEditView()
 	})
 
 	queryLabel := tview.NewTextView()
@@ -422,6 +420,10 @@ func NewMainView(params *MainViewParams) *MainView {
 			switch event.Rune() {
 			case ':':
 				mv.focusCmdline()
+				return nil
+
+			case 'i', 'a':
+				mv.params.App.SetFocus(mv.queryInput)
 				return nil
 			}
 		}
@@ -1265,4 +1267,10 @@ func (mv *MainView) queueUpdateLater(f func()) {
 	go func() {
 		mv.params.App.QueueUpdateDraw(f)
 	}()
+}
+
+func (mv *MainView) openQueryEditView() {
+	mv.params.QueryHistory.Load()
+	mv.params.QueryHistory.Reset()
+	mv.queryEditView.Show(mv.getQueryFull())
 }

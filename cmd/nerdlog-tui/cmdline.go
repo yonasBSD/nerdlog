@@ -163,6 +163,12 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 
 		// TODO: print history item stats
 
+	case "e", "edit":
+		app.mainView.openQueryEditView()
+
+	case "q", "quit":
+		app.tviewApp.Stop()
+
 	default:
 		app.printError(fmt.Sprintf("unknown command %q", parts[0]))
 	}
