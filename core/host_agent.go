@@ -38,7 +38,7 @@ const connectionTimeout = 5 * time.Second
 // To avoid reformatting things manually and thus slowing them down, we just use
 // different formats.
 const queryLogsArgsTimeLayout = "Jan-02-15:04"
-const queryLogsMstatsTimeLayout = "Jan-2-15:04"
+const queryLogsMstatsTimeLayout = "Jan2-15:04"
 
 const syslogTimeLayout = "Jan _2 15:04:05"
 
@@ -284,8 +284,8 @@ func (ha *HostAgent) run() {
 					resp := respCtx.Resp
 
 					switch {
-					case strings.HasPrefix(line, "mstats:"):
-						parts := strings.Split(strings.TrimPrefix(line, "mstats:"), ",")
+					case strings.HasPrefix(line, "s:"):
+						parts := strings.Split(strings.TrimPrefix(line, "s:"), ",")
 						if len(parts) < 2 {
 							err := errors.Errorf("malformed mstats %q: expected at least 2 parts", line)
 							resp.Errs = append(resp.Errs, err)
@@ -331,9 +331,9 @@ func (ha *HostAgent) run() {
 							fromLinenumber: logNumberOfLines,
 						})
 
-					case strings.HasPrefix(line, "msg:"):
+					case strings.HasPrefix(line, "m:"):
 						// msg:Mar 26 17:08:34 localhost myapp[21134]: Mar 26 17:08:34.476329 foo bar foo bar
-						msg := strings.TrimPrefix(line, "msg:")
+						msg := strings.TrimPrefix(line, "m:")
 						idx := strings.IndexRune(msg, ':')
 						if idx <= 0 {
 							resp.Errs = append(resp.Errs, errors.Errorf("parsing log msg: no line number in %q", line))

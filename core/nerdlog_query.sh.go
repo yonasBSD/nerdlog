@@ -272,7 +272,7 @@ awk_script='
 BEGIN { curline=0; maxlines='$max_num_lines' }
 '$awk_pattern'
 {
-  stats[$1 "-" $2 "-" substr($3,1,5)]++;
+  stats[$1 $2 "-" substr($3,1,5)]++;
 
   '$lines_until_check'
 
@@ -291,7 +291,7 @@ END {
   print "logfile:'$logfile2':'$prevlog_lines'";
 
   for (x in stats) {
-    print "mstats:" x "," stats[x]
+    print "s:" x "," stats[x]
   }
 
   for (i = 0; i < maxlines; i++) {
@@ -306,7 +306,7 @@ END {
 
     curNR = lastNRs[ln] + '$from_nr_int' - 1;
 
-    print "msg:" curNR ":" lastlines[ln];
+    print "m:" curNR ":" lastlines[ln];
   }
 }
 '
