@@ -151,14 +151,14 @@ func NewMainView(params *MainViewParams) *MainView {
 	mainFlex := tview.NewFlex().SetDirection(tview.FlexRow)
 
 	mv.queryInput = tview.NewInputField()
-	mv.queryInput.SetDoneFunc(func(key tcell.Key) {
-		switch key {
-
+	mv.queryInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
 		case tcell.KeyEnter:
 			mv.setQuery(mv.queryInput.GetText())
 			mv.bumpTimeRange(false)
 			mv.doQuery(doQueryParams{})
 			mv.queryInputApplyStyle()
+			return nil
 
 		case tcell.KeyEsc:
 			//if mv.queryInput.GetText() != mv.query {
@@ -166,13 +166,56 @@ func NewMainView(params *MainViewParams) *MainView {
 			//mv.queryInputApplyStyle()
 			//}
 			mv.params.App.SetFocus(mv.logsTable)
+			return nil
 
 		case tcell.KeyTab:
 			mv.params.App.SetFocus(mv.queryEditBtn)
+			return nil
 
 		case tcell.KeyBacktab:
 			mv.params.App.SetFocus(mv.logsTable)
+			return nil
+
+		case tcell.KeyCtrlP, tcell.KeyUp, tcell.KeyCtrlN, tcell.KeyDown:
+			var item clhistory.Item
+			qf := QueryFull{
+				Query: mv.queryInput.GetText(),
+			}
+			cmd := qf.MarshalShellCmd()
+
+			for {
+				var hasMore bool
+				if event.Key() == tcell.KeyCtrlP || event.Key() == tcell.KeyUp {
+					item, hasMore = mv.params.QueryHistory.Prev(cmd)
+				} else {
+					item, hasMore = mv.params.QueryHistory.Next(cmd)
+				}
+
+				var tmp QueryFull
+				if err := tmp.UnmarshalShellCmd(item.Str); err != nil {
+					mv.showMessagebox("err", "Broken query history", err.Error(), nil)
+					return nil
+				}
+
+				if (tmp.Query != "" && tmp.Query != qf.Query) || !hasMore {
+					// Either we found a different value for this field, or ran out of
+					// history. Set this value in the original QueryFull, and use it.
+					qf.Query = tmp.Query
+					break
+				}
+			}
+
+			mv.queryInput.SetText(qf.Query)
+			return nil
+
+		case tcell.KeyRune, tcell.KeyBackspace, tcell.KeyBackspace2,
+			tcell.KeyDelete, tcell.KeyCtrlD,
+			tcell.KeyCtrlW, tcell.KeyCtrlU, tcell.KeyCtrlK:
+
+			mv.params.QueryHistory.Reset()
 		}
+
+		return event
 	})
 
 	mv.queryInput.SetChangedFunc(func(text string) {
