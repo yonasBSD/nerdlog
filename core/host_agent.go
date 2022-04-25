@@ -30,7 +30,7 @@ const (
 	// gzipStartMarker and gzipEndMarker are echoed in the beginning and the end
 	// of the gzipped output. Effectively we're doing this:
 	//
-	//   $ echo gzip_start && whatever command we need to run | gzip && echo gzip_end
+	//   $ echo gzip_start ; whatever command we need to run | gzip ; echo gzip_end
 	//
 	// and the scanner func (returned by getScannerFunc) sees those markers and
 	// buffers gzipped output until it's done, then gunzips it and sends to the
@@ -998,7 +998,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		var parts []string
 
 		if useGzip {
-			parts = append(parts, "echo", gzipStartMarker, "&&")
+			parts = append(parts, "echo", gzipStartMarker, ";")
 		}
 
 		parts = append(
@@ -1025,7 +1025,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		}
 
 		if useGzip {
-			parts = append(parts, "|", "gzip", "&&", "echo", gzipEndMarker)
+			parts = append(parts, "|", "gzip", ";", "echo", gzipEndMarker)
 		}
 
 		cmd := strings.Join(parts, " ") + "\n"
