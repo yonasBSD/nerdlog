@@ -86,7 +86,19 @@ type MainView struct {
 
 	// actualFrom, actualTo represent the actual time range resolved from from
 	// and to, and they both can't be zero.
+	//
+	// NOTE: don't use actualTo for the queries (QueryLogsParams); use
+	// actualToForQuery instead, see below.
 	actualFrom, actualTo time.Time
+
+	// actualToForQuery is similar to actualTo, but if the "to" was at zero
+	// value, then actualToForQuery will be zero value too. It's suitable for the
+	// use in queries (QueryLogsParams); and it must be used instead of actualTo,
+	// because when requesting latest logs, actualTo is actually in the future
+	// and if we pass a timestamp in the future to nerdlog_query.sh, it will
+	// uselessly try to update the cache (the timestamp -> linenumber mapping),
+	// trying to find this non-existing future timestamp there.
+	actualToForQuery time.Time
 
 	// When doQueryParamsOnceConnected is not nil, it means that whenever we get
 	// a new status update (ApplyHMState gets called), if Connected is true
@@ -510,7 +522,7 @@ func NewMainView(params *MainViewParams) *MainView {
 			// Do the query to core
 			mv.params.OnLogQuery(core.QueryLogsParams{
 				From:  mv.actualFrom,
-				To:    mv.actualTo,
+				To:    mv.actualToForQuery,
 				Query: mv.query,
 
 				LoadEarlier: true,
@@ -1115,17 +1127,27 @@ func (mv *MainView) bumpTimeRange(updateHistogramRange bool) {
 
 	if !mv.to.IsZero() {
 		mv.actualTo = mv.to.AbsoluteTime(time.Now())
+		mv.actualToForQuery = mv.actualTo
 	} else {
 		mv.actualTo = time.Now()
+		mv.actualToForQuery = time.Time{}
 	}
 
 	// Snap both actualFrom and actualTo to the 1m grid, rounding forward.
 	mv.actualFrom = truncateCeil(mv.actualFrom, 1*time.Minute)
 	mv.actualTo = truncateCeil(mv.actualTo, 1*time.Minute)
+	if !mv.actualToForQuery.IsZero() {
+		mv.actualToForQuery = truncateCeil(mv.actualToForQuery, 1*time.Minute)
+	}
 
 	// If from is after than to, swap them.
 	if mv.actualFrom.After(mv.actualTo) {
 		mv.actualFrom, mv.actualTo = mv.actualTo, mv.actualFrom
+
+		// Sanity check: mv.actualToForQuery can never be zero in this case.
+		if mv.actualToForQuery.IsZero() {
+			panic("actualToForQuery is zero while actualFrom is after actualTo")
+		}
 	}
 
 	// Also update the histogram
@@ -1163,7 +1185,7 @@ type doQueryParams struct {
 func (mv *MainView) doQuery(params doQueryParams) {
 	mv.params.OnLogQuery(core.QueryLogsParams{
 		From:  mv.actualFrom,
-		To:    mv.actualTo,
+		To:    mv.actualToForQuery,
 		Query: mv.query,
 
 		DontAddHistoryItem: params.dontAddHistoryItem,
