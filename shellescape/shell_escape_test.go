@@ -65,6 +65,8 @@ func TestEscape(t *testing.T) {
 	testCases := []escapeTC{
 		escapeTC{parts: nil, want: ""},
 		escapeTC{parts: []string{`foo`, `bar`, `baz`}, want: `foo bar baz`},
+		escapeTC{parts: []string{`foo/bar-baz/hey_foo`, `bar`, `baz`}, want: `foo/bar-baz/hey_foo bar baz`},
+		escapeTC{parts: []string{`foo/bar-\baz/hey_foo`, `bar`, `baz`}, want: `'foo/bar-\baz/hey_foo' bar baz`},
 		escapeTC{parts: []string{`foo13`, `bar`, `baz`}, want: `foo13 bar baz`},
 		escapeTC{parts: []string{`foo bar`, `baz`}, want: `'foo bar' baz`},
 		escapeTC{parts: []string{`foo "bar`, `baz`}, want: `'foo "bar' baz`},

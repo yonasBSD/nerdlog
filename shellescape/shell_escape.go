@@ -13,7 +13,7 @@ func Escape(parts []string) string {
 	for _, part := range parts {
 		needEscape := false
 		for _, r := range part {
-			if !unicode.IsLetter(r) && !unicode.IsNumber(r) && r != '-' {
+			if !unicode.IsLetter(r) && !unicode.IsNumber(r) && r != '-' && r != '_' && r != '.' && r != '/' {
 				needEscape = true
 				break
 			}
