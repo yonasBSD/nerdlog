@@ -310,27 +310,80 @@ END {
   }
 }
 '
-logfiles="$logfile1 $logfile2"
 
-if [[ "$from_nr" != "" ]]; then
-  # Let's see if we need to check the $logfile1 at all
-  if [[ $(( prevlog_lines < from_nr )) == 1 ]]; then
-    echo "Ignoring prev log file" 1>&2
-    from_nr=$(( from_nr - prevlog_lines ))
-    if [[ "$to_nr" != "" ]]; then
-      to_nr=$(( to_nr - prevlog_lines ))
-    fi
-    logfiles="$logfile2"
+# NOTE: there are multiple ways to tail a file, and performance differs greatly:
+# Log file has 21789347 lines:
+#
+#ubuntu@my-host-1-watchdog-01:~$ time cat /var/log/syslog.1 | tail -n +16789340 > /dev/null
+
+#real    0m4.523s
+#user    0m0.869s
+#sys     0m6.915s
+#ubuntu@my-host-1-watchdog-01:~$ time tail -n +16789340 /var/log/syslog.1 > /dev/null
+
+#real    0m2.184s
+#user    0m0.660s
+#sys     0m1.524s
+#ubuntu@my-host-1-watchdog-01:~$ time tail -n 5000000 /var/log/syslog.1 > /dev/null
+
+#real    0m1.260s
+#user    0m0.412s
+#sys     0m0.848s
+
+# So it's best to tail file directly (without cat) and also whenever possible
+# do the "-n N", not "-n +N" (but for the latest logfile, which is constantly
+# appended to, we have to use the "-n +N")
+
+# Generate commands to get all the logs as per requested timerange.
+declare -a cmds
+if [[ "$from_nr" != "" && $(( from_nr > prevlog_lines )) == 1 ]]; then
+  # Only $logfile2 is used.
+  from_nr=$(( from_nr - prevlog_lines ))
+  if [[ "$to_nr" != "" ]]; then
+    echo "Getting logs from line $from_nr to line $((to_nr-1)) inclusive, all in the $logfile2" 1>&2
+    to_nr=$(( to_nr - prevlog_lines ))
+    cmds+=("tail -n +$from_nr $logfile2 | head -n $((to_nr - from_nr))")
+  else
+    # Most common case
+    echo "Getting logs from line $from_nr until the end of $logfile2." 1>&2
+    cmds+=("tail -n +$from_nr $logfile2")
   fi
+elif [[ "$to_nr" != "" && $(( to_nr <= prevlog_lines )) == 1 ]]; then
+  # Only $logfile1 is used.
+  if [[ "$from_nr" != "" ]]; then
+    echo "Getting logs from line $from_nr to line $((to_nr-1)), all in the $logfile1" 1>&2
+    # TODO: see similar TODO below for the tail -n
+    cmds+=("tail -n $(( prevlog_lines - from_nr + 1 )) $logfile1 | head -n $((to_nr - from_nr))")
+  else
+    echo "Getting logs from the very beginning to line $(( to_nr - 1 )) inclusive, all in the $logfile1." 1>&2
+    cmds+=("head -n $(( to_nr - 1)) $logfile1")
+  fi
+else
+  # Both log files are used
+  if [[ "$from_nr" != "" ]]; then
+    info="Getting logs from line $from_nr in $logfile1"
+    # TODO: for now we just assume that from_nr is closer to the end of
+    # $logfile1, and so we use the usual tail (specifying number of lines in
+    # the end), but it's better to check if from_nr is actually closer to the
+    # beginning, and then use the tail -n +$(( from_nr ))
+    cmds+=("tail -n $(( prevlog_lines - from_nr + 1 )) $logfile1")
+  else
+    info="Getting logs from the very beginning in $logfile1"
+    cmds+=("cat $logfile1")
+  fi
+
+  if [[ "$to_nr" != "" ]]; then
+    info="$info to line $(( to_nr - prevlog_lines - 1 )) inclusive in $logfile2"
+    cmds+=("head -n $(( to_nr - prevlog_lines - 1 )) $logfile2")
+  else
+    info="$info until the end of $logfile2"
+    cmds+=("cat $logfile2")
+  fi
+
+  echo "$info" 1>&2
 fi
 
-if [[ "$from_nr" == "" && "$to_nr" == "" ]]; then
-  cat $logfiles | awk "$awk_script" -
-elif [[ "$from_nr" != "" && "$to_nr" == "" ]]; then
-  cat $logfiles | tail -n +$from_nr | awk "$awk_script" -
-elif [[ "$from_nr" == "" && "$to_nr" != "" ]]; then
-  cat $logfiles | head -n $to_nr | awk "$awk_script" -
-else
-  cat $logfiles | tail -n +$from_nr | head -n $((to_nr - from_nr)) | awk "$awk_script" -
-fi
+# Now execute all those commands, and feed those logs to the awk script
+# which will analyze them and produce the final output.
+for cmd in "${cmds[@]}"; do eval $cmd; done | awk "$awk_script" -
 `
