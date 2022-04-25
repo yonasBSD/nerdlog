@@ -43,7 +43,7 @@ func New(params CLHistoryParams) (*CLHistory, error) {
 		curHistIdx: -1,
 	}
 
-	if err := h.Load(); err != nil {
+	if err := h.Load(); err != nil && !os.IsNotExist(errors.Cause(err)) {
 		return nil, errors.Trace(err)
 	}
 

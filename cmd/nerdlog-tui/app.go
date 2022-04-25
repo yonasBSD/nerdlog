@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 
 	"github.com/dimonomid/nerdlog/blhistory"
 	"github.com/dimonomid/nerdlog/clhistory"
@@ -52,15 +53,20 @@ type cmdWithOpts struct {
 }
 
 func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, errors.Annotatef(err, "getting home dir")
+	}
+
 	cmdLineHistory, err := clhistory.New(clhistory.CLHistoryParams{
-		Filename: "/tmp/herdlog_history", // TODO: store it in home directory
+		Filename: filepath.Join(homeDir, ".nerdlog_history"),
 	})
 	if err != nil {
 		return nil, errors.Annotatef(err, "initializing cmdline history")
 	}
 
 	queryCLHistory, err := clhistory.New(clhistory.CLHistoryParams{
-		Filename: "/tmp/herdlog_query_history", // TODO: store it in home directory
+		Filename: filepath.Join(homeDir, ".nerdlog_query_history"),
 	})
 	if err != nil {
 		return nil, errors.Annotatef(err, "initializing query history")
