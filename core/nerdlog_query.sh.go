@@ -70,6 +70,7 @@ fi
 function refresh_cache { # {{{
   local last_linenr=0
   local last_bytenr=0
+  local prevlog_bytes=$(get_prevlog_bytenr)
 
   # Add new entries to cache, if needed
 
@@ -152,20 +153,14 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
   then
     echo "caching new line numbers" 1>&2
 
-    local typ="$(tail -n 1 $cachefile | cut -f1)"
     local lastTimestr="$(tail -n 1 $cachefile | cut -f2)"
     local last_linenr="$(tail -n 1 $cachefile | cut -f3)"
     local last_bytenr="$(tail -n 1 $cachefile | cut -f4)"
 
     echo hey $lastTimestr 1>&2
     echo hey2 $last_linenr $last_bytenr 1>&2
-    #last_linenr=$(( last_linenr-1 ))
 
-    # TODO: as one more optimization, we can store the size of the logfile1 in
-    # the cache, so here we get this file size and below we don't cat it.
-    local logfile1_numlines=0
-
-    cat $logfile1 $logfile2 | tail -n +$((last_linenr-logfile1_numlines)) | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; lastTimestamp = nerdlogTimestrToTImestamp(lastTimestr) }"'
+    tail -c +$((last_bytenr-prevlog_bytes)) $logfile2 | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; lastTimestamp = nerdlogTimestrToTImestamp(lastTimestr) }"'
   '"$script1"'
   ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(( last_linenr-1 ))', bytenr_cur+'$(( last_bytenr-1 ))'); lastTimestr = curTimestr; lastTimestamp = curTimestamp; }
   ' - >> $cachefile
@@ -188,7 +183,7 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
     #echo hey3 $lastTimestr 1>&2
     cat $logfile2 | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; lastTimestamp = nerdlogTimestrToTImestamp(lastTimestr) }"'
   '"$script1"'
-  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(get_prevlog_lines_from_cache)', bytenr_cur+'$(get_prevlog_bytenr)'); lastTimestr = curTimestr;  lastTimestamp = curTimestamp; }
+  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(get_prevlog_lines_from_cache)', bytenr_cur+'$prevlog_bytes'); lastTimestr = curTimestr;  lastTimestamp = curTimestamp; }
   ' - >> $cachefile
   fi
 } # }}}
