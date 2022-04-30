@@ -75,7 +75,7 @@ function refresh_cache { # {{{
   # Add new entries to cache, if needed
 
   awk_functions='
-function logFieldsToTimestamp(monthStr, day, hhmm) {
+function logFieldsToTimestamp(monthStr, day, hhmmss) {
   monthByName["Jan"] = "01";
   monthByName["Feb"] = "02";
   monthByName["Mar"] = "03";
@@ -91,8 +91,8 @@ function logFieldsToTimestamp(monthStr, day, hhmm) {
 
   month = monthByName[monthStr]
   year = 2022
-  hour = substr(hhmm, 1, 2)
-  min = substr(hhmm, 4, 2)
+  hour = substr(hhmmss, 1, 2)
+  min = substr(hhmmss, 4, 2)
 
   return mktime(year " " month " " day " " hour " " min " " 0)
 }
@@ -101,7 +101,7 @@ function formatNerdlogTime(timestamp) {
   return strftime("%b-%d-%H:%M", timestamp, 1)
 }
 
-function nerdlogTimestrToTImestamp(timestr) {
+function nerdlogTimestrToTimestamp(timestr) {
   return logFieldsToTimestamp(substr(timestr, 1, 3), substr(timestr, 5, 2), substr(timestr, 8, 5));
 }
 
@@ -140,13 +140,25 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
 # awk will work in terms of bytes, not characters. We use length($0) there and
 # we rely on it being number of bytes.
 # TODO: better rewrite this indexing stuff in perl.
-  script1='BEGIN { bytenr_cur=1; bytenr_next=1 }
-{
-  curTimestamp = logFieldsToTimestamp($1, $2, $3)
-  curTimestr = formatNerdlogTime(curTimestamp)
 
-  bytenr_cur = bytenr_next
+  scriptInitFromLastTimestr='
+    lastTimestamp = nerdlogTimestrToTimestamp(lastTimestr);
+    lastHHMM = substr(lastTimestr, 8, 5);
+    last3 = lastHHMM ":00"'
+
+  scriptSetCurTimestr='bytenr_cur = bytenr_next-length($0)-1; curTimestamp = logFieldsToTimestamp($1, $2, $3); curTimestr = formatNerdlogTime(curTimestamp)'
+  scriptSetLastTimestrEtc='lastTimestr = curTimestr; lastTimestamp = curTimestamp; lastHHMM = curHHMM'
+
+  script1='BEGIN { bytenr_next=1 }
+{
   bytenr_next += length($0)+1
+
+  if (last3 == $3) {
+    next;
+  }
+
+  last3 = $3;
+  curHHMM = substr($3, 1, 5);
 }'
 
   if [ -s $cachefile ]
@@ -160,18 +172,18 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
     echo hey $lastTimestr 1>&2
     echo hey2 $last_linenr $last_bytenr 1>&2
 
-    tail -c +$((last_bytenr-prevlog_bytes)) $logfile2 | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; lastTimestamp = nerdlogTimestrToTImestamp(lastTimestr) }"'
+    tail -c +$((last_bytenr-prevlog_bytes)) $logfile2 | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
   '"$script1"'
-  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(( last_linenr-1 ))', bytenr_cur+'$(( last_bytenr-1 ))'); lastTimestr = curTimestr; lastTimestamp = curTimestamp; }
+  ( lastHHMM != curHHMM ) { '"$scriptSetCurTimestr"'; printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(( last_linenr-1 ))', bytenr_cur+'$(( last_bytenr-1 ))'); '"$scriptSetLastTimestrEtc"' }
   ' - >> $cachefile
   else
     echo "caching all line numbers" 1>&2
 
     echo "prevlog_modtime	$(stat -c %y $logfile1)" > $cachefile
 
-    cat $logfile1 | awk -b "$awk_functions"'
+    cat $logfile1 | awk -b "$awk_functions BEGIN { lastHHMM=\"\"; last3=\"\" }"'
   '"$script1"'
-  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR, bytenr_cur); lastTimestr = curTimestr; lastTimestamp = curTimestamp; }
+  ( lastHHMM != curHHMM ) { '"$scriptSetCurTimestr"'; printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR, bytenr_cur); '"$scriptSetLastTimestrEtc"' }
   END { print "prevlog_lines\t" NR }
   ' - >> $cachefile
 
@@ -181,9 +193,9 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
   # TODO: make sure that if there are no logs in the $lotfile1, we don't screw up.
     local lastTimestr="$(tail -n 2 $cachefile | head -n 1 | cut -f2)"
     #echo hey3 $lastTimestr 1>&2
-    cat $logfile2 | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; lastTimestamp = nerdlogTimestrToTImestamp(lastTimestr) }"'
+    cat $logfile2 | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
   '"$script1"'
-  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(get_prevlog_lines_from_cache)', bytenr_cur+'$prevlog_bytes'); lastTimestr = curTimestr;  lastTimestamp = curTimestamp; }
+  ( lastHHMM != curHHMM ) { '"$scriptSetCurTimestr"'; printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(get_prevlog_lines_from_cache)', bytenr_cur+'$prevlog_bytes'); '"$scriptSetLastTimestrEtc"' }
   ' - >> $cachefile
   fi
 } # }}}
