@@ -1004,7 +1004,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		parts = append(
 			parts,
 			"bash", "/var/tmp/nerdlog_query_"+ha.params.ClientID+".sh",
-			"--cache-file", "/tmp/nerdlog_query_cache_"+ha.params.ClientID,
+			"--cache-file", "/tmp/nerdlog_query_index_"+ha.params.ClientID,
 			"--max-num-lines", strconv.Itoa(cmdCtx.cmd.queryLogs.maxNumLines),
 		)
 

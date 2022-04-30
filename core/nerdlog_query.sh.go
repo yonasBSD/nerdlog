@@ -39,6 +39,10 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
+    --refresh-index)
+      refresh_index="1"
+      shift # past argument
+      ;;
     -l|--max-num-lines)
       max_num_lines="$2"
       shift # past argument
@@ -59,9 +63,13 @@ set -- "${positional_args[@]}" # restore positional parameters
 
 user_pattern=$1
 
+if [[ "$refresh_index" == "1" ]]; then
+  rm -f $cachefile
+fi
+
 function refresh_cache { # {{{
-  local lastnr=0
-  local awknrplus="NR"
+  local last_linenr=0
+  local last_bytenr=0
 
   # Add new entries to cache, if needed
 
@@ -96,13 +104,13 @@ function nerdlogTimestrToTImestamp(timestr) {
   return logFieldsToTimestamp(substr(timestr, 1, 3), substr(timestr, 5, 2), substr(timestr, 8, 5));
 }
 
-function printIndexLine(timestr, linenr) {
-  print "idx\t" timestr "\t" linenr;
+function printIndexLine(timestr, linenr, bytenr) {
+  print "idx\t" timestr "\t" linenr "\t" bytenr;
 }
 
-function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linenr) {
+function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linenr, bytenr) {
   if (lastTimestr == "") {
-    printIndexLine(curTimestr, linenr);
+    printIndexLine(curTimestr, linenr, bytenr);
     return;
   }
 
@@ -111,7 +119,7 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
     nextTimestamp = lastTimestamp + 60
     nextTimestr = formatNerdlogTime(nextTimestamp)
 
-    printIndexLine(nextTimestr, linenr);
+    printIndexLine(nextTimestr, linenr, bytenr);
 
     lastTimestamp = nextTimestamp
   } while (nextTimestamp < curTimestamp && i++ < 1000);
@@ -127,39 +135,48 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
 # TODO: ^ if we fail to find the next timestamp and abort on 1000, print an error,
 # and then the Go part should see this error and report it to user
 
-  script1='{
+# NOTE: this script MUST be executed with the "-b" awk key, which means that
+# awk will work in terms of bytes, not characters. We use length($0) there and
+# we rely on it being number of bytes.
+# TODO: better rewrite this indexing stuff in perl.
+  script1='BEGIN { bytenr_cur=1; bytenr_next=1 }
+{
   curTimestamp = logFieldsToTimestamp($1, $2, $3)
   curTimestr = formatNerdlogTime(curTimestamp)
+
+  bytenr_cur = bytenr_next
+  bytenr_next += length($0)+1
 }'
 
-  if [ -s $cachefile ]; then
+  if [ -s $cachefile ]
+  then
     echo "caching new line numbers" 1>&2
 
     local typ="$(tail -n 1 $cachefile | cut -f1)"
     local lastTimestr="$(tail -n 1 $cachefile | cut -f2)"
-    local lastnr="$(tail -n 1 $cachefile | cut -f3)"
-    local awknrplus="NR+$(( lastnr-1 ))"
+    local last_linenr="$(tail -n 1 $cachefile | cut -f3)"
+    local last_bytenr="$(tail -n 1 $cachefile | cut -f4)"
 
     echo hey $lastTimestr 1>&2
-    echo hey2 $lastnr 1>&2
-    #lastnr=$(( lastnr-1 ))
+    echo hey2 $last_linenr $last_bytenr 1>&2
+    #last_linenr=$(( last_linenr-1 ))
 
     # TODO: as one more optimization, we can store the size of the logfile1 in
     # the cache, so here we get this file size and below we don't cat it.
     local logfile1_numlines=0
 
-    cat $logfile1 $logfile2 | tail -n +$((lastnr-logfile1_numlines)) | awk "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; lastTimestamp = nerdlogTimestrToTImestamp(lastTimestr) }"'
+    cat $logfile1 $logfile2 | tail -n +$((last_linenr-logfile1_numlines)) | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; lastTimestamp = nerdlogTimestrToTImestamp(lastTimestr) }"'
   '"$script1"'
-  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(( lastnr-1 ))'); lastTimestr = curTimestr; lastTimestamp = curTimestamp; }
+  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(( last_linenr-1 ))', bytenr_cur+'$(( last_bytenr-1 ))'); lastTimestr = curTimestr; lastTimestamp = curTimestamp; }
   ' - >> $cachefile
   else
     echo "caching all line numbers" 1>&2
 
     echo "prevlog_modtime	$(stat -c %y $logfile1)" > $cachefile
 
-    cat $logfile1 | awk "$awk_functions"'
+    cat $logfile1 | awk -b "$awk_functions"'
   '"$script1"'
-  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR); lastTimestr = curTimestr; lastTimestamp = curTimestamp; }
+  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR, bytenr_cur); lastTimestr = curTimestr; lastTimestamp = curTimestamp; }
   END { print "prevlog_lines\t" NR }
   ' - >> $cachefile
 
@@ -169,15 +186,20 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
   # TODO: make sure that if there are no logs in the $lotfile1, we don't screw up.
     local lastTimestr="$(tail -n 2 $cachefile | head -n 1 | cut -f2)"
     #echo hey3 $lastTimestr 1>&2
-    cat $logfile2 | awk "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; lastTimestamp = nerdlogTimestrToTImestamp(lastTimestr) }"'
+    cat $logfile2 | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; lastTimestamp = nerdlogTimestrToTImestamp(lastTimestr) }"'
   '"$script1"'
-  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(get_prevlog_lines_from_cache)'); lastTimestr = curTimestr;  lastTimestamp = curTimestamp; }
+  ( lastTimestr != curTimestr ) { printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(get_prevlog_lines_from_cache)', bytenr_cur+'$(get_prevlog_bytenr)'); lastTimestr = curTimestr;  lastTimestamp = curTimestamp; }
   ' - >> $cachefile
   fi
 } # }}}
 
-function get_from_cache() { # {{{
-  awk -F"\t" '$1 == "idx" && $2 == "'$1'" { print $3; exit }' $cachefile
+# Prints linenumber and bytenumber, space-separated.
+# One possible use is:
+#   read -r my_linenr my_bytenr <<<$(get_linenr_and_bytenr_from_cache my_timestr)
+#
+# Now we can use those vars $my_linenr and $my_bytenr
+function get_linenr_and_bytenr_from_cache() { # {{{
+  awk -F"\t" '$1 == "idx" && $2 == "'$1'" { print $3 " " $4; exit }' $cachefile
 } # }}}
 
 function get_prevlog_lines_from_cache() { # {{{
@@ -190,6 +212,10 @@ function get_prevlog_modtime_from_cache() { # {{{
   if ! awk -F"\t" 'BEGIN { found=0 } $1 == "prevlog_modtime" { print $2; found = 1; exit } END { if (found == 0) { exit 1 } }' $cachefile ; then
     return 1
   fi
+} # }}}
+
+function get_prevlog_bytenr() { # {{{
+  du -sb $logfile1 | awk '{ print $1 }'
 } # }}}
 
 if [[ "$from" != "" || "$to" != "" ]]; then
@@ -212,16 +238,16 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   # First try to find it in cache without refreshing the cache
 
   if [[ "$from" != "" ]]; then
-    from_nr=$(get_from_cache $from)
-    if [[ "$from_nr" == "" ]]; then
+    read -r from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from)
+    if [[ "$from_bytenr" == "" ]]; then
       echo "the from isn't found, gonna refresh the cache" 1>&2
       refresh_and_retry=1
     fi
   fi
 
   if [[ "$to" != "" ]]; then
-    to_nr=$(get_from_cache $to)
-    if [[ "$to_nr" == "" ]]; then
+    read -r to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to)
+    if [[ "$to_bytenr" == "" ]]; then
       echo "the to isn't found, gonna refresh the cache" 1>&2
       refresh_and_retry=1
     fi
@@ -231,15 +257,15 @@ if [[ "$from" != "" || "$to" != "" ]]; then
     refresh_cache
 
     if [[ "$from" != "" ]]; then
-      from_nr=$(get_from_cache $from)
-      if [[ "$from_nr" == "" ]]; then
+      read -r from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from)
+      if [[ "$from_bytenr" == "" ]]; then
         echo "the from isn't found, will use the beginning" 1>&2
       fi
     fi
 
     if [[ "$to" != "" ]]; then
-      to_nr=$(get_from_cache $to)
-      if [[ "$to_nr" == "" ]]; then
+      read -r to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to)
+      if [[ "$to_bytenr" == "" ]]; then
         echo "the to isn't found, will use the end" 1>&2
       fi
     fi
@@ -247,15 +273,16 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   fi
 fi
 
-echo "from $from_nr to $to_nr" 1>&2
+echo "from $from_linenr ($from_bytenr) to $to_linenr ($to_bytenr)" 1>&2
 
 echo "scanning logs" 1>&2
 
 prevlog_lines=$(get_prevlog_lines_from_cache)
+prevlog_bytes=$(get_prevlog_bytenr)
 
-from_nr_int=$from_nr
-if [[ "$from_nr" == "" ]]; then
-  from_nr_int=0
+from_linenr_int=$from_linenr
+if [[ "$from_linenr" == "" ]]; then
+  from_linenr_int=0
 fi
 
 awk_pattern=''
@@ -265,7 +292,7 @@ fi
 
 lines_until_check=''
 if [[ "$lines_until" != "" ]]; then
-  lines_until_check="if (NR >= $((lines_until-from_nr_int+1))) { next; }"
+  lines_until_check="if (NR >= $((lines_until-from_linenr_int+1))) { next; }"
 fi
 
 awk_script='
@@ -304,7 +331,7 @@ END {
       continue;
     }
 
-    curNR = lastNRs[ln] + '$from_nr_int' - 1;
+    curNR = lastNRs[ln] + '$from_linenr_int' - 1;
 
     print "m:" curNR ":" lastlines[ln];
   }
@@ -336,45 +363,40 @@ END {
 
 # Generate commands to get all the logs as per requested timerange.
 declare -a cmds
-if [[ "$from_nr" != "" && $(( from_nr > prevlog_lines )) == 1 ]]; then
+if [[ "$from_bytenr" != "" && $(( from_bytenr > prevlog_bytes )) == 1 ]]; then
   # Only $logfile2 is used.
-  from_nr=$(( from_nr - prevlog_lines ))
-  if [[ "$to_nr" != "" ]]; then
-    echo "Getting logs from line $from_nr to line $((to_nr-1)) inclusive, all in the $logfile2" 1>&2
-    to_nr=$(( to_nr - prevlog_lines ))
-    cmds+=("tail -n +$from_nr $logfile2 | head -n $((to_nr - from_nr))")
+  from_bytenr=$(( from_bytenr - prevlog_bytes ))
+  if [[ "$to_bytenr" != "" ]]; then
+    to_bytenr=$(( to_bytenr - prevlog_bytes ))
+    echo "Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the $logfile2" 1>&2
+    cmds+=("tail -c +$from_bytenr $logfile2 | head -c $((to_bytenr - from_bytenr))")
   else
     # Most common case
-    echo "Getting logs from line $from_nr until the end of $logfile2." 1>&2
-    cmds+=("tail -n +$from_nr $logfile2")
+    echo "Getting logs from offset $from_bytenr until the end of $logfile2." 1>&2
+    cmds+=("tail -c +$from_bytenr $logfile2")
   fi
-elif [[ "$to_nr" != "" && $(( to_nr <= prevlog_lines )) == 1 ]]; then
+elif [[ "$to_bytenr" != "" && $(( to_bytenr <= prevlog_bytes )) == 1 ]]; then
   # Only $logfile1 is used.
-  if [[ "$from_nr" != "" ]]; then
-    echo "Getting logs from line $from_nr to line $((to_nr-1)), all in the $logfile1" 1>&2
-    # TODO: see similar TODO below for the tail -n
-    cmds+=("tail -n $(( prevlog_lines - from_nr + 1 )) $logfile1 | head -n $((to_nr - from_nr))")
+  if [[ "$from_bytenr" != "" ]]; then
+    echo "Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the $logfile1" 1>&2
+    cmds+=("tail -c +$from_bytenr $logfile1 | head -c $((to_bytenr - from_bytenr))")
   else
-    echo "Getting logs from the very beginning to line $(( to_nr - 1 )) inclusive, all in the $logfile1." 1>&2
-    cmds+=("head -n $(( to_nr - 1)) $logfile1")
+    echo "Getting logs from the very beginning to offset $(( to_bytenr - 1 )), all in the $logfile1." 1>&2
+    cmds+=("head -c $(( to_bytenr - 1)) $logfile1")
   fi
 else
   # Both log files are used
-  if [[ "$from_nr" != "" ]]; then
-    info="Getting logs from line $from_nr in $logfile1"
-    # TODO: for now we just assume that from_nr is closer to the end of
-    # $logfile1, and so we use the usual tail (specifying number of lines in
-    # the end), but it's better to check if from_nr is actually closer to the
-    # beginning, and then use the tail -n +$(( from_nr ))
-    cmds+=("tail -n $(( prevlog_lines - from_nr + 1 )) $logfile1")
+  if [[ "$from_bytenr" != "" ]]; then
+    info="Getting logs from offset $from_bytenr in $logfile1"
+    cmds+=("tail -c +$from_bytenr $logfile1")
   else
     info="Getting logs from the very beginning in $logfile1"
     cmds+=("cat $logfile1")
   fi
 
-  if [[ "$to_nr" != "" ]]; then
-    info="$info to line $(( to_nr - prevlog_lines - 1 )) inclusive in $logfile2"
-    cmds+=("head -n $(( to_nr - prevlog_lines - 1 )) $logfile2")
+  if [[ "$to_bytenr" != "" ]]; then
+    info="$info to offset $(( to_bytenr - prevlog_bytes - 1 )) in $logfile2"
+    cmds+=("head -c $(( to_bytenr - prevlog_bytes - 1 )) $logfile2")
   else
     info="$info until the end of $logfile2"
     cmds+=("cat $logfile2")
