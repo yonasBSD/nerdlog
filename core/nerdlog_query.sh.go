@@ -181,11 +181,11 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
 
     echo "prevlog_modtime	$(stat -c %y $logfile1)" > $cachefile
 
-    cat $logfile1 | awk -b "$awk_functions BEGIN { lastHHMM=\"\"; last3=\"\" }"'
+    awk -b "$awk_functions BEGIN { lastHHMM=\"\"; last3=\"\" }"'
   '"$script1"'
   ( lastHHMM != curHHMM ) { '"$scriptSetCurTimestr"'; printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR, bytenr_cur); '"$scriptSetLastTimestrEtc"' }
   END { print "prevlog_lines\t" NR }
-  ' - >> $cachefile
+  ' $logfile1 >> $cachefile
 
   # Before we start handling $logfile2, gotta read the last idx line (which is
   # last-but-one line) and set it for the next script, otherwise there is a gap
@@ -193,10 +193,10 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
   # TODO: make sure that if there are no logs in the $lotfile1, we don't screw up.
     local lastTimestr="$(tail -n 2 $cachefile | head -n 1 | cut -f2)"
     #echo hey3 $lastTimestr 1>&2
-    cat $logfile2 | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
+    awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
   '"$script1"'
   ( lastHHMM != curHHMM ) { '"$scriptSetCurTimestr"'; printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(get_prevlog_lines_from_cache)', bytenr_cur+'$prevlog_bytes'); '"$scriptSetLastTimestrEtc"' }
-  ' - >> $cachefile
+  ' $logfile2 >> $cachefile
   fi
 } # }}}
 
