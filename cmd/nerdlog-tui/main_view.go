@@ -151,6 +151,26 @@ var (
 			Background(tcell.ColorWhite).
 			Foreground(tcell.ColorBlue).
 			Bold(true)
+
+	cmdLineCommand = tcell.Style{}.
+			Background(tcell.ColorBlue).
+			Foreground(tcell.ColorWhite).
+			Bold(false)
+
+	cmdLineMsgInfo = tcell.Style{}.
+			Background(tcell.ColorBlue).
+			Foreground(tcell.ColorWhite).
+			Bold(false)
+
+	cmdLineMsgWarn = tcell.Style{}.
+			Background(tcell.ColorBlue).
+			Foreground(tcell.ColorLime).
+			Bold(true)
+
+	cmdLineMsgErr = tcell.Style{}.
+			Background(tcell.ColorBlue).
+			Foreground(tcell.ColorYellow).
+			Bold(false)
 )
 
 func NewMainView(params *MainViewParams) *MainView {
@@ -600,6 +620,7 @@ func NewMainView(params *MainViewParams) *MainView {
 	mainFlex.AddItem(statusLineFlex, 1, 0, false)
 
 	mv.cmdInput = tview.NewInputField()
+	mv.cmdInput.SetFieldStyle(cmdLineCommand)
 	mv.cmdInput.SetChangedFunc(func(text string) {
 		if text == "" {
 			mv.params.App.SetFocus(mv.focusedBeforeCmd)
@@ -675,9 +696,43 @@ func NewMainView(params *MainViewParams) *MainView {
 }
 
 func (mv *MainView) focusCmdline() {
+	mv.cmdInput.SetFieldStyle(cmdLineCommand)
 	mv.cmdInput.SetText(":")
 	mv.focusedBeforeCmd = mv.params.App.GetFocus()
 	mv.params.App.SetFocus(mv.cmdInput)
+}
+
+type nlMsgLevel string
+
+const (
+	nlMsgLevelInfo nlMsgLevel = "info"
+	nlMsgLevelWarn nlMsgLevel = "warn"
+	nlMsgLevelErr  nlMsgLevel = "err"
+)
+
+func (mv *MainView) printMsg(s string, level nlMsgLevel) {
+	// If the commandline is focused, then don't print anything since it would mess
+	// with the current input.
+	//
+	// TODO: keep some history of the messages that were printed, so that we can at least
+	// check later what exactly has happened.
+	if mv.cmdInput.HasFocus() {
+		// TODO: still indicate _somehow_ that a message has happened.
+		return
+	}
+
+	style := cmdLineMsgInfo
+	switch level {
+	case nlMsgLevelInfo:
+		style = cmdLineMsgInfo
+	case nlMsgLevelWarn:
+		style = cmdLineMsgWarn
+	case nlMsgLevelErr:
+		style = cmdLineMsgErr
+	}
+
+	mv.cmdInput.SetFieldStyle(style)
+	mv.cmdInput.SetText(s)
 }
 
 func (mv *MainView) run() {

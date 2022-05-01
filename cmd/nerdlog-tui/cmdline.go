@@ -105,7 +105,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 			vn := parts[1][:len(parts[1])-1]
 			switch vn {
 			case "numlines", "maxnumlines":
-				app.printError("numlines is " + strconv.Itoa(app.maxNumLines))
+				app.printMsg("numlines is " + strconv.Itoa(app.maxNumLines))
 
 			default:
 				app.printError("Unknown variable " + vn)
