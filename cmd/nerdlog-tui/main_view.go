@@ -995,6 +995,8 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 	}
 
 	mv.bumpStatusLineRight()
+
+	mv.printMsg(fmt.Sprintf("Query took: %s", resp.QueryDur.Round(1*time.Millisecond)), nlMsgLevelInfo)
 }
 
 func (mv *MainView) bumpStatusLineLeft() {

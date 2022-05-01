@@ -210,9 +210,10 @@ func (hm *HostsManager) run() {
 				}
 
 				hm.curQueryLogsCtx = &manQueryLogsCtx{
-					req:   req.queryLogs,
-					resps: make(map[string]*LogResp, len(hm.has)),
-					errs:  map[string]error{},
+					req:       req.queryLogs,
+					startTime: time.Now(),
+					resps:     make(map[string]*LogResp, len(hm.has)),
+					errs:      map[string]error{},
 				}
 
 				// sendStateUpdate must be done after setting curQueryLogsCtx.
@@ -370,6 +371,8 @@ func (hm *HostsManager) Ping() {
 type manQueryLogsCtx struct {
 	req *QueryLogsParams
 
+	startTime time.Time
+
 	// resps is a map from host name to its response. Once all responses have
 	// been collected, we'll start merging them together.
 	resps map[string]*LogResp
@@ -460,6 +463,8 @@ func (hm *HostsManager) sendStateUpdate() {
 }
 
 func (hm *HostsManager) sendLogRespUpdate(resp *LogRespTotal) {
+	resp.QueryDur = time.Since(hm.curQueryLogsCtx.startTime)
+
 	hm.params.UpdatesCh <- HostsManagerUpdate{
 		LogResp: resp,
 	}

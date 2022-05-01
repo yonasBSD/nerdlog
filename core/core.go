@@ -60,6 +60,9 @@ type LogRespTotal struct {
 	NumMsgsTotal int
 
 	Errs []error
+
+	// QueryDur shows how long the query took.
+	QueryDur time.Duration
 }
 
 type MinuteStatsItem struct {
