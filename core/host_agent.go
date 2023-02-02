@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -1065,8 +1066,31 @@ func parseLine(msg string, lastTime time.Time) (*parseLineResult, error) {
 		return nil, errors.Trace(err)
 	}
 
-	tsStr := sdmsg.tsStr
 	msg = sdmsg.msg
+
+	if len(msg) > 0 && msg[0] == '{' {
+		res, err := parseLineStructured(lastTime, sdmsg)
+		if err == nil {
+			return res, nil
+		}
+
+		// The message looked like it was in a structured format, but we failed
+		// to parse it, so fallback to the regular parsing
+	}
+
+	res, err := parseLineUnstructured(lastTime, sdmsg)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return res, nil
+}
+
+func parseLineUnstructured(
+	lastTime time.Time, sdmsg *parseSystemdMsgResult,
+) (*parseLineResult, error) {
+	tsStr := sdmsg.tsStr
+	msg := sdmsg.msg
 
 	// Logs often contain double timestamps: one from systemd and
 	// the next one from the app, so check if the second one exists
@@ -1142,6 +1166,72 @@ tagsLoop:
 				msg = msg[idx+3:]
 			}
 		}
+	}
+
+	return &parseLineResult{
+		time:               t,
+		decreasedTimestamp: decreasedTimestamp,
+		msg:                msg,
+		ctxMap:             ctxMap,
+	}, nil
+}
+
+func parseLineStructured(
+	lastTime time.Time, sdmsg *parseSystemdMsgResult,
+) (*parseLineResult, error) {
+	tsStr := sdmsg.tsStr
+	msg := sdmsg.msg
+
+	var msgParsed struct {
+		Fields map[string]interface{}
+	}
+
+	if err := json.Unmarshal([]byte(msg), &msgParsed); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	ctxMap := make(map[string]string, len(msgParsed.Fields))
+	for k, v := range msgParsed.Fields {
+		var vStr string
+		switch vTyped := v.(type) {
+		case string:
+			vStr = vTyped
+		default:
+			vStr = fmt.Sprintf("%v", v)
+		}
+
+		ctxMap[k] = vStr
+	}
+
+	if ts2Str, ok := ctxMap["time"]; ok {
+		tsStr = ts2Str
+		delete(ctxMap, "time")
+	}
+
+	// Now, tsStr contains the timestamp to parse, and msg contains
+	// everything after that timestamp.
+
+	t, err := time.Parse(syslogTimeLayout, tsStr)
+	if err != nil {
+		return nil, errors.Annotatef(err, "parsing log msg")
+	}
+
+	t = InferYear(t)
+
+	decreasedTimestamp := false
+
+	if t.Before(lastTime) {
+		// Time has decreased: this might happen if the previous log line had
+		// a precise timestamp with microseconds, but the current line only has
+		// a second precision. Then we just hackishly set the current timestamp
+		// to be the same.
+		t = lastTime
+		decreasedTimestamp = true
+	}
+
+	if msg2, ok := ctxMap["msg"]; ok {
+		msg = msg2
+		delete(ctxMap, "msg")
 	}
 
 	return &parseLineResult{
