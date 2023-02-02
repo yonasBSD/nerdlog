@@ -343,7 +343,7 @@ func (ha *HostAgent) run() {
 						logNumberOfLinesStr := msg[idx+1:]
 						logNumberOfLines, err := strconv.Atoi(logNumberOfLinesStr)
 						if err != nil {
-							resp.Errs = append(resp.Errs, errors.Errorf("parsing logfile msg: invalid number in %q", line))
+							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing logfile msg: invalid number in %q", line))
 							continue
 						}
 
@@ -366,7 +366,7 @@ func (ha *HostAgent) run() {
 
 						logLinenoCombined, err := strconv.Atoi(logLinenoStr)
 						if err != nil {
-							resp.Errs = append(resp.Errs, errors.Errorf("parsing log msg: invalid line number in %q", line))
+							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing log msg: invalid line number in %q", line))
 							continue
 						}
 
@@ -386,7 +386,7 @@ func (ha *HostAgent) run() {
 
 						parseRes, err := parseLine(msg, respCtx.lastTime)
 						if err != nil {
-							resp.Errs = append(resp.Errs, errors.Errorf("parsing log msg: no time in %q", line))
+							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing log msg: no time in %q", line))
 							continue
 						}
 
