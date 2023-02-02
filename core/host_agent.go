@@ -383,149 +383,30 @@ func (ha *HostAgent) run() {
 
 						origLine := msg
 
-						//if msg == "" {
-						//continue
-						//}
-
-						// Mar  6 17:08:35 localhost redacted[21
-						// Mar 26 17:08:35 localhost redacted[21
-
-						// Find the index of third space, which would indicate where
-						// timestamp ends
-						ts1Len := 0
-						ns := 0
-						inWhitespace := false
-						for i, r := range msg {
-							if r != ' ' {
-								inWhitespace = false
-								continue
-							}
-
-							if inWhitespace {
-								continue
-							}
-
-							inWhitespace = true
-
-							ns++
-							if ns >= 3 {
-								ts1Len = i
-								break
-							}
-						}
-
-						if ts1Len == 0 {
+						parseRes, err := parseLine(msg, respCtx.lastTime)
+						if err != nil {
 							resp.Errs = append(resp.Errs, errors.Errorf("parsing log msg: no time in %q", line))
 							continue
 						}
 
-						tsStr := msg[:ts1Len]
-						msg = msg[ts1Len+1:]
-						colonIdx := strings.IndexRune(msg, ':')
-						if colonIdx == -1 {
-							resp.Errs = append(resp.Errs, errors.Errorf("parsing log msg: no systemd colon"))
-							continue
-						}
-
-						msg = msg[colonIdx+1:]
-						msg = strings.TrimSpace(msg)
-
-						// Logs often contain double timestamps: one from systemd and
-						// the next one from the app, so check if the second one exists
-						// indeed.
-						ts2Idx := strings.Index(msg, tsStr)
-						if ts2Idx >= 0 {
-							tmp := strings.IndexRune(msg[ts2Idx+ts1Len:], ' ')
-							if tmp > 0 {
-								ts2Len := ts1Len + tmp
-								tsStr = msg[ts2Idx:ts2Len]
-								msg = msg[ts2Idx+ts2Len+1:]
-							}
-						}
-
-						// Now, tsStr contains the timestamp to parse, and msg contains
-						// everything after that timestamp.
-
-						t, err := time.Parse(syslogTimeLayout, tsStr)
-						if err != nil {
-							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing log msg"))
-							continue
-						}
-
-						t = InferYear(t)
-
-						lastTime := respCtx.lastTime
-						decreasedTimestamp := false
-
-						if t.Before(lastTime) {
-							// Time has decreased: this might happen if the previous log line had
-							// a precise timestamp with microseconds, but the current line only has
-							// a second precision. Then we just hackishly set the current timestamp
-							// to be the same.
-							t = lastTime
-							decreasedTimestamp = true
-						}
-
-						ctxMap := map[string]string{
-							"source": ha.params.Config.Name,
-						}
-
-						// Extract context tags from msg
-						lastEqIdx := strings.LastIndexByte(msg, '=')
-					tagsLoop:
-						for ; lastEqIdx >= 0; lastEqIdx = strings.LastIndexByte(msg, '=') {
-							val := msg[lastEqIdx+1:]
-							msg = msg[:lastEqIdx]
-							var key string
-
-							lastSpaceIdx := strings.LastIndexByte(msg, ' ')
-							if lastSpaceIdx >= 0 {
-								key = msg[lastSpaceIdx+1:]
-								msg = msg[:lastSpaceIdx]
-							} else {
-								key = msg
-								msg = ""
-							}
-
-							for _, r := range key {
-								if !unicode.IsLetter(r) && !unicode.IsNumber(r) && r != '_' && r != '-' {
-									continue tagsLoop
-								}
-							}
-
-							ctxMap[key] = val
-						}
-
-						// Another hack: often our messages contain a prefix like
-						// "[ foo.bar.baz.info ]", but this is redundant since
-						// "foo.bar.baz" is already present as a namespace, and "info"
-						// is present as level_name. So we check if such redundant prefix
-						// exists, and strip it.
-						if strings.HasPrefix(msg, "[ ") {
-							if idx := strings.Index(msg, " ] "); idx >= 0 {
-								if msg[2:idx] == ctxMap["namespace"]+"."+ctxMap["level_name"] {
-									// Prefix exists and is redundant, strip it.
-									msg = msg[idx+3:]
-								}
-							}
-						}
+						parseRes.ctxMap["source"] = ha.params.Config.Name
 
 						resp.Logs = append(resp.Logs, LogMsg{
-							Time:               t,
-							DecreasedTimestamp: decreasedTimestamp,
+							Time:               parseRes.time,
+							DecreasedTimestamp: parseRes.decreasedTimestamp,
 
 							LogFilename:   logFilename,
 							LogLinenumber: logLineno,
 
 							CombinedLinenumber: logLinenoCombined,
 
-							Msg:     msg,
-							Context: ctxMap,
+							Msg:     parseRes.msg,
+							Context: parseRes.ctxMap,
 
 							OrigLine: origLine,
 						})
 
-						respCtx.lastTime = t
+						respCtx.lastTime = parseRes.time
 					}
 				}
 
@@ -1111,4 +992,162 @@ func timeWithYear(t time.Time, year int) time.Time {
 		t.Nanosecond(),
 		t.Location(),
 	)
+}
+
+type parseSystemdMsgResult struct {
+	tsStr  string
+	ts1Len int
+
+	msg string
+}
+
+func parseSystemdMsg(msg string) (*parseSystemdMsgResult, error) {
+	ts1Len := 0
+	ns := 0
+	inWhitespace := false
+	for i, r := range msg {
+		if r != ' ' {
+			inWhitespace = false
+			continue
+		}
+
+		if inWhitespace {
+			continue
+		}
+
+		inWhitespace = true
+
+		ns++
+		if ns >= 3 {
+			ts1Len = i
+			break
+		}
+	}
+
+	if ts1Len == 0 {
+		return nil, errors.Errorf("parsing log msg: no time in %q", msg)
+	}
+
+	tsStr := msg[:ts1Len]
+	msg = msg[ts1Len+1:]
+	colonIdx := strings.IndexRune(msg, ':')
+	if colonIdx == -1 {
+		return nil, errors.Errorf("parsing log msg: no systemd colon")
+	}
+
+	msg = msg[colonIdx+1:]
+	msg = strings.TrimSpace(msg)
+
+	return &parseSystemdMsgResult{
+		tsStr:  tsStr,
+		ts1Len: ts1Len,
+		msg:    msg,
+	}, nil
+}
+
+type parseLineResult struct {
+	// time might or might not be populated: most of our messages contain an
+	// extra (more precise) timestamp, so in this case it'll be populated here,
+	// and client code should use it.
+	time               time.Time
+	decreasedTimestamp bool
+
+	// msg is the actual log message.
+	msg string
+
+	// ctxMap contains context for the message.
+	ctxMap map[string]string
+}
+
+func parseLine(msg string, lastTime time.Time) (*parseLineResult, error) {
+	sdmsg, err := parseSystemdMsg(msg)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	tsStr := sdmsg.tsStr
+	msg = sdmsg.msg
+
+	// Logs often contain double timestamps: one from systemd and
+	// the next one from the app, so check if the second one exists
+	// indeed.
+	ts2Idx := strings.Index(msg, tsStr)
+	if ts2Idx >= 0 {
+		tmp := strings.IndexRune(msg[ts2Idx+sdmsg.ts1Len:], ' ')
+		if tmp > 0 {
+			ts2Len := sdmsg.ts1Len + tmp
+			tsStr = msg[ts2Idx:ts2Len]
+			msg = msg[ts2Idx+ts2Len+1:]
+		}
+	}
+
+	// Now, tsStr contains the timestamp to parse, and msg contains
+	// everything after that timestamp.
+
+	t, err := time.Parse(syslogTimeLayout, tsStr)
+	if err != nil {
+		return nil, errors.Annotatef(err, "parsing log msg")
+	}
+
+	t = InferYear(t)
+
+	decreasedTimestamp := false
+
+	if t.Before(lastTime) {
+		// Time has decreased: this might happen if the previous log line had
+		// a precise timestamp with microseconds, but the current line only has
+		// a second precision. Then we just hackishly set the current timestamp
+		// to be the same.
+		t = lastTime
+		decreasedTimestamp = true
+	}
+
+	ctxMap := map[string]string{}
+
+	// Extract context tags from msg
+	lastEqIdx := strings.LastIndexByte(msg, '=')
+tagsLoop:
+	for ; lastEqIdx >= 0; lastEqIdx = strings.LastIndexByte(msg, '=') {
+		val := msg[lastEqIdx+1:]
+		msg = msg[:lastEqIdx]
+		var key string
+
+		lastSpaceIdx := strings.LastIndexByte(msg, ' ')
+		if lastSpaceIdx >= 0 {
+			key = msg[lastSpaceIdx+1:]
+			msg = msg[:lastSpaceIdx]
+		} else {
+			key = msg
+			msg = ""
+		}
+
+		for _, r := range key {
+			if !unicode.IsLetter(r) && !unicode.IsNumber(r) && r != '_' && r != '-' {
+				continue tagsLoop
+			}
+		}
+
+		ctxMap[key] = val
+	}
+
+	// Another hack: often our messages contain a prefix like
+	// "[ foo.bar.baz.info ]", but this is redundant since
+	// "foo.bar.baz" is already present as a namespace, and "info"
+	// is present as level_name. So we check if such redundant prefix
+	// exists, and strip it.
+	if strings.HasPrefix(msg, "[ ") {
+		if idx := strings.Index(msg, " ] "); idx >= 0 {
+			if msg[2:idx] == ctxMap["namespace"]+"."+ctxMap["level_name"] {
+				// Prefix exists and is redundant, strip it.
+				msg = msg[idx+3:]
+			}
+		}
+	}
+
+	return &parseLineResult{
+		time:               t,
+		decreasedTimestamp: decreasedTimestamp,
+		msg:                msg,
+		ctxMap:             ctxMap,
+	}, nil
 }
