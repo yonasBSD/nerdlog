@@ -10,8 +10,8 @@ import (
 var queryLabelText = `Query (awk syntax). Examples:
 - Simple regexp:                          [yellow]/foo bar/[-]
 - Regexps with complex conditions:        [yellow]( /foo bar/ || /other stuff/ ) && !/baz/[-]
-- Find items tagged with series ID 86:    [yellow]/series_ids_string=.*\|86\|.*/[-]
-- Find errors:                            [yellow]/level_name=error/[-]
+- Find items tagged with series ID 86:    [yellow]/series_ids_string":".*\|86\|.*/[-]
+- Find errors:                            [yellow]/level_name":"error/[-]
 `
 
 /*
