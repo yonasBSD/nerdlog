@@ -13,6 +13,14 @@ cachefile=/tmp/nerdlog_query_cache
 logfile1=/var/log/syslog.1
 logfile2=/var/log/syslog
 
+# Just a hack to account for cases when /var/log/syslog.1 doesn't exist:
+# create an empty file and pretend that it's an empty log file.
+if [ ! -e "$logfile1"  ]; then
+  logfile1="/tmp/nerdlog-empty-file"
+  rm -f $logfile1
+  touch $logfile1
+fi
+
 positional_args=()
 
 max_num_lines=100
