@@ -6,12 +6,17 @@ import (
 	"github.com/juju/errors"
 )
 
-var DefaultSelectQuery SelectQuery = FieldNameTime + " STICKY, " + FieldNameMessage + ", source, level_name AS lvl, redacted_id_int AS ds, redacted_symbol_str AS ds_symbol, namespace, series_ids_string AS series, series_slug_str AS slug, series_type_str AS series_type"
+var DefaultSelectQuery SelectQuery = FieldNameTime + " STICKY, " + FieldNameMessage + ", source, level_name, redacted_id_int, redacted_symbol_str, namespace, series_ids_string, series_slug_str, series_type_str"
 
 const (
 	FieldNameTime    = "time"
 	FieldNameMessage = "message"
 )
+
+var FieldNamesSpecial = map[string]struct{}{
+	FieldNameTime:    {},
+	FieldNameMessage: {},
+}
 
 // TODO explain
 type SelectQuery string

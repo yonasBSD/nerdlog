@@ -29,7 +29,7 @@ current time is used.
 var hostsLabelText = `Hosts. Comma-separated glob patterns, e.g. "[yellow]my-host-*,my-host-*[-]" matches
 all staging redacted and redacted nodes.`
 
-var selectQueryLabelText = `Select field query. Example: "[yellow]time STICKY, message, source, level_name AS lvl[-]".`
+var selectQueryLabelText = `Select field query. Example: "[yellow]time STICKY, message, source, level_name AS level, *[-]".`
 
 type QueryEditViewParams struct {
 	// DoneFunc is called when the user submits the form. If it returns a non-nil
@@ -54,7 +54,8 @@ type QueryEditView struct {
 	hostsInput *tview.InputField
 	queryInput *tview.InputField
 
-	selectQueryInput *tview.InputField
+	selectQueryInput   *tview.InputField
+	selectQueryEditBtn *tview.Button
 
 	frame *tview.Frame
 	//
@@ -181,8 +182,17 @@ func NewQueryEditView(
 	qev.flex.AddItem(selectQueryLabel, 1, 0, false)
 
 	qev.selectQueryInput = tview.NewInputField()
-	qev.flex.AddItem(qev.selectQueryInput, 1, 0, false)
 	focusers = append(focusers, qev.selectQueryInput)
+
+	qev.selectQueryEditBtn = tview.NewButton("Edit")
+	focusers = append(focusers, qev.selectQueryEditBtn)
+
+	sqFlex := tview.NewFlex().SetDirection(tview.FlexColumn)
+	sqFlex.
+		AddItem(qev.selectQueryInput, 0, 1, false).
+		AddItem(nil, 1, 0, false).
+		AddItem(qev.selectQueryEditBtn, 6, 0, false)
+	qev.flex.AddItem(sqFlex, 1, 0, false)
 
 	//qev.textView = tview.NewTextView()
 	//qev.textView.SetText(params.Message)
@@ -317,6 +327,28 @@ func NewQueryEditView(
 			if err := qev.applyQuery(); err != nil {
 				qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
 			}
+			return nil
+		}
+
+		return event
+	})
+
+	qev.selectQueryEditBtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEnter:
+			rdv := NewRowDetailsView(qev.mainView, &RowDetailsViewParams{
+				DoneFunc: func(data QueryFull, dqp doQueryParams) error {
+					qev.SetQueryFull(data)
+					return nil
+				},
+				Data:             qev.GetQueryFull(),
+				ExistingNamesSet: qev.mainView.existingTagNames,
+			})
+			rdv.Show()
+		}
+
+		event = qev.genericInputHandler(event, getGenericTabHandler(qev.selectQueryEditBtn), nil, nil)
+		if event == nil {
 			return nil
 		}
 

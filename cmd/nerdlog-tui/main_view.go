@@ -19,7 +19,9 @@ const logsTableTimeLayout = "Jan02 15:04:05.000"
 
 const (
 	pageNameMessage         = "message"
-	pageNameEditQueryParams = "message"
+	pageNameEditQueryParams = "edit_query_params"
+	pageNameRowDetails      = "row_details"
+	pageNameColumnDetails   = "column_details"
 )
 
 const (
@@ -102,6 +104,10 @@ type MainView struct {
 	// uselessly try to update the cache (the timestamp -> linenumber mapping),
 	// trying to find this non-existing future timestamp there.
 	actualToForQuery time.Time
+
+	// existingTagNames is a list of all tag names that exist in currently
+	// queried logs (regardless of whether those columns exist in the UI).
+	existingTagNames map[string]struct{}
 
 	// When doQueryParamsOnceConnected is not nil, it means that whenever we get
 	// a new status update (ApplyHMState gets called), if Connected is true
@@ -562,29 +568,26 @@ func NewMainView(params *MainViewParams) *MainView {
 			return
 		}
 
-		// "Click" on a data cell: show original message
+		// "Click" on a data cell: show details
 
-		timeCell := mv.logsTable.GetCell(row, 0)
-		msg := timeCell.GetReference().(core.LogMsg)
+		firstCell := mv.logsTable.GetCell(row, 0)
+		msg := firstCell.GetReference().(core.LogMsg)
 
-		lnOffsetUp := 1000   // How many surrounding lines to show, up
-		lnOffsetDown := 1000 // How many surrounding lines to show, down
-		lnBegin := msg.LogLinenumber - lnOffsetUp
-		if lnBegin <= 0 {
-			lnOffsetUp += lnBegin - 1
-			lnBegin = 1
+		existingNamesSet := map[string]struct{}{
+			FieldNameTime:    {},
+			FieldNameMessage: {},
+		}
+		for key := range msg.Context {
+			existingNamesSet[key] = struct{}{}
 		}
 
-		s := fmt.Sprintf(
-			"ssh -t %s 'vim +\"set ft=messages\" +%d <(tail -n +%d %s | head -n %d)'\n\n%s",
-			msg.Context["source"], lnOffsetUp+1, lnBegin, msg.LogFilename, lnOffsetUp+lnOffsetDown,
-			msg.OrigLine,
-		)
-
-		mv.showMessagebox("msg", "Message", s, &MessageboxParams{
-			Width:  120,
-			Height: 20,
+		rdv := NewRowDetailsView(mv, &RowDetailsViewParams{
+			DoneFunc:         mv.applyQueryEditData,
+			Data:             mv.getQueryFull(),
+			ExistingNamesSet: existingNamesSet,
+			Msg:              &msg,
 		})
+		rdv.Show()
 	}).SetSelectionChangedFunc(func(row, column int) {
 		mv.bumpStatusLineRight()
 	})
@@ -928,13 +931,13 @@ func (mv *MainView) updateTableHeader(msgs []core.LogMsg) (colNames []string) {
 		return vi < vj
 	})
 
+	explicit := make(map[string]struct{}, len(fields))
+	for _, v := range fields {
+		explicit[v.Name] = struct{}{}
+	}
+
 	if mv.selectQuery.IncludeAll {
 		var implicitFields []SelectQueryField
-		explicit := make(map[string]struct{}, len(fields))
-		for _, v := range fields {
-			explicit[v.Name] = struct{}{}
-		}
-
 		for v := range existingTags {
 			if _, ok := explicit[v]; ok {
 				continue
@@ -958,6 +961,9 @@ func (mv *MainView) updateTableHeader(msgs []core.LogMsg) (colNames []string) {
 		cell := newTableCellHeader(fld.DisplayName)
 		if _, ok := existingTags[fld.Name]; !ok {
 			cell.SetTextColor(tcell.ColorRed)
+		}
+		if _, ok := explicit[fld.Name]; !ok {
+			cell.SetTextColor(tcell.ColorLightGray)
 		}
 
 		mv.logsTable.SetCell(0, i, cell)
@@ -986,6 +992,18 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 	offsetRow, offsetCol := mv.logsTable.GetOffset()
 	mv.logsTable.Clear()
 
+	// Update existingTagNames
+	mv.existingTagNames = map[string]struct{}{
+		FieldNameTime:    {},
+		FieldNameMessage: {},
+	}
+	for _, msg := range resp.Logs {
+		for name := range msg.Context {
+			mv.existingTagNames[name] = struct{}{}
+		}
+	}
+
+	// Update table header
 	colNames := mv.updateTableHeader(resp.Logs)
 
 	mv.logsTable.SetCell(
@@ -1380,6 +1398,27 @@ func (mv *MainView) ShowMessagebox(
 func (mv *MainView) HideMessagebox(msgID string, popFocusStack bool) {
 	mv.params.App.QueueUpdateDraw(func() {
 		mv.hideModal(pageNameMessage+msgID, popFocusStack)
+	})
+}
+
+func (mv *MainView) showOriginalMsg(msg core.LogMsg) {
+	lnOffsetUp := 1000   // How many surrounding lines to show, up
+	lnOffsetDown := 1000 // How many surrounding lines to show, down
+	lnBegin := msg.LogLinenumber - lnOffsetUp
+	if lnBegin <= 0 {
+		lnOffsetUp += lnBegin - 1
+		lnBegin = 1
+	}
+
+	s := fmt.Sprintf(
+		"ssh -t %s 'vim +\"set ft=messages\" +%d <(tail -n +%d %s | head -n %d)'\n\n%s",
+		msg.Context["source"], lnOffsetUp+1, lnBegin, msg.LogFilename, lnOffsetUp+lnOffsetDown,
+		msg.OrigLine,
+	)
+
+	mv.showMessagebox("msg", "Message", s, &MessageboxParams{
+		Width:  120,
+		Height: 20,
 	})
 }
 
