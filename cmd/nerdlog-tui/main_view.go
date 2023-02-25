@@ -91,6 +91,9 @@ type MainView struct {
 	// actualToForQuery instead, see below.
 	actualFrom, actualTo time.Time
 
+	// selectQuery is the effective SelectQuery
+	selectQuery *SelectQueryParsed
+
 	// actualToForQuery is similar to actualTo, but if the "to" was at zero
 	// value, then actualToForQuery will be zero value too. It's suitable for the
 	// use in queries (QueryLogsParams); and it must be used instead of actualTo,
@@ -176,6 +179,12 @@ var (
 func NewMainView(params *MainViewParams) *MainView {
 	mv := &MainView{
 		params: *params,
+	}
+
+	var err error
+	mv.selectQuery, err = ParseSelectQuery(DefaultSelectQuery)
+	if err != nil {
+		panic(err.Error())
 	}
 
 	mv.rootPages = tview.NewPages()
@@ -522,9 +531,6 @@ func NewMainView(params *MainViewParams) *MainView {
 		return event
 	})
 
-	// TODO: once tableview fixed, use SetFixed(1, 1)
-	// (there's an issue with going to the very top using "g")
-	mv.logsTable.SetFixed(1, 1)
 	mv.logsTable.Select(0, 0).SetDoneFunc(func(key tcell.Key) {
 		if key == tcell.KeyEnter {
 			//mv.logsTable.SetSelectable(true, true)
@@ -793,6 +799,11 @@ func (mv *MainView) applyQueryEditData(data QueryFull, dqp doQueryParams) error 
 		return errors.Annotatef(err, "time")
 	}
 
+	sqp, err := ParseSelectQuery(data.SelectQuery)
+	if err != nil {
+		return errors.Annotatef(err, "select query")
+	}
+
 	mv.setQuery(data.Query)
 	mv.setTimeRange(ftr.From, ftr.To)
 
@@ -806,6 +817,8 @@ func (mv *MainView) applyQueryEditData(data QueryFull, dqp doQueryParams) error 
 	if err != nil {
 		return errors.Annotate(err, "hosts")
 	}
+
+	mv.setSelectQuery(sqp)
 
 	mv.setHostsFilter(data.HostsFilter)
 
@@ -876,46 +889,83 @@ func getStatuslineNumStr(icon string, num int, color string) string {
 }
 
 func (mv *MainView) updateTableHeader(msgs []core.LogMsg) (colNames []string) {
-	whitelisted := map[string]struct{}{
-		"redacted_id_int":     {},
-		"redacted_symbol_str": {},
-		"level_name":            {},
-		"namespace":             {},
-		"series_ids_string":     {},
-		"series_slug_str":       {},
-		"series_type_str":       {},
-	}
+	// - maybe: Iterate all messages, and remove non-existing whitelisted fields
+	// - If IncludeAll is set: build a list of tags which are not specified explicitly,
+	//   and sort them
 
-	tagNamesSet := map[string]struct{}{}
+	existingTags := map[string]struct{}{
+		FieldNameTime:    {},
+		FieldNameMessage: {},
+	}
 	for _, msg := range msgs {
 		for name := range msg.Context {
-			if _, ok := whitelisted[name]; !ok {
-				continue
-			}
-
-			tagNamesSet[name] = struct{}{}
+			existingTags[name] = struct{}{}
 		}
 	}
 
-	delete(tagNamesSet, "source")
-	delete(tagNamesSet, "level_name")
+	numSticky := 0
+	fields := make([]SelectQueryField, 0, len(mv.selectQuery.Fields))
+	for _, fld := range mv.selectQuery.Fields {
+		fields = append(fields, fld)
 
-	tagNames := make([]string, 0, len(tagNamesSet))
-	for name := range tagNamesSet {
-		tagNames = append(tagNames, name)
+		if fld.Sticky {
+			numSticky++
+		}
 	}
 
-	sort.Strings(tagNames)
+	// Move sticky ones to the front
+	sort.SliceStable(fields, func(i, j int) bool {
+		vi := 1
+		if fields[i].Sticky {
+			vi = 0
+		}
 
-	colNames = append([]string{"time", "message", "source", "level_name"}, tagNames...)
+		vj := 1
+		if fields[j].Sticky {
+			vj = 0
+		}
 
-	// Add header
-	for i, colName := range colNames {
-		mv.logsTable.SetCell(
-			0, i,
-			newTableCellHeader(colName),
-		)
+		return vi < vj
+	})
+
+	if mv.selectQuery.IncludeAll {
+		var implicitFields []SelectQueryField
+		explicit := make(map[string]struct{}, len(fields))
+		for _, v := range fields {
+			explicit[v.Name] = struct{}{}
+		}
+
+		for v := range existingTags {
+			if _, ok := explicit[v]; ok {
+				continue
+			}
+
+			implicitFields = append(implicitFields, SelectQueryField{
+				Name:        v,
+				DisplayName: v,
+			})
+		}
+
+		sort.Slice(implicitFields, func(i, j int) bool {
+			return implicitFields[i].Name < implicitFields[j].Name
+		})
+
+		fields = append(fields, implicitFields...)
 	}
+
+	colNames = make([]string, 0, len(fields))
+	for i, fld := range fields {
+		cell := newTableCellHeader(fld.DisplayName)
+		if _, ok := existingTags[fld.Name]; !ok {
+			cell.SetTextColor(tcell.ColorRed)
+		}
+
+		mv.logsTable.SetCell(0, i, cell)
+
+		colNames = append(colNames, fld.Name)
+	}
+
+	mv.logsTable.SetFixed(1, numSticky)
 
 	return colNames
 }
@@ -960,21 +1010,19 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 			timeStr = ""
 		}
 
-		mv.logsTable.SetCell(
-			rowIdx, 0,
-			newTableCellLogmsg(timeStr).SetTextColor(tcell.ColorLightBlue),
-		)
+		for i, colName := range colNames {
+			var cell *tview.TableCell
 
-		mv.logsTable.SetCell(
-			rowIdx, 1,
-			newTableCellLogmsg(msg.Msg).SetTextColor(msgColor),
-		)
+			switch colName {
+			case FieldNameTime:
+				cell = newTableCellLogmsg(timeStr).SetTextColor(tcell.ColorLightBlue)
+			case FieldNameMessage:
+				cell = newTableCellLogmsg(msg.Msg).SetTextColor(msgColor)
+			default:
+				cell = newTableCellLogmsg(msg.Context[colName]).SetTextColor(msgColor)
+			}
 
-		for i, colName := range colNames[2:] {
-			mv.logsTable.SetCell(
-				rowIdx, 2+i,
-				newTableCellLogmsg(msg.Context[colName]).SetTextColor(msgColor),
-			)
+			mv.logsTable.SetCell(rowIdx, i, cell)
 		}
 
 		mv.logsTable.GetCell(rowIdx, 0).SetReference(msg)
@@ -1134,6 +1182,10 @@ func (mv *MainView) setQuery(q string) {
 		mv.queryInput.SetText(q)
 	}
 	mv.query = q
+}
+
+func (mv *MainView) setSelectQuery(sqp *SelectQueryParsed) {
+	mv.selectQuery = sqp
 }
 
 func (mv *MainView) setTimeRange(from, to TimeOrDur) {
@@ -1378,6 +1430,7 @@ func (mv *MainView) getQueryFull() QueryFull {
 		Time:        ftr.String(),
 		Query:       mv.query,
 		HostsFilter: mv.hostsFilter,
+		SelectQuery: mv.selectQuery.Marshal(),
 	}
 }
 

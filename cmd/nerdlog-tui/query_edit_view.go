@@ -29,6 +29,8 @@ current time is used.
 var hostsLabelText = `Hosts. Comma-separated glob patterns, e.g. "[yellow]my-host-*,my-host-*[-]" matches
 all staging redacted and redacted nodes.`
 
+var selectQueryLabelText = `Select field query. Example: "[yellow]time STICKY, message, source, level_name AS lvl[-]".`
+
 type QueryEditViewParams struct {
 	// DoneFunc is called when the user submits the form. If it returns a non-nil
 	// error, the form will show that error and will not be submitted.
@@ -51,6 +53,8 @@ type QueryEditView struct {
 	timeInput  *tview.InputField
 	hostsInput *tview.InputField
 	queryInput *tview.InputField
+
+	selectQueryInput *tview.InputField
 
 	frame *tview.Frame
 	//
@@ -169,6 +173,17 @@ func NewQueryEditView(
 	qev.flex.AddItem(qev.queryInput, 1, 0, false)
 	focusers = append(focusers, qev.queryInput)
 
+	qev.flex.AddItem(nil, 1, 0, false)
+
+	selectQueryLabel := tview.NewTextView()
+	selectQueryLabel.SetText(selectQueryLabelText)
+	selectQueryLabel.SetDynamicColors(true)
+	qev.flex.AddItem(selectQueryLabel, 1, 0, false)
+
+	qev.selectQueryInput = tview.NewInputField()
+	qev.flex.AddItem(qev.selectQueryInput, 1, 0, false)
+	focusers = append(focusers, qev.selectQueryInput)
+
 	//qev.textView = tview.NewTextView()
 	//qev.textView.SetText(params.Message)
 	//qev.textView.SetTextAlign(tview.AlignCenter)
@@ -193,7 +208,7 @@ func NewQueryEditView(
 	qev.backBtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyEnter:
-			// Just pretent it was a Ctrl+K, and let the genericInputHandler handle it.
+			// Just pretend it was a Ctrl+K, and let the genericInputHandler handle it.
 			event = tcell.NewEventKey(tcell.KeyCtrlK, 0, tcell.ModNone)
 		}
 
@@ -286,6 +301,28 @@ func NewQueryEditView(
 		return event
 	})
 
+	qev.selectQueryInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		event = qev.genericInputHandler(
+			event,
+			getGenericTabHandler(qev.selectQueryInput),
+			func(qf QueryFull) string { return string(qf.SelectQuery) },
+			func(qf *QueryFull, part string) { qf.SelectQuery = SelectQuery(part) },
+		)
+		if event == nil {
+			return nil
+		}
+
+		switch event.Key() {
+		case tcell.KeyEnter:
+			if err := qev.applyQuery(); err != nil {
+				qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
+			}
+			return nil
+		}
+
+		return event
+	})
+
 	return qev
 }
 
@@ -293,8 +330,8 @@ func (qev *QueryEditView) Show(data QueryFull) {
 	qev.SetQueryFull(data)
 	qev.mainView.showModal(
 		pageNameEditQueryParams, qev.frame,
-		101,
-		21,
+		121,
+		23,
 		true,
 	)
 }
@@ -308,6 +345,7 @@ func (qev *QueryEditView) GetQueryFull() QueryFull {
 		Time:        qev.timeInput.GetText(),
 		Query:       qev.queryInput.GetText(),
 		HostsFilter: qev.hostsInput.GetText(),
+		SelectQuery: SelectQuery(qev.selectQueryInput.GetText()),
 	}
 }
 
@@ -315,6 +353,8 @@ func (qev *QueryEditView) SetQueryFull(qf QueryFull) {
 	qev.timeInput.SetText(qf.Time)
 	qev.hostsInput.SetText(qf.HostsFilter)
 	qev.queryInput.SetText(qf.Query)
+
+	qev.selectQueryInput.SetText(string(qf.SelectQuery))
 }
 
 func (qev *QueryEditView) genericInputHandler(

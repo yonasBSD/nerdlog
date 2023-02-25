@@ -24,6 +24,7 @@ func main() {
 	initialTime := "-1h"
 	initialHosts := "my-host-*"
 	initialQuery := ""
+	initialSelectQuery := DefaultSelectQuery
 	connectRightAway := false
 
 	if *flagTime != "" {
@@ -45,6 +46,7 @@ func main() {
 		Time:        initialTime,
 		Query:       initialQuery,
 		HostsFilter: initialHosts,
+		SelectQuery: initialSelectQuery,
 	}
 
 	enableClipboard := true
