@@ -152,28 +152,60 @@ func (app *nerdlogApp) runTViewApp() error {
 func (app *nerdlogApp) initHostsManager(initialHostsFilter string) {
 	updatesCh := make(chan core.HostsManagerUpdate, 128)
 	go func() {
+		// We don't want to necessarily update UI on _every_ state update, since
+		// they might be getting a lot of those messages due to those progress
+		// percentage updates; so we just remember the last state, and only update
+		// the UI once we don't have more messages yet.
+		var lastState *core.HostsManagerState
+		var logResps []*core.LogRespTotal // TODO: perhaps we should also only keep the last one?
+
+		handleUpdate := func(upd core.HostsManagerUpdate) {
+			switch {
+			case upd.State != nil:
+				lastState = upd.State
+			case upd.LogResp != nil:
+				logResps = append(logResps, upd.LogResp)
+
+			default:
+				panic("empty hosts manager update")
+			}
+		}
+
 		for {
-			upd := <-updatesCh
+			select {
+			case upd := <-updatesCh:
+				handleUpdate(upd)
 
-			app.tviewApp.QueueUpdateDraw(func() {
-				switch {
-				case upd.State != nil:
-					app.mainView.applyHMState(upd.State)
+			default:
+				// If anything has changed, update the UI.
+				if lastState != nil || len(logResps) > 0 {
+					app.tviewApp.QueueUpdateDraw(func() {
+						if lastState != nil {
+							app.mainView.applyHMState(lastState)
+						}
 
-				case upd.LogResp != nil:
-					if len(upd.LogResp.Errs) > 0 {
-						// TODO: include other errors too, not only the first one
-						app.mainView.showMessagebox("err", "Log query error", upd.LogResp.Errs[0].Error(), nil)
-						return
-					}
+						for _, logResp := range logResps {
+							if len(logResp.Errs) > 0 {
+								// TODO: include other errors too, not only the first one
+								app.mainView.showMessagebox("err", "Log query error", logResp.Errs[0].Error(), nil)
+								return
+							}
 
-					app.mainView.applyLogs(upd.LogResp)
-					app.lastLogResp = upd.LogResp
+							app.mainView.applyLogs(logResp)
+							app.lastLogResp = logResp
+						}
+					})
 
-				default:
-					panic("empty hosts manager update")
+					lastState = nil
+					logResps = nil
 				}
-			})
+
+				// The same select again, but without the default case.
+				select {
+				case upd := <-updatesCh:
+					handleUpdate(upd)
+				}
+			}
 		}
 	}()
 
