@@ -28,6 +28,10 @@ if [ ! -e "$logfile1"  ]; then
   touch $logfile1
 fi
 
+logfile1_size=$(stat -c%s $logfile1)
+logfile2_size=$(stat -c%s $logfile2)
+total_size=$((logfile1_size+logfile2_size))
+
 positional_args=()
 
 max_num_lines=100
@@ -81,6 +85,16 @@ user_pattern=$1
 if [[ "$refresh_index" == "1" ]]; then
   rm -f $cachefile
 fi
+
+awk_func_print_percentage='
+function printPercentage(numCur, numTotal) {
+  curPercent = int(numCur/numTotal*100);
+  if (curPercent != lastPercent) {
+    print "p:p:" curPercent >> "/dev/stderr"
+    lastPercent = curPercent
+  }
+}
+'
 
 function refresh_cache { # {{{
   local last_linenr=0
@@ -141,14 +155,7 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
   } while (nextTimestamp < curTimestamp && i++ < 1000);
 }
 
-function printIndexPercentage(bytenr, total) {
-  curPercent = int(bytenr/total*100);
-  if (curPercent != lastPercent) {
-    print "p:p:" curPercent >> "/dev/stderr"
-    lastPercent = curPercent
-  }
-}
-
+'$awk_func_print_percentage'
   '
 # TODO: ^ newer versions of awk support one more argument for mktime, which is to
 #         use UTC. Sadly versions deployed to our machines have older awk, but
@@ -184,10 +191,6 @@ function printIndexPercentage(bytenr, total) {
   curHHMM = substr($3, 1, 5);
 }'
 
-	logfile1_size=$(stat -c%s $logfile1)
-	logfile2_size=$(stat -c%s $logfile2)
-	total_size=$((logfile1_size+logfile2_size))
-
   if [ -s $cachefile ]
   then
     echo "p:stage:$STAGE_INDEX_APPEND:indexing up" 1>&2
@@ -206,7 +209,7 @@ function printIndexPercentage(bytenr, total) {
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
     printAllNew("'$cachefile'", lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(( last_linenr-1 ))', bytenr_cur+'$(( last_bytenr-1 ))');
-    printIndexPercentage(bytenr_cur, '$size_to_index');
+    printPercentage(bytenr_cur, '$size_to_index');
     '"$scriptSetLastTimestrEtc"'
   }
   ' -
@@ -220,7 +223,7 @@ function printIndexPercentage(bytenr, total) {
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
     printAllNew("'$cachefile'", lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR, bytenr_cur);
-    printIndexPercentage(bytenr_cur, '$total_size');
+    printPercentage(bytenr_cur, '$total_size');
     '"$scriptSetLastTimestrEtc"'
   }
   END { print "prevlog_lines\t" NR >> "'$cachefile'" }
@@ -238,7 +241,7 @@ function printIndexPercentage(bytenr, total) {
     '"$scriptSetCurTimestr"';
     bytenr = bytenr_cur+'$prevlog_bytes';
     printAllNew("'$cachefile'", lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(get_prevlog_lines_from_cache)', bytenr);
-    printIndexPercentage(bytenr, '$total_size');
+    printPercentage(bytenr, '$total_size');
     '"$scriptSetLastTimestrEtc"'
   }
   ' $logfile2
@@ -347,8 +350,42 @@ if [[ "$lines_until" != "" ]]; then
   lines_until_check="if (NR >= $((lines_until-from_linenr_int+1))) { next; }"
 fi
 
+num_bytes_to_scan=0
+if [[ "$from_bytenr" == "" && "$to_bytenr" == "" ]]; then
+  # Getting _all_ available logs
+  num_bytes_to_scan=$total_size
+  echo hey1 $num_bytes_to_scan 2>&1
+elif [[ "$from_bytenr" != "" && "$to_bytenr" == "" ]]; then
+  # Getting logs from some point in time to the very end (most frequent case)
+  num_bytes_to_scan=$((total_size-from_bytenr))
+  echo hey2 "|$num_bytes_to_scan,$total_size,$from_bytenr|" 2>&1
+elif [[ "$from_bytenr" == "" && "$to_bytenr" != "" ]]; then
+  # Getting logs from the beginning until some point in time
+  num_bytes_to_scan=$((to_bytenr))
+  echo hey3 $num_bytes_to_scan 2>&1
+else
+  # Getting logs between two points T1 and T2
+  num_bytes_to_scan=$((to_bytenr-from_bytenr))
+  echo hey4 $num_bytes_to_scan 2>&1
+fi
+
+# NOTE: this script MUST be executed with the "-b" awk key, which means that
+# awk will work in terms of bytes, not characters. We use length($0) there and
+# we rely on it being number of bytes. That said, it's only used for percentage
+# calculation, which is a non-essential.
+#
+# Also btw, this percentage calculation slows the whole query by about 10%,
+# which isn't ideal. TODO: maybe instead of doing the division on every line,
+# we can only do the division when the percentage changes, so we calculate the
+# next point when it'd change, and going forward we just compare it with a simple "<".
 awk_script='
-BEGIN { curline=0; maxlines='$max_num_lines' }
+'$awk_func_print_percentage'
+
+BEGIN { bytenr=1; curline=0; maxlines='$max_num_lines'; lastPercent=0 }
+{ bytenr += length($0)+1 }
+NR % 100 == 0 {
+  printPercentage(bytenr, '$num_bytes_to_scan')
+}
 '$awk_pattern'
 {
   stats[$1 $2 "-" substr($3,1,5)]++;
@@ -459,7 +496,7 @@ fi
 
 # Now execute all those commands, and feed those logs to the awk script
 # which will analyze them and produce the final output.
-for cmd in "${cmds[@]}"; do eval $cmd; done | awk "$awk_script" -
+for cmd in "${cmds[@]}"; do eval $cmd; done | awk -b "$awk_script" -
 
 echo "p:stage:$STAGE_DONE:done" 1>&2
 `
