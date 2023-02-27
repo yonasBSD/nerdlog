@@ -313,6 +313,12 @@ func (ha *HostAgent) run() {
 
 			switch ha.state {
 			case HostAgentStateConnectedBusy:
+				if ha.curCmdCtx == nil {
+					// We received some line before printing any command, must be
+					// just standard welcome message, but we're not interested in that.
+					continue
+				}
+
 				switch {
 				case ha.curCmdCtx.cmd.bootstrap != nil:
 					if line == "bootstrap ok" {
