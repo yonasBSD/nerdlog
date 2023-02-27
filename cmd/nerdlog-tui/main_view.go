@@ -843,7 +843,50 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 	if !mv.curHMState.Connected && !mv.curHMState.NoMatchingHosts {
 		overlayMsg = "Connecting to hosts..."
 	} else if mv.curHMState.Busy {
-		overlayMsg = "Updating search results..."
+		var sb strings.Builder
+
+		sb.WriteString("Updating search results...")
+
+		// If we have info about hosts busy stage, show the slowest one.
+		if len(hmState.BusyStageByHost) > 0 {
+			type hostWBusyStage struct {
+				host  string
+				stage core.BusyStage
+			}
+
+			vs := make([]hostWBusyStage, 0, len(hmState.BusyStageByHost))
+			for host, stage := range hmState.BusyStageByHost {
+				vs = append(vs, hostWBusyStage{
+					host:  host,
+					stage: stage,
+				})
+			}
+
+			sort.Slice(vs, func(i, j int) bool {
+				if vs[i].stage.Num != vs[j].stage.Num {
+					return vs[i].stage.Num < vs[j].stage.Num
+				}
+
+				if vs[i].stage.Percentage != vs[j].stage.Percentage {
+					return vs[i].stage.Percentage < vs[j].stage.Percentage
+				}
+
+				return vs[i].host < vs[j].host
+			})
+
+			slowest := vs[0]
+
+			sb.WriteString("\n[lightgray]")
+			sb.WriteString(slowest.stage.Title)
+			if slowest.stage.Percentage != 0 {
+				sb.WriteString(fmt.Sprintf(" (%d%%)", slowest.stage.Percentage))
+			}
+
+			sb.WriteString(" - " + slowest.host)
+			sb.WriteString("[-]")
+		}
+
+		overlayMsg = sb.String()
 	}
 
 	if overlayMsg != "" {
@@ -853,7 +896,7 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 				"overlay_msg", "", "", &MessageboxParams{
 					Buttons: []string{},
 					NoFocus: true,
-					Width:   40,
+					Width:   70,
 					Height:  6,
 
 					BackgroundColor: tcell.ColorDarkBlue,

@@ -20,6 +20,9 @@ type HostsManager struct {
 
 	has      map[string]*HostAgent
 	haStates map[string]HostAgentState
+	// haBusyStages only contains items for hosts which are in the
+	// HostAgentStateConnectedBusy state.
+	haBusyStages map[string]BusyStage
 
 	hostsByState    map[HostAgentState]map[string]struct{}
 	numNotConnected int
@@ -54,8 +57,9 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 
 		hcs: make(map[string]ConfigHost, len(params.ConfigHosts)),
 
-		has:      map[string]*HostAgent{},
-		haStates: map[string]HostAgentState{},
+		has:          map[string]*HostAgent{},
+		haStates:     map[string]HostAgentState{},
+		haBusyStages: map[string]BusyStage{},
 
 		hostUpdatesCh: make(chan *HostAgentUpdate, 1024),
 		reqCh:         make(chan hostsManagerReq, 8),
@@ -175,7 +179,15 @@ func (hm *HostsManager) run() {
 
 				hm.haStates[upd.Name] = upd.State.NewState
 
+				// Maintain hm.haBusyStages
+				if upd.State.NewState != HostAgentStateConnectedBusy {
+					delete(hm.haBusyStages, upd.Name)
+				}
+
 				hm.updateHostsByState()
+				hm.sendStateUpdate()
+			} else if upd.BusyStage != nil {
+				hm.haBusyStages[upd.Name] = *upd.BusyStage
 				hm.sendStateUpdate()
 			} else if upd.TornDown {
 				// do we need this event at all?
@@ -418,6 +430,8 @@ type HostsManagerState struct {
 
 	// Busy is true when a query is in progress.
 	Busy bool
+
+	BusyStageByHost map[string]BusyStage
 }
 
 func (hm *HostsManager) updateHostsByState() {
@@ -449,7 +463,12 @@ func (hm *HostsManager) sendStateUpdate() {
 		}
 	}
 
-	hm.params.UpdatesCh <- HostsManagerUpdate{
+	busyStagesCopy := make(map[string]BusyStage, len(hm.haBusyStages))
+	for k, v := range hm.haBusyStages {
+		busyStagesCopy[k] = v
+	}
+
+	upd := HostsManagerUpdate{
 		State: &HostsManagerState{
 			NumHosts:        len(hm.has),
 			HostsByState:    hm.hostsByState,
@@ -458,8 +477,11 @@ func (hm *HostsManager) sendStateUpdate() {
 			Connected:       hm.numNotConnected == 0 && numConnected > 0,
 			NumUnused:       hm.numUnused,
 			Busy:            hm.curQueryLogsCtx != nil,
+			BusyStageByHost: busyStagesCopy,
 		},
 	}
+
+	hm.params.UpdatesCh <- upd
 }
 
 func (hm *HostsManager) sendLogRespUpdate(resp *LogRespTotal) {

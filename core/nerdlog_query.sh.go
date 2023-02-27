@@ -8,6 +8,13 @@ var nerdlogQuerySh = `#/bin/bash
 # --from, --to: time in the format Jan-02-15:04. NOTE it's important to keep
 #               the leading zero!
 
+# Those numbers are supposed to go up as the query progresses; the Go app
+# will then be able to tell which node is the slowest and show info for it.
+STAGE_INDEX_FULL=1
+STAGE_INDEX_APPEND=2
+STAGE_QUERYING=3
+STAGE_DONE=4
+
 cachefile=/tmp/nerdlog_query_cache
 
 logfile1=/var/log/syslog.1
@@ -113,13 +120,13 @@ function nerdlogTimestrToTimestamp(timestr) {
   return logFieldsToTimestamp(substr(timestr, 1, 3), substr(timestr, 5, 2), substr(timestr, 8, 5));
 }
 
-function printIndexLine(timestr, linenr, bytenr) {
-  print "idx\t" timestr "\t" linenr "\t" bytenr;
+function printIndexLine(outfile, timestr, linenr, bytenr) {
+  print "idx\t" timestr "\t" linenr "\t" bytenr >> outfile;
 }
 
-function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linenr, bytenr) {
+function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimestr, linenr, bytenr) {
   if (lastTimestr == "") {
-    printIndexLine(curTimestr, linenr, bytenr);
+    printIndexLine(outfile, curTimestr, linenr, bytenr);
     return;
   }
 
@@ -128,10 +135,18 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
     nextTimestamp = lastTimestamp + 60
     nextTimestr = formatNerdlogTime(nextTimestamp)
 
-    printIndexLine(nextTimestr, linenr, bytenr);
+    printIndexLine(outfile, nextTimestr, linenr, bytenr);
 
     lastTimestamp = nextTimestamp
   } while (nextTimestamp < curTimestamp && i++ < 1000);
+}
+
+function printIndexPercentage(bytenr, total) {
+  curPercent = int(bytenr/total*100);
+  if (curPercent != lastPercent) {
+    print "p:p:" curPercent >> "/dev/stderr"
+    lastPercent = curPercent
+  }
 }
 
   '
@@ -157,7 +172,7 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
   scriptSetCurTimestr='bytenr_cur = bytenr_next-length($0)-1; curTimestamp = logFieldsToTimestamp($1, $2, $3); curTimestr = formatNerdlogTime(curTimestamp)'
   scriptSetLastTimestrEtc='lastTimestr = curTimestr; lastTimestamp = curTimestamp; lastHHMM = curHHMM'
 
-  script1='BEGIN { bytenr_next=1 }
+  script1='BEGIN { bytenr_next=1; lastPercent=0 }
 {
   bytenr_next += length($0)+1
 
@@ -169,31 +184,47 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
   curHHMM = substr($3, 1, 5);
 }'
 
+	logfile1_size=$(stat -c%s $logfile1)
+	logfile2_size=$(stat -c%s $logfile2)
+	total_size=$((logfile1_size+logfile2_size))
+
   if [ -s $cachefile ]
   then
-    echo "caching new line numbers" 1>&2
+    echo "p:stage:$STAGE_INDEX_APPEND:indexing up" 1>&2
 
     local lastTimestr="$(tail -n 1 $cachefile | cut -f2)"
     local last_linenr="$(tail -n 1 $cachefile | cut -f3)"
     local last_bytenr="$(tail -n 1 $cachefile | cut -f4)"
+    local size_to_index=$((total_size-last_bytenr))
 
     echo hey $lastTimestr 1>&2
     echo hey2 $last_linenr $last_bytenr 1>&2
+    echo hey3 $size_to_index 1>&2
 
     tail -c +$((last_bytenr-prevlog_bytes)) $logfile2 | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
   '"$script1"'
-  ( lastHHMM != curHHMM ) { '"$scriptSetCurTimestr"'; printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(( last_linenr-1 ))', bytenr_cur+'$(( last_bytenr-1 ))'); '"$scriptSetLastTimestrEtc"' }
-  ' - >> $cachefile
+  ( lastHHMM != curHHMM ) {
+    '"$scriptSetCurTimestr"';
+    printAllNew("'$cachefile'", lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(( last_linenr-1 ))', bytenr_cur+'$(( last_bytenr-1 ))');
+    printIndexPercentage(bytenr_cur, '$size_to_index');
+    '"$scriptSetLastTimestrEtc"'
+  }
+  ' -
   else
-    echo "caching all line numbers" 1>&2
+    echo "p:stage:$STAGE_INDEX_FULL:indexing from scratch" 1>&2
 
     echo "prevlog_modtime	$(stat -c %y $logfile1)" > $cachefile
 
     awk -b "$awk_functions BEGIN { lastHHMM=\"\"; last3=\"\" }"'
   '"$script1"'
-  ( lastHHMM != curHHMM ) { '"$scriptSetCurTimestr"'; printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR, bytenr_cur); '"$scriptSetLastTimestrEtc"' }
-  END { print "prevlog_lines\t" NR }
-  ' $logfile1 >> $cachefile
+  ( lastHHMM != curHHMM ) {
+    '"$scriptSetCurTimestr"';
+    printAllNew("'$cachefile'", lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR, bytenr_cur);
+    printIndexPercentage(bytenr_cur, '$total_size');
+    '"$scriptSetLastTimestrEtc"'
+  }
+  END { print "prevlog_lines\t" NR >> "'$cachefile'" }
+  ' $logfile1
 
   # Before we start handling $logfile2, gotta read the last idx line (which is
   # last-but-one line) and set it for the next script, otherwise there is a gap
@@ -203,8 +234,14 @@ function printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, linen
     #echo hey3 $lastTimestr 1>&2
     awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
   '"$script1"'
-  ( lastHHMM != curHHMM ) { '"$scriptSetCurTimestr"'; printAllNew(lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(get_prevlog_lines_from_cache)', bytenr_cur+'$prevlog_bytes'); '"$scriptSetLastTimestrEtc"' }
-  ' $logfile2 >> $cachefile
+  ( lastHHMM != curHHMM ) {
+    '"$scriptSetCurTimestr"';
+    bytenr = bytenr_cur+'$prevlog_bytes';
+    printAllNew("'$cachefile'", lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(get_prevlog_lines_from_cache)', bytenr);
+    printIndexPercentage(bytenr, '$total_size');
+    '"$scriptSetLastTimestrEtc"'
+  }
+  ' $logfile2
   fi
 } # }}}
 
@@ -290,7 +327,7 @@ fi
 
 echo "from $from_linenr ($from_bytenr) to $to_linenr ($to_bytenr)" 1>&2
 
-echo "scanning logs" 1>&2
+echo "p:stage:$STAGE_QUERYING:querying logs" 1>&2
 
 prevlog_lines=$(get_prevlog_lines_from_cache)
 prevlog_bytes=$(get_prevlog_bytenr)
@@ -423,4 +460,6 @@ fi
 # Now execute all those commands, and feed those logs to the awk script
 # which will analyze them and produce the final output.
 for cmd in "${cmds[@]}"; do eval $cmd; done | awk "$awk_script" -
+
+echo "p:stage:$STAGE_DONE:done" 1>&2
 `

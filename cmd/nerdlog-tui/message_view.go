@@ -52,6 +52,7 @@ func NewMessageView(
 	msgv.textView = tview.NewTextView()
 	msgv.textView.SetText(params.Message)
 	msgv.textView.SetTextAlign(tview.AlignCenter)
+	msgv.textView.SetDynamicColors(true)
 
 	if msgv.params.BackgroundColor != tcell.ColorDefault {
 		msgv.textView.SetBackgroundColor(msgv.params.BackgroundColor)

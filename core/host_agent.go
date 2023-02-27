@@ -69,7 +69,8 @@ type HostAgent struct {
 	connectResCh chan hostConnectRes
 	enqueueCmdCh chan hostCmd
 
-	state HostAgentState
+	state     HostAgentState
+	busyStage BusyStage
 
 	conn *connCtx
 
@@ -91,6 +92,20 @@ type connCtx struct {
 
 	stdoutLinesCh chan string
 	stderrLinesCh chan string
+}
+
+type BusyStage struct {
+	// Num is just a stage number. Its meaning depends on the kind of command the
+	// host is executing, but a general rule is that this number starts from 1
+	// and then increases, as the process goes on, so we can compare different
+	// nodes and e.g. find the slowest one.
+	Num int
+
+	// Title is just a human-readable description of the stage.
+	Title string
+
+	// Percentage is a percentage of the current stage.
+	Percentage int
 }
 
 func (c *connCtx) getStdoutLinesCh() chan string {
@@ -116,6 +131,8 @@ type HostAgentUpdate struct {
 	Name string
 
 	State *HostAgentUpdateState
+
+	BusyStage *BusyStage
 
 	// If TornDown is true, it means it's the last update from that agent.
 	TornDown bool
@@ -193,6 +210,7 @@ func (ha *HostAgent) changeState(newState HostAgentState) {
 		ha.connectResCh = nil
 	case HostAgentStateConnectedBusy:
 		ha.curCmdCtx = nil
+		ha.busyStage = BusyStage{}
 	}
 
 	// Enter new state
@@ -221,6 +239,13 @@ func (ha *HostAgent) changeState(newState HostAgentState) {
 	case HostAgentStateDisconnected:
 		ha.conn = nil
 	}
+}
+
+func (ha *HostAgent) sendBusyStageUpdate() {
+	upd := ha.busyStage
+	ha.sendUpdate(&HostAgentUpdate{
+		BusyStage: &upd,
+	})
 }
 
 func (ha *HostAgent) sendCmdResp(resp interface{}, err error) {
@@ -408,6 +433,9 @@ func (ha *HostAgent) run() {
 						})
 
 						respCtx.lastTime = parseRes.time
+
+						// NOTE: the "p:" lines (process-related) are in stderr and thus
+						// are handled below. Why they are in stderr, see comments there.
 					}
 				}
 
@@ -488,7 +516,53 @@ func (ha *HostAgent) run() {
 			//if ha.params.Config.Name == "my-host-01" {
 			//fmt.Println("rxe:", line)
 			//}
-			_ = line
+
+			// NOTE: the "p:" lines (process-related) are here in stderr, because
+			// stdout is gzipped and thus we don't have any partial results (we get
+			// them all at once), but for the process info, we actually want it right
+			// when it's printed by the nerdlog_query.sh.
+			switch ha.state {
+			case HostAgentStateConnectedBusy:
+				switch {
+				case strings.HasPrefix(line, "p:"):
+					// "p:" means process
+					processLine := strings.TrimPrefix(line, "p:")
+
+					switch {
+					case strings.HasPrefix(processLine, "stage:"):
+						stageLine := strings.TrimPrefix(processLine, "stage:")
+						parts := strings.Split(stageLine, ":")
+						if len(parts) < 2 {
+							fmt.Println("received malformed p:stage line:", line)
+							continue
+						}
+
+						num, err := strconv.Atoi(parts[0])
+						if err != nil {
+							fmt.Println("received malformed p:stage line:", line)
+							continue
+						}
+
+						ha.busyStage = BusyStage{
+							Num:   num,
+							Title: parts[1],
+						}
+						ha.sendBusyStageUpdate()
+
+					case strings.HasPrefix(processLine, "p:"):
+						// second "p:" means percentage
+
+						percentage, err := strconv.Atoi(strings.TrimPrefix(processLine, "p:"))
+						if err != nil {
+							fmt.Println("received malformed p:p line:", line)
+							continue
+						}
+
+						ha.busyStage.Percentage = percentage
+						ha.sendBusyStageUpdate()
+					}
+				}
+			}
 
 			//case data := <-ha.stdinCh:
 			//ha.stdinBuf.Write([]byte(data))
