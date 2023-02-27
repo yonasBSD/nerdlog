@@ -932,7 +932,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		cmdCtx.bootstrapCtx = &hostCmdCtxBootstrap{}
 
 		ha.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > /var/tmp/nerdlog_query_" + ha.params.ClientID + ".sh\n" + nerdlogQuerySh + "EOF\n"))
-		ha.conn.stdinBuf.Write([]byte("if [ $? == 0 ]; then echo 'bootstrap ok'; else echo 'bootstrap failed'; fi\n"))
+		ha.conn.stdinBuf.Write([]byte("if [[ $? == 0 ]]; then echo 'bootstrap ok'; else echo 'bootstrap failed'; fi\n"))
 
 	case cmdCtx.cmd.ping != nil:
 		cmdCtx.pingCtx = &hostCmdCtxPing{}
