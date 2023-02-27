@@ -86,11 +86,15 @@ if [[ "$refresh_index" == "1" ]]; then
   rm -f $cachefile
 fi
 
+# NOTE: we only show percentages with 5% increments, to save on traffic and
+# other overhead. With all 24 redacteds, having percentage being printed with
+# 1% increments, it generates extra traffic of about 290KB per single query,
+# wow. With 5% increments, the overhead is about 70 KB.
 awk_func_print_percentage='
 function printPercentage(numCur, numTotal) {
-  curPercent = int(numCur/numTotal*100);
+  curPercent = int(numCur/numTotal*20);
   if (curPercent != lastPercent) {
-    print "p:p:" curPercent >> "/dev/stderr"
+    print "p:p:" curPercent*5 >> "/dev/stderr"
     lastPercent = curPercent
   }
 }
