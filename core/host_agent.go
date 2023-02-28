@@ -1180,7 +1180,7 @@ func parseLineUnstructured(
 		tmp := strings.IndexRune(msg[ts2Idx+sdmsg.ts1Len:], ' ')
 		if tmp > 0 {
 			ts2Len := sdmsg.ts1Len + tmp
-			tsStr = msg[ts2Idx:ts2Len]
+			tsStr = msg[ts2Idx : ts2Idx+ts2Len]
 			msg = msg[ts2Idx+ts2Len+1:]
 		}
 	}
