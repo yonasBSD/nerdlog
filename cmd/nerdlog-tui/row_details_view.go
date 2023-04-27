@@ -10,7 +10,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/juju/errors"
 	"github.com/rivo/tview"
-	"golang.design/x/clipboard"
 )
 
 const (
@@ -207,6 +206,17 @@ func NewRowDetailsView(
 			rdv.sq.Fields[idx+1], rdv.sq.Fields[idx] = rdv.sq.Fields[idx], rdv.sq.Fields[idx+1]
 		}
 
+		showFullValue := func() {
+			nRow, _ := rdv.tbl.GetSelection()
+			rCtx := rdv.tbl.GetCell(nRow, 0).GetReference().(rowDetailsViewCellCtx)
+
+			mtv := NewMyTextView(rdv.mainView, &MyTextViewParams{
+				Title: rCtx.field.Name,
+				Text:  rCtx.val,
+			})
+			mtv.Show()
+		}
+
 		toggle := func() {
 			// Toggle the field in the select query
 			nRow, _ := rdv.tbl.GetSelection()
@@ -385,13 +395,6 @@ func NewRowDetailsView(
 			cev.Show(SelectQueryField{})
 		}
 
-		copyToClipboard := func() {
-			nRow, _ := rdv.tbl.GetSelection()
-			rCtx := rdv.tbl.GetCell(nRow, 0).GetReference().(rowDetailsViewCellCtx)
-
-			clipboard.Write(clipboard.FmtText, []byte(rCtx.val))
-		}
-
 		toggleIncludeAll := func() {
 			rdv.sq.IncludeAll = !rdv.sq.IncludeAll
 			rdv.updateUI()
@@ -411,6 +414,8 @@ func NewRowDetailsView(
 			rCtx := rdv.tbl.GetCell(nRow, 0).GetReference().(rowDetailsViewCellCtx)
 
 			rdv.tbl.ClearOptions()
+
+			rdv.tbl.AddOption("    Show full value", showFullValue)
 
 			if rCtx.fieldIdx < 0 {
 				if !rdv.sq.IncludeAll {
@@ -440,8 +445,6 @@ func NewRowDetailsView(
 			if rCtx.fieldIdx < len(rdv.sq.Fields)-1 && rCtx.fieldIdx != -1 {
 				rdv.tbl.AddOption("    Move down               [black]<Ctrl-Dn>, <Ctrl-J>[-]", moveDown)
 			}
-
-			rdv.tbl.AddOption("    Copy value to clipboard", copyToClipboard)
 
 			if rCtx.fieldIdx < 0 {
 				if !rdv.sq.IncludeAll {

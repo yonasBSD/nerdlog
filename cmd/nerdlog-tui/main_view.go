@@ -22,6 +22,7 @@ const (
 	pageNameEditQueryParams = "edit_query_params"
 	pageNameRowDetails      = "row_details"
 	pageNameColumnDetails   = "column_details"
+	pageNameTextView        = "text_view"
 )
 
 const (
