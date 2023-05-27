@@ -5,8 +5,6 @@
 - Use https://github.com/benhoyt/goawk just to check the awk syntax before
   submitting the query
 - Implement hosts filtering:
-  - Use https://github.com/benhoyt/goawk and have filters be defined like
-    "/my-host-/", or "/my-host-/ && !/01/ && !/02/"
   - Implement logic in host manager which will take the filter like that, and
     come up with relevant set of nodes (we'll also need to do that in realtime
     while typing), and reconnect to the new ones etc

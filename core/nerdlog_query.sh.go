@@ -87,7 +87,7 @@ if [[ "$refresh_index" == "1" ]]; then
 fi
 
 # NOTE: we only show percentages with 5% increments, to save on traffic and
-# other overhead. With all 24 redacteds, having percentage being printed with
+# other overhead. With all 24 my-nodes, having percentage being printed with
 # 1% increments, it generates extra traffic of about 290KB per single query,
 # wow. With 5% increments, the overhead is about 70 KB.
 awk_func_print_percentage='
@@ -434,17 +434,17 @@ END {
 # NOTE: there are multiple ways to tail a file, and performance differs greatly:
 # Log file has 21789347 lines:
 #
-#ubuntu@my-host-1-watchdog-01:~$ time cat /var/log/syslog.1 | tail -n +16789340 > /dev/null
+#ubuntu@dummy-node-01:~$ time cat /var/log/syslog.1 | tail -n +16789340 > /dev/null
 
 #real    0m4.523s
 #user    0m0.869s
 #sys     0m6.915s
-#ubuntu@my-host-1-watchdog-01:~$ time tail -n +16789340 /var/log/syslog.1 > /dev/null
+#ubuntu@dummy-node-01:~$ time tail -n +16789340 /var/log/syslog.1 > /dev/null
 
 #real    0m2.184s
 #user    0m0.660s
 #sys     0m1.524s
-#ubuntu@my-host-1-watchdog-01:~$ time tail -n 5000000 /var/log/syslog.1 > /dev/null
+#ubuntu@dummy-node-01:~$ time tail -n 5000000 /var/log/syslog.1 > /dev/null
 
 #real    0m1.260s
 #user    0m0.412s

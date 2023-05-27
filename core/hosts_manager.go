@@ -325,10 +325,6 @@ func (hm *HostsManager) run() {
 						hm.sendStateUpdate()
 					}
 
-					//if resp.hostname == "my-host-01" {
-					//fmt.Printf("HEY got resp %+v\n", v.MinuteStats)
-					//}
-
 				default:
 					panic(fmt.Sprintf("unexpected resp type %T", v))
 				}

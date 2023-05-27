@@ -94,7 +94,7 @@ can do the same by sharing this string.
 The string would look like this:
 
 ```
-nerdlog --hosts 'my-host-*' --time -3h --query '/redacted_symbol_str=kucoin/'
+nerdlog --hosts 'my-node*' --time -3h --query '/something/'
 ```
 
 And it can be used in either the shell (which would open a new instance of

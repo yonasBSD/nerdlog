@@ -307,10 +307,6 @@ func (ha *HostAgent) run() {
 
 			lastUpdTime = time.Now()
 
-			//if ha.params.Config.Name == "my-host-01" {
-			//fmt.Fprintln(ha.debugFile, time.Now(), "rx:", line)
-			//}
-
 			switch ha.state {
 			case HostAgentStateConnectedBusy:
 				if ha.curCmdCtx == nil {
@@ -517,11 +513,6 @@ func (ha *HostAgent) run() {
 			}
 
 			lastUpdTime = time.Now()
-
-			// TODO maybe save somewhere for debugging
-			//if ha.params.Config.Name == "my-host-01" {
-			//fmt.Println("rxe:", line)
-			//}
 
 			// NOTE: the "p:" lines (process-related) are here in stderr, because
 			// stdout is gzipped and thus we don't have any partial results (we get
@@ -946,10 +937,6 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		cmd := "whoami\n"
 		ha.conn.stdinBuf.Write([]byte(cmd))
 
-		//if ha.params.Config.Name == "my-host-01" {
-		//fmt.Fprintln(ha.debugFile, time.Now(), "cmd:", ha.params.Config.Name, ":", cmd)
-		//}
-
 	case cmdCtx.cmd.queryLogs != nil:
 		cmdCtx.queryLogsCtx = &hostCmdCtxQueryLogs{
 			Resp: &LogResp{
@@ -992,10 +979,6 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 
 		cmd := strings.Join(parts, " ") + "\n"
 		//fmt.Println("hey", ha.params.Config.Name, "cmd:", cmd)
-
-		//if ha.params.Config.Name == "my-host-01" {
-		//fmt.Fprintln(ha.debugFile, time.Now(), "cmd:", ha.params.Config.Name, ":", cmd)
-		//}
 
 		ha.conn.stdinBuf.Write([]byte(cmd))
 

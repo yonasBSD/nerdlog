@@ -10,7 +10,6 @@ import (
 var queryLabelText = `Query (awk syntax). Examples:
 - Simple regexp:                          [yellow]/foo bar/[-]
 - Regexps with complex conditions:        [yellow]( /foo bar/ || /other stuff/ ) && !/baz/[-]
-- Find items tagged with series ID 86:    [yellow]/series_ids_string":".*\|86\|.*/[-]
 - Find errors:                            [yellow]/level_name":"error/[-]
 `
 
@@ -26,8 +25,8 @@ var timeLabelText = `Time range in the format "[yellow]<time>[ to <time>][-]", w
 current time is used.
 `
 
-var hostsLabelText = `Hosts. Comma-separated glob patterns, e.g. "[yellow]my-host-*,my-host-*[-]" matches
-all staging redacted and redacted nodes.`
+var hostsLabelText = `Hosts. Comma-separated glob patterns, e.g. "[yellow]foo-*,bar-*[-]" matches
+all nodes beginning with "foo-" and "bar-".`
 
 var selectQueryLabelText = `Select field query. Example: "[yellow]time STICKY, message, source, level_name AS level, *[-]".`
 
@@ -168,7 +167,7 @@ func NewQueryEditView(
 	queryLabel := tview.NewTextView()
 	queryLabel.SetText(queryLabelText)
 	queryLabel.SetDynamicColors(true)
-	qev.flex.AddItem(queryLabel, 5, 0, false)
+	qev.flex.AddItem(queryLabel, 4, 0, false)
 
 	qev.queryInput = tview.NewInputField()
 	qev.flex.AddItem(qev.queryInput, 1, 0, false)
