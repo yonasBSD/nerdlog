@@ -1,3 +1,43 @@
+## TODO before publishing
+
+- Reimplement host selection (see details below)
+- Reimplement message parsing (see details below)
+- Implement some fake logs generation, just to use in examples
+- Write docs
+
+### Reimplement host selection
+
+Reimplement host selection: instead of always having to have an exhaustive list
+of hosts to connect to and using globs to filter them, make it so that the user
+can specify hosts without any configuration; in the most verbose form, it'd look
+like this: "user@myhost.com:/var/log/syslog:/var/log/syslog.1 as foo" But every part
+other than the host is optional: default user is the same as the current user,
+default first log file is `/var/log/syslog`, and default second log file is the
+first one with `.1` appended. And if "as <something>" is omitted, obviously it's
+just used in `source` as is; otherwise the alias is used.
+
+That's like the bare minimum.
+
+Some nice-to-haves though:
+
+Config file can be used to specify all those details for every particular node,
+plus some extras which actually can't be specified inline, like the port number
+(or maybe we can make it inline-able, like `myhost.com {"port": 123}`, but idk)
+
+Config file will also make it possible to implement the globs (without the
+config, we have nothing to filter from)
+
+### Reimplement message parsing
+
+It should be customizable, one way or the other.
+
+The simplest is to just factor out some Go abstraction, so that we could have
+multiple implementations, and in the config file we'll be able to select which
+one to use.
+
+But maybe we can actually make it scriptable somehow.
+
+Need to check what https://lnav.org/ uses, maybe get some ideas from there.
 
 ## TODO first
 

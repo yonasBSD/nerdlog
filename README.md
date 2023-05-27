@@ -1,4 +1,4 @@
-# Nerdlog
+# Nerdlog: a fancy yet low-key terminal log viewer for distributed systems
 
 A proof-of-concept log fetcher and viewer. Features terminal-based UI, works by
 ssh-ing directly to the nodes and analyzing syslog files using
