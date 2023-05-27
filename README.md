@@ -11,6 +11,42 @@ But it works. It's pretty usable and surprisingly fast.
 
 ![Nerdlog](images/nerdlog.png)
 
+## Project history
+
+My team and I were working on a project which was printing a fairly sizeable
+amount of logs from a distributed cluster of 20+ nodes: about 2-3M log messages
+per hour in total. We were using Graylog back then, and querying those logs for
+an hour was taking 1-2 seconds, so it was very decent.
+
+Infra people hated Graylog though, since it required some annoying maintenance,
+and so at some point the decision was made to switch to Splunk instead. And when
+Splunk was finally rolled out, I had to find out that it was incredibly,
+ridiculously slow. Honestly looking at it, I don't quite understand how they are
+even selling it. If you've used Splunk, you might know that it has two modes:
+"Smart" and "Fast". In "Smart" mode, the same query for an hour of logs was
+taking _a few minutes_. And in so called "Fast" mode, it was taking 30-60s (and
+that "Fast" mode has some other limitations which makes it a lot less useful).
+It might have been a misconfiguration of some sort (I'm not an infra guy so I
+don't know), but no one knew how or wanted to fix it, and so it was clear that
+once Graylog is finally shut down, we'll lose our ability to query logs quickly,
+and it was a massive bummer for us.
+
+And I thought that it's just ridiculous. 2-3M log messages doesn't sound like
+such a big amount of logs, and it seemed like some old-school shell hacks should
+be able to be about as fast as Graylog was, and it should be enough for our
+needs. And so that's how that project started: I couldn't stop thinking of it,
+so I took a week off, and went on a personal hackathon to implement this
+proof-of-concept log fetcher and viewer.
+
+It has proven to be very capable of replacing Graylog. I almost never used
+Splunk to fetch logs from those 20+ nodes.
+
+So having that backstory, you can already get a feel of the goals and design of
+Nerdlog: aiming to replace Graylog for us, it is lazer-focused on being super
+efficient while querying logs from multiple remote machines simultaneously,
+filtering them by time range and patterns, and apart from showing the actual
+logs, also drawing the chart.
+
 ## Installation
 
 To install `nerdlog` binary to your `/usr/local/bin`:
@@ -133,3 +169,18 @@ Currently supported options are:
 
 ^ All of those can be solved by having a separate machine and syncing all log
 files to it (just plain log files, nothing fancy).
+
+## How is it different from [lnav](https://lnav.org/)?
+
+It actually differs in a lot of ways. From what I know, lnav was primarily
+implemented as a local log viewer (I mean, to read logs on the same machine
+where lnav is running, which can obviously be accessed over ssh), and it does a
+pretty good job on this. And while the feature to read logs from a remote server
+was implemented later on, it's still not possible to e.g. query logs by a time
+range and filter them without lnav actually downloading the whole log file,
+which might be huge.
+
+Nerdlog, on the other hand, was remote-first from the beginning. It is
+lazer-focused on being super efficient while querying logs from multiple remote
+machines, filtering them by time range and a pattern, and drawing the chart for
+the whole time range.
