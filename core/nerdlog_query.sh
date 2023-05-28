@@ -14,20 +14,20 @@ STAGE_DONE=4
 
 cachefile=/tmp/nerdlog_query_cache
 
-logfile1=/var/log/syslog.1
-logfile2=/var/log/syslog
+logfile_prev=/var/log/syslog.1
+logfile_last=/var/log/syslog
 
 # Just a hack to account for cases when /var/log/syslog.1 doesn't exist:
 # create an empty file and pretend that it's an empty log file.
-if [ ! -e "$logfile1"  ]; then
-  logfile1="/tmp/nerdlog-empty-file"
-  rm -f $logfile1
-  touch $logfile1
+if [ ! -e "$logfile_prev"  ]; then
+  logfile_prev="/tmp/nerdlog-empty-file"
+  rm -f $logfile_prev
+  touch $logfile_prev
 fi
 
-logfile1_size=$(stat -c%s $logfile1)
-logfile2_size=$(stat -c%s $logfile2)
-total_size=$((logfile1_size+logfile2_size))
+logfile_prev_size=$(stat -c%s $logfile_prev)
+logfile_last_size=$(stat -c%s $logfile_last)
+total_size=$((logfile_prev_size+logfile_last_size))
 
 positional_args=()
 
@@ -205,7 +205,7 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
     echo hey2 $last_linenr $last_bytenr 1>&2
     echo hey3 $size_to_index 1>&2
 
-    tail -c +$((last_bytenr-prevlog_bytes)) $logfile2 | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
+    tail -c +$((last_bytenr-prevlog_bytes)) $logfile_last | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
   '"$script1"'
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
@@ -217,7 +217,7 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
   else
     echo "p:stage:$STAGE_INDEX_FULL:indexing from scratch" 1>&2
 
-    echo "prevlog_modtime	$(stat -c %y $logfile1)" > $cachefile
+    echo "prevlog_modtime	$(stat -c %y $logfile_prev)" > $cachefile
 
     awk -b "$awk_functions BEGIN { lastHHMM=\"\"; last3=\"\" }"'
   '"$script1"'
@@ -228,11 +228,11 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
     '"$scriptSetLastTimestrEtc"'
   }
   END { print "prevlog_lines\t" NR >> "'$cachefile'" }
-  ' $logfile1
+  ' $logfile_prev
 
-  # Before we start handling $logfile2, gotta read the last idx line (which is
+  # Before we start handling $logfile_last, gotta read the last idx line (which is
   # last-but-one line) and set it for the next script, otherwise there is a gap
-  # in index before the first line in the $logfile2.
+  # in index before the first line in the $logfile_last.
   # TODO: make sure that if there are no logs in the $lotfile1, we don't screw up.
     local lastTimestr="$(tail -n 2 $cachefile | head -n 1 | cut -f2)"
     #echo hey3 $lastTimestr 1>&2
@@ -245,7 +245,7 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
     printPercentage(bytenr, '$total_size');
     '"$scriptSetLastTimestrEtc"'
   }
-  ' $logfile2
+  ' $logfile_last
   fi
 } # }}}
 
@@ -271,16 +271,16 @@ function get_prevlog_modtime_from_cache() { # {{{
 } # }}}
 
 function get_prevlog_bytenr() { # {{{
-  du -sb $logfile1 | awk '{ print $1 }'
+  du -sb $logfile_prev | awk '{ print $1 }'
 } # }}}
 
 if [[ "$from" != "" || "$to" != "" ]]; then
   # Check timestamp in the first line of /tmp/nerdlog_query_cache, and if
-  # $logfile1's modification time is newer, then delete whole cache
-  logfile1_stored_modtime="$(get_prevlog_modtime_from_cache)"
-  logfile1_cur_modtile=$(stat -c %y $logfile1)
-  if [[ "$logfile1_stored_modtime" != "$logfile1_cur_modtile" ]]; then
-    echo "logfile has changed: stored '$logfile1_stored_modtime', actual '$logfile1_cur_modtile', deleting it" 1>&2
+  # $logfile_prev's modification time is newer, then delete whole cache
+  logfile_prev_stored_modtime="$(get_prevlog_modtime_from_cache)"
+  logfile_prev_cur_modtile=$(stat -c %y $logfile_prev)
+  if [[ "$logfile_prev_stored_modtime" != "$logfile_prev_cur_modtile" ]]; then
+    echo "logfile has changed: stored '$logfile_prev_stored_modtime', actual '$logfile_prev_cur_modtile', deleting it" 1>&2
     rm -f $cachefile
   fi
 
@@ -404,8 +404,8 @@ NR % 100 == 0 {
 }
 
 END {
-  print "logfile:'$logfile1':0";
-  print "logfile:'$logfile2':'$prevlog_lines'";
+  print "logfile:'$logfile_prev':0";
+  print "logfile:'$logfile_last':'$prevlog_lines'";
 
   for (x in stats) {
     print "s:" x "," stats[x]
@@ -454,42 +454,42 @@ END {
 # Generate commands to get all the logs as per requested timerange.
 declare -a cmds
 if [[ "$from_bytenr" != "" && $(( from_bytenr > prevlog_bytes )) == 1 ]]; then
-  # Only $logfile2 is used.
+  # Only $logfile_last is used.
   from_bytenr=$(( from_bytenr - prevlog_bytes ))
   if [[ "$to_bytenr" != "" ]]; then
     to_bytenr=$(( to_bytenr - prevlog_bytes ))
-    echo "Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the $logfile2" 1>&2
-    cmds+=("tail -c +$from_bytenr $logfile2 | head -c $((to_bytenr - from_bytenr))")
+    echo "Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the $logfile_last" 1>&2
+    cmds+=("tail -c +$from_bytenr $logfile_last | head -c $((to_bytenr - from_bytenr))")
   else
     # Most common case
-    echo "Getting logs from offset $from_bytenr until the end of $logfile2." 1>&2
-    cmds+=("tail -c +$from_bytenr $logfile2")
+    echo "Getting logs from offset $from_bytenr until the end of $logfile_last." 1>&2
+    cmds+=("tail -c +$from_bytenr $logfile_last")
   fi
 elif [[ "$to_bytenr" != "" && $(( to_bytenr <= prevlog_bytes )) == 1 ]]; then
-  # Only $logfile1 is used.
+  # Only $logfile_prev is used.
   if [[ "$from_bytenr" != "" ]]; then
-    echo "Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the $logfile1" 1>&2
-    cmds+=("tail -c +$from_bytenr $logfile1 | head -c $((to_bytenr - from_bytenr))")
+    echo "Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the $logfile_prev" 1>&2
+    cmds+=("tail -c +$from_bytenr $logfile_prev | head -c $((to_bytenr - from_bytenr))")
   else
-    echo "Getting logs from the very beginning to offset $(( to_bytenr - 1 )), all in the $logfile1." 1>&2
-    cmds+=("head -c $(( to_bytenr - 1)) $logfile1")
+    echo "Getting logs from the very beginning to offset $(( to_bytenr - 1 )), all in the $logfile_prev." 1>&2
+    cmds+=("head -c $(( to_bytenr - 1)) $logfile_prev")
   fi
 else
   # Both log files are used
   if [[ "$from_bytenr" != "" ]]; then
-    info="Getting logs from offset $from_bytenr in $logfile1"
-    cmds+=("tail -c +$from_bytenr $logfile1")
+    info="Getting logs from offset $from_bytenr in $logfile_prev"
+    cmds+=("tail -c +$from_bytenr $logfile_prev")
   else
-    info="Getting logs from the very beginning in $logfile1"
-    cmds+=("cat $logfile1")
+    info="Getting logs from the very beginning in $logfile_prev"
+    cmds+=("cat $logfile_prev")
   fi
 
   if [[ "$to_bytenr" != "" ]]; then
-    info="$info to offset $(( to_bytenr - prevlog_bytes - 1 )) in $logfile2"
-    cmds+=("head -c $(( to_bytenr - prevlog_bytes - 1 )) $logfile2")
+    info="$info to offset $(( to_bytenr - prevlog_bytes - 1 )) in $logfile_last"
+    cmds+=("head -c $(( to_bytenr - prevlog_bytes - 1 )) $logfile_last")
   else
-    info="$info until the end of $logfile2"
-    cmds+=("cat $logfile2")
+    info="$info until the end of $logfile_last"
+    cmds+=("cat $logfile_last")
   fi
 
   echo "$info" 1>&2
