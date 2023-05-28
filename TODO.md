@@ -1,6 +1,11 @@
 ## TODO before publishing
 
 - Reimplement host selection (see details below)
+  - Aliases to be used as "source"
+  - Parsing of things like {foo,bar}: so that
+    "myserver.com:/var/log/{kern,auth}.log" becomes
+    "myserver.com:/var/log/kern.log, myserver.com:/var/log/auth.log"
+  - Config file with a list of predefined stuff
 - Reimplement message parsing (see details below)
 - Implement some fake logs generation, just to use in examples
 - Write docs

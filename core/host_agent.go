@@ -148,7 +148,7 @@ type HostAgentUpdateState struct {
 }
 
 type HostAgentParams struct {
-	Config ConfigHost
+	Config ConfigLogSubject
 
 	// ClientID is just an arbitrary string (should be filename-friendly though)
 	// which will be appended to the nerdlog_query.sh and its cache filenames.
@@ -230,7 +230,7 @@ func (ha *HostAgent) changeState(newState HostAgentState) {
 	switch ha.state {
 	case HostAgentStateConnecting:
 		ha.connectResCh = make(chan hostConnectRes, 1)
-		go connectToHost(ha.params.Config, ha.connectResCh)
+		go connectToHost(ha.params.Config.Host, ha.connectResCh)
 
 	case HostAgentStateConnectedIdle:
 		if len(ha.cmdQueue) > 0 {

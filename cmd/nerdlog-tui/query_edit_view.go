@@ -25,8 +25,8 @@ var timeLabelText = `Time range in the format "[yellow]<time>[ to <time>][-]", w
 current time is used.
 `
 
-var hostsLabelText = `Hosts. Comma-separated strings like "[yellow]myserver.com[-]", "[yellow]user@myserver.com[-]",
-or even "[yellow]user@myserver.com:/var/log/syslog -p 22[-]"`
+var hostsLabelText = `Hosts. Comma-separated strings of the format "[yellow][user@]myserver.com[:port[:/path/to/logfile]][-]".
+Examples: "[yellow]user@myserver.com[-]", or "[yellow]user@myserver.com:22:/var/log/syslog[-]"`
 
 var selectQueryLabelText = `Select field query. Example: "[yellow]time STICKY, message, source, level_name AS level, *[-]".`
 

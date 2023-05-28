@@ -14,7 +14,7 @@ type HostsManager struct {
 	params HostsManagerParams
 
 	hostsStr          string
-	parsedHostConfigs map[string]*ConfigHost
+	parsedLogSubjects map[string]*ConfigLogSubject
 
 	has      map[string]*HostAgent
 	haStates map[string]HostAgentState
@@ -78,7 +78,7 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 
 // TODO: rename to something like setHosts
 func (hm *HostsManager) setHostsFilter(hostsStr string) error {
-	parsedHostConfigs := map[string]*ConfigHost{}
+	parsedLogSubjects := map[string]*ConfigLogSubject{}
 
 	// TODO: when json is supported, splitting by commas will need to be improved.
 	parts := strings.Split(hostsStr, ",")
@@ -95,11 +95,11 @@ func (hm *HostsManager) setHostsFilter(hostsStr string) error {
 		for _, ch := range cfs {
 			key := ch.Key()
 
-			if _, exists := parsedHostConfigs[key]; exists {
+			if _, exists := parsedLogSubjects[key]; exists {
 				return errors.Errorf("the host %s is present at least twice", key)
 			}
 
-			parsedHostConfigs[key] = ch
+			parsedLogSubjects[key] = ch
 		}
 
 		//matcher, err := glob.Compile(part)
@@ -125,7 +125,7 @@ func (hm *HostsManager) setHostsFilter(hostsStr string) error {
 
 	// All went well, remember the filter
 	hm.hostsStr = hostsStr
-	hm.parsedHostConfigs = parsedHostConfigs
+	hm.parsedLogSubjects = parsedLogSubjects
 
 	return nil
 }
@@ -133,7 +133,7 @@ func (hm *HostsManager) setHostsFilter(hostsStr string) error {
 func (hm *HostsManager) updateHAs() {
 	// Close unused host agents
 	for key, oldHA := range hm.has {
-		if _, ok := hm.parsedHostConfigs[key]; ok {
+		if _, ok := hm.parsedLogSubjects[key]; ok {
 			// The host is still used
 			continue
 		}
@@ -145,7 +145,7 @@ func (hm *HostsManager) updateHAs() {
 	}
 
 	// Create new host agents
-	for key, hc := range hm.parsedHostConfigs {
+	for key, hc := range hm.parsedLogSubjects {
 		if _, ok := hm.has[key]; ok {
 			// This host agent already exists
 			continue

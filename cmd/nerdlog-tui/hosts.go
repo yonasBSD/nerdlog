@@ -1,61 +1,58 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/dimonomid/nerdlog/core"
-	"github.com/kevinburke/ssh_config"
 )
 
 // TODO: use it when we support configs
 func makeConfigHosts() []core.ConfigHost {
-	if true {
-		hosts := []core.ConfigHost{}
+	return nil
 
-		f, _ := os.Open(filepath.Join(os.Getenv("HOME"), ".ssh", "config"))
-		cfg, _ := ssh_config.Decode(f)
-		for _, host := range cfg.Hosts {
-			name := host.Patterns[0].String()
-			hostName, err := cfg.Get(name, "HostName")
-			if err != nil {
-				continue
-			}
+	//if true {
+	//hosts := []core.ConfigHost{}
 
-			port, err := cfg.Get(name, "Port")
-			if err != nil {
-				continue
-			}
+	//f, _ := os.Open(filepath.Join(os.Getenv("HOME"), ".ssh", "config"))
+	//cfg, _ := ssh_config.Decode(f)
+	//for _, host := range cfg.Hosts {
+	//name := host.Patterns[0].String()
+	//hostName, err := cfg.Get(name, "HostName")
+	//if err != nil {
+	//continue
+	//}
 
-			user, err := cfg.Get(name, "User")
-			if err != nil {
-				continue
-			}
+	//port, err := cfg.Get(name, "Port")
+	//if err != nil {
+	//continue
+	//}
 
-			if name == "" || hostName == "" || port == "" || user == "" {
-				continue
-			}
+	//user, err := cfg.Get(name, "User")
+	//if err != nil {
+	//continue
+	//}
 
-			hc := core.ConfigHost{
-				Name: name,
-				Addr: fmt.Sprintf("%s:%s", hostName, port),
-				User: user,
-			}
+	//if name == "" || hostName == "" || port == "" || user == "" {
+	//continue
+	//}
 
-			hosts = append(hosts, hc)
-		}
+	//hc := core.ConfigHost{
+	//Name: name,
+	//Addr: fmt.Sprintf("%s:%s", hostName, port),
+	//User: user,
+	//}
 
-		return hosts
-	} else {
-		hosts := []core.ConfigHost{}
+	//hosts = append(hosts, hc)
+	//}
 
-		hosts = append(hosts, core.ConfigHost{
-			Name: fmt.Sprintf("dummynode-01:22"),
-			Addr: "127.0.0.1:22",
-			User: "ubuntu",
-		})
+	//return hosts
+	//} else {
+	//hosts := []core.ConfigHost{}
 
-		return hosts
-	}
+	//hosts = append(hosts, core.ConfigHost{
+	//Name: fmt.Sprintf("dummynode-01:22"),
+	//Addr: "127.0.0.1:22",
+	//User: "ubuntu",
+	//})
+
+	//return hosts
+	//}
 }
