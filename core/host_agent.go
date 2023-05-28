@@ -957,6 +957,8 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 			"bash", "/var/tmp/nerdlog_query_"+ha.params.ClientID+".sh",
 			"--cache-file", "/tmp/nerdlog_query_index_"+ha.params.ClientID,
 			"--max-num-lines", strconv.Itoa(cmdCtx.cmd.queryLogs.maxNumLines),
+			"--logfile-last", ha.params.Config.LogFileLast,
+			"--logfile-prev", ha.params.Config.LogFilePrev,
 		)
 
 		if !cmdCtx.cmd.queryLogs.from.IsZero() {

@@ -29,8 +29,8 @@ type ConfigHost struct {
 	// User is the username to authenticate as.
 	User string `yaml:"user"`
 
-	LogFile1 string `yaml:"logFile1"`
-	LogFile2 string `yaml:"logFile2"`
+	LogFileLast string `yaml:"logFileLast"`
+	LogFilePrev string `yaml:"logFilePrev"`
 
 	// TODO: some jumphost config
 }
@@ -73,14 +73,14 @@ func parseConfigHost(s string) ([]*ConfigHost, error) {
 	}
 
 	hostname := parts[0]
-	logFile1 := "/var/log/syslog"
+	logFileLast := "/var/log/syslog"
 	if len(parts) >= 2 {
-		logFile1 = parts[1]
+		logFileLast = parts[1]
 	}
 
-	logFile2 := logFile1 + ".1"
+	logFilePrev := logFileLast + ".1"
 	if len(parts) >= 3 {
-		logFile2 = parts[2]
+		logFilePrev = parts[2]
 	}
 
 	if len(parts) > 3 {
@@ -96,8 +96,8 @@ func parseConfigHost(s string) ([]*ConfigHost, error) {
 			Addr: fmt.Sprintf("%s:%s", hostname, port),
 			User: username,
 
-			LogFile1: logFile1,
-			LogFile2: logFile2,
+			LogFileLast: logFileLast,
+			LogFilePrev: logFilePrev,
 		},
 	}, nil
 }

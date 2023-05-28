@@ -40,6 +40,16 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
+    --logfile-last)
+      logfile_last="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --logfile-prev)
+      logfile_prev="$2"
+      shift # past argument
+      shift # past value
+      ;;
     -f|--from)
       from="$2"
       shift # past argument
