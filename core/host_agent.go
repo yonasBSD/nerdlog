@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"compress/gzip"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -62,6 +63,9 @@ const queryLogsArgsTimeLayout = "Jan-02-15:04"
 const queryLogsMstatsTimeLayout = "Jan2-15:04"
 
 const syslogTimeLayout = "Jan _2 15:04:05"
+
+//go:embed nerdlog_query.sh
+var nerdlogQuerySh string
 
 type HostAgent struct {
 	params HostAgentParams

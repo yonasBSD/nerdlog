@@ -1,7 +1,4 @@
-package core
-
-// TODO: convert it to an embedded file
-var nerdlogQuerySh = `#/bin/bash
+#/bin/bash
 
 # Arguments:
 #
@@ -503,4 +500,3 @@ fi
 for cmd in "${cmds[@]}"; do eval $cmd; done | awk -b "$awk_script" -
 
 echo "p:stage:$STAGE_DONE:done" 1>&2
-`
