@@ -308,6 +308,8 @@ func (ha *HostAgent) run() {
 				continue
 			}
 
+			//log.Printf("hey line(%s): %s", ha.params.Config.Name, line)
+
 			lastUpdTime = time.Now()
 
 			switch ha.state {
@@ -930,7 +932,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 	case cmdCtx.cmd.bootstrap != nil:
 		cmdCtx.bootstrapCtx = &hostCmdCtxBootstrap{}
 
-		ha.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > /var/tmp/nerdlog_query_" + ha.params.ClientID + ".sh\n" + nerdlogQuerySh + "EOF\n"))
+		ha.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > /tmp/nerdlog_query_" + ha.params.ClientID + ".sh\n" + nerdlogQuerySh + "EOF\n"))
 		ha.conn.stdinBuf.Write([]byte("if [[ $? == 0 ]]; then echo 'bootstrap ok'; else echo 'bootstrap failed'; fi\n"))
 
 	case cmdCtx.cmd.ping != nil:
@@ -954,7 +956,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 
 		parts = append(
 			parts,
-			"bash", "/var/tmp/nerdlog_query_"+ha.params.ClientID+".sh",
+			"bash", "/tmp/nerdlog_query_"+ha.params.ClientID+".sh",
 			"--cache-file", "/tmp/nerdlog_query_index_"+ha.params.ClientID,
 			"--max-num-lines", strconv.Itoa(cmdCtx.cmd.queryLogs.maxNumLines),
 			"--logfile-last", ha.params.Config.LogFileLast,
@@ -982,7 +984,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		}
 
 		cmd := strings.Join(parts, " ") + "\n"
-		//fmt.Println("hey", ha.params.Config.Name, "cmd:", cmd)
+		//log.Printf("hey command(%s): %s", ha.params.Config.Name, cmd)
 
 		ha.conn.stdinBuf.Write([]byte(cmd))
 
