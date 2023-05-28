@@ -2,7 +2,6 @@ package core
 
 import (
 	"fmt"
-	"math/rand"
 	"sort"
 	"strings"
 	"time"
@@ -154,7 +153,7 @@ func (hm *HostsManager) updateHAs() {
 		// We need to create a new host agent
 		ha := NewHostAgent(HostAgentParams{
 			Config:    *hc,
-			ClientID:  fmt.Sprintf("%s-%d", hm.params.ClientID, rand.Int()),
+			ClientID:  hm.params.ClientID, //fmt.Sprintf("%s-%d", hm.params.ClientID, rand.Int()),
 			UpdatesCh: hm.hostUpdatesCh,
 		})
 		hm.has[key] = ha

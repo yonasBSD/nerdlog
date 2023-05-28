@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"math/rand"
 	"os"
 	"path/filepath"
 
@@ -217,7 +215,7 @@ func (app *nerdlogApp) initHostsManager(initialHosts string) {
 		PredefinedConfigHosts: makeConfigHosts(),
 		InitialHosts:          initialHosts,
 
-		ClientID: fmt.Sprintf("%s-%d", envUser, rand.Int()),
+		ClientID: envUser,
 
 		UpdatesCh: updatesCh,
 	})

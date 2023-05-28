@@ -9,10 +9,18 @@
 - Reimplement message parsing (see details below)
 - Implement some fake logs generation, just to use in examples
 - Write docs
-- Cleanup tmp files on the servers
+- Fix the issue with UTC time: histogram only works fine with UTC time, but when
+  we check e.g. local logs (which are in UTC+3), and we're looking at e.g. just
+  last hour, then the histogram looks empty.
+- Overall, non-UTC times aren't handled correctly. Too bad that old awk doesn't
+  even support the utc-flag in mktime. Perhaps I should just refuse to work with
+  such old awks (albeit it will mean not supporting my own
+  server.dmitryfrank.com)
+- Fix client name (make it include the log filename)
+- Fix tmp file naming (make it non-random, so that index is reused between
+  invocations)
 - Fix an issue with reconnect tight loop
 - Fix error handling when we can't connect to a host
-- Fix a bug with total number of lines being wrong (it's too low)
 - Fix an issue with things like "[system]" in the log messages being interpreted
   by tview
 

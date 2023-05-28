@@ -19,6 +19,8 @@ import (
 	"github.com/juju/errors"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
+
+	"github.com/dimonomid/nerdlog/log"
 )
 
 const connectionTimeout = 5 * time.Second
@@ -994,7 +996,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		}
 
 		cmd := strings.Join(parts, " ") + "\n"
-		//log.Printf("hey command(%s): %s", ha.params.Config.Name, cmd)
+		log.Printf("hey command(%s): %s", ha.params.Config.Name, cmd)
 
 		ha.conn.stdinBuf.Write([]byte(cmd))
 
