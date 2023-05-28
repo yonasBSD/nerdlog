@@ -6,7 +6,7 @@ import (
 	"github.com/juju/errors"
 )
 
-var DefaultSelectQuery SelectQuery = FieldNameTime + " STICKY, " + FieldNameMessage + ", source, level_name, namespace"
+var DefaultSelectQuery SelectQuery = FieldNameTime + " STICKY, " + FieldNameMessage + ", source, *"
 
 const (
 	FieldNameTime    = "time"

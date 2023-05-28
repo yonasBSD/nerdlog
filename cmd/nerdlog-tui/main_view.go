@@ -1059,6 +1059,7 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 	for i, rowIdx := 0, 2; i < len(resp.Logs); i, rowIdx = i+1, rowIdx+1 {
 		msg := resp.Logs[i]
 
+		// TODO: make it configurable
 		msgColor := tcell.ColorWhite
 		switch msg.Context["level_name"] {
 		case "warn":
