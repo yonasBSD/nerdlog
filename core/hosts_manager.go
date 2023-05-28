@@ -7,16 +7,13 @@ import (
 	"time"
 
 	"github.com/juju/errors"
-	"github.com/komem3/glob"
 )
 
 type HostsManager struct {
 	params HostsManagerParams
 
-	hcs map[string]ConfigHost
-
-	hostsFilter     string
-	matchingHANames map[string]struct{}
+	hostsStr          string
+	parsedHostConfigs map[string]*ConfigHost
 
 	has      map[string]*HostAgent
 	haStates map[string]HostAgentState
@@ -26,7 +23,6 @@ type HostsManager struct {
 
 	hostsByState    map[HostAgentState]map[string]struct{}
 	numNotConnected int
-	numUnused       int
 
 	hostUpdatesCh chan *HostAgentUpdate
 	reqCh         chan hostsManagerReq
@@ -38,8 +34,10 @@ type HostsManager struct {
 }
 
 type HostsManagerParams struct {
-	ConfigHosts        []ConfigHost
-	InitialHostsFilter string
+	// TODO: use it
+	PredefinedConfigHosts []ConfigHost
+
+	InitialHosts string
 
 	// ClientID is just an arbitrary string (should be filename-friendly though)
 	// which will be appended to the nerdlog_query.sh and its cache filenames.
@@ -55,8 +53,6 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 	hm := &HostsManager{
 		params: params,
 
-		hcs: make(map[string]ConfigHost, len(params.ConfigHosts)),
-
 		has:          map[string]*HostAgent{},
 		haStates:     map[string]HostAgentState{},
 		haBusyStages: map[string]BusyStage{},
@@ -66,12 +62,7 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 		respCh:        make(chan hostCmdRes),
 	}
 
-	// Populate hm.hcs
-	for _, hc := range params.ConfigHosts {
-		hm.hcs[hc.Name] = hc
-	}
-
-	if err := hm.setHostsFilter(params.InitialHostsFilter); err != nil {
+	if err := hm.setHostsFilter(params.InitialHosts); err != nil {
 		panic("setHostsFilter didn't like the initial filter: " + err.Error())
 	}
 
@@ -84,78 +75,89 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 	return hm
 }
 
-func (hm *HostsManager) setHostsFilter(hostsFilter string) error {
-	matchingHANames := map[string]struct{}{}
+// TODO: rename to something like setHosts
+func (hm *HostsManager) setHostsFilter(hostsStr string) error {
+	parsedHostConfigs := map[string]*ConfigHost{}
 
-	parts := strings.Split(hostsFilter, ",")
+	// TODO: when json is supported, splitting by commas will need to be improved.
+	parts := strings.Split(hostsStr, ",")
 	for _, part := range parts {
 		if part == "" {
-			// Normally, empty filter means permissive filter, but in this case
-			// it's safer not to allow just connecting to everything. Maybe we can
-			// change it at some point (and then the initial filter also needs to
-			// change, since on startup nerdlog shouldn't connect to anything right
-			// away, and so we use the empty filter there)
 			continue
 		}
 
-		matcher, err := glob.Compile(part)
+		cfs, err := parseConfigHost(part)
 		if err != nil {
-			return errors.Annotatef(err, "pattern %q", part)
+			return errors.Annotatef(err, "parsing %q", part)
 		}
 
-		numMatchedPart := 0
+		for _, ch := range cfs {
+			key := ch.Key()
 
-		for _, hc := range hm.params.ConfigHosts {
-			if !matcher.MatchString(hc.Name) {
-				continue
+			if _, exists := parsedHostConfigs[key]; exists {
+				return errors.Errorf("the host %s is present at least twice", key)
 			}
 
-			matchingHANames[hc.Name] = struct{}{}
-			numMatchedPart++
+			parsedHostConfigs[key] = ch
 		}
 
-		if numMatchedPart == 0 {
-			return errors.Errorf("%q didn't match anything", part)
-		}
+		//matcher, err := glob.Compile(part)
+		//if err != nil {
+		//return errors.Annotatef(err, "pattern %q", part)
+		//}
+
+		//numMatchedPart := 0
+
+		//for _, hc := range hm.params.ConfigHosts {
+		//if !matcher.MatchString(hc.Name) {
+		//continue
+		//}
+
+		//matchingHANames[hc.Name] = struct{}{}
+		//numMatchedPart++
+		//}
+
+		//if numMatchedPart == 0 {
+		//return errors.Errorf("%q didn't match anything", part)
+		//}
 	}
 
 	// All went well, remember the filter
-	hm.hostsFilter = hostsFilter
-	hm.matchingHANames = matchingHANames
+	hm.hostsStr = hostsStr
+	hm.parsedHostConfigs = parsedHostConfigs
 
 	return nil
 }
 
 func (hm *HostsManager) updateHAs() {
 	// Close unused host agents
-	for name, oldHA := range hm.has {
-		if _, ok := hm.matchingHANames[name]; ok {
+	for key, oldHA := range hm.has {
+		if _, ok := hm.parsedHostConfigs[key]; ok {
 			// The host is still used
 			continue
 		}
 
 		// We used to use this host, but now it's filtered out, so close it
 		oldHA.Close()
-		delete(hm.has, name)
-		delete(hm.haStates, name)
+		delete(hm.has, key)
+		delete(hm.haStates, key)
 	}
 
 	// Create new host agents
-	for name := range hm.matchingHANames {
-		if _, ok := hm.has[name]; ok {
+	for key, hc := range hm.parsedHostConfigs {
+		if _, ok := hm.has[key]; ok {
 			// This host agent already exists
 			continue
 		}
 
 		// We need to create a new host agent
-		hc := hm.hcs[name]
 		ha := NewHostAgent(HostAgentParams{
-			Config:    hc,
+			Config:    *hc,
 			ClientID:  hm.params.ClientID,
 			UpdatesCh: hm.hostUpdatesCh,
 		})
-		hm.has[hc.Name] = ha
-		hm.haStates[hc.Name] = HostAgentStateDisconnected
+		hm.has[key] = ha
+		hm.haStates[key] = HostAgentStateDisconnected
 	}
 }
 
@@ -171,23 +173,21 @@ func (hm *HostsManager) run() {
 		select {
 		case upd := <-hm.hostUpdatesCh:
 			if upd.State != nil {
-				// If we don't have state for this agent, it means it's unused and the
-				// state is probably about being torn down, so ignore the update.
-				if _, ok := hm.haStates[upd.Name]; !ok {
+				if _, ok := hm.haStates[upd.Key]; !ok {
 					continue
 				}
 
-				hm.haStates[upd.Name] = upd.State.NewState
+				hm.haStates[upd.Key] = upd.State.NewState
 
 				// Maintain hm.haBusyStages
 				if upd.State.NewState != HostAgentStateConnectedBusy {
-					delete(hm.haBusyStages, upd.Name)
+					delete(hm.haBusyStages, upd.Key)
 				}
 
 				hm.updateHostsByState()
 				hm.sendStateUpdate()
 			} else if upd.BusyStage != nil {
-				hm.haBusyStages[upd.Name] = *upd.BusyStage
+				hm.haBusyStages[upd.Key] = *upd.BusyStage
 				hm.sendStateUpdate()
 			} else if upd.TornDown {
 				// do we need this event at all?
@@ -411,9 +411,6 @@ type HostsManagerState struct {
 
 	HostsByState map[HostAgentState]map[string]struct{}
 
-	// NumUnused is the number of hosts available in the config but filtered out.
-	NumUnused int
-
 	// NumConnected is how many nodes are actually connected
 	NumConnected int
 
@@ -447,8 +444,6 @@ func (hm *HostsManager) updateHostsByState() {
 			hm.numNotConnected++
 		}
 	}
-
-	hm.numUnused = len(hm.params.ConfigHosts) - len(hm.has)
 }
 
 func (hm *HostsManager) sendStateUpdate() {
@@ -471,7 +466,6 @@ func (hm *HostsManager) sendStateUpdate() {
 			NumConnected:    numConnected,
 			NoMatchingHosts: hm.numNotConnected == 0 && numConnected == 0,
 			Connected:       hm.numNotConnected == 0 && numConnected > 0,
-			NumUnused:       hm.numUnused,
 			Busy:            hm.curQueryLogsCtx != nil,
 			BusyStageByHost: busyStagesCopy,
 		},

@@ -128,7 +128,7 @@ func (c *connCtx) getStderrLinesCh() chan string {
 // populated and it's the host's name, and from all the other fields, exactly
 // one field must be non-nil.
 type HostAgentUpdate struct {
-	Name string
+	Key string
 
 	State *HostAgentUpdateState
 
@@ -268,7 +268,6 @@ func (ha *HostAgent) run() {
 		select {
 		case res := <-ha.connectResCh:
 			if res.err != nil {
-				fmt.Println("failed to connect:", res.err)
 				// TODO: backoff
 				ha.changeState(HostAgentStateDisconnected)
 				ha.changeState(HostAgentStateConnecting)
@@ -584,7 +583,7 @@ func (ha *HostAgent) run() {
 }
 
 func (ha *HostAgent) sendUpdate(upd *HostAgentUpdate) {
-	upd.Name = ha.params.Config.Name
+	upd.Key = ha.params.Config.Key()
 	ha.params.UpdatesCh <- upd
 }
 
@@ -604,10 +603,9 @@ func connectToHost(
 	var sshClient *ssh.Client
 
 	conf := getClientConfig(config.User)
-	//fmt.Printf("hey %+v %q\n", config, config.Addr)
 	//fmt.Println("hey2", conn, conf)
 
-	if true {
+	if false {
 		// Use jumphost
 		jumphost, err := getJumphostClient()
 		if err != nil {
@@ -705,10 +703,10 @@ func getClientConfig(username string) *ssh.ClientConfig {
 	return &ssh.ClientConfig{
 		User: username,
 		Auth: []ssh.AuthMethod{auth},
-		// TODO FIX
-		HostKeyCallback: func(hostname string, remote net.Addr, key ssh.PublicKey) error {
-			return nil
-		},
+
+		// TODO: fix it
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+
 		Timeout: connectionTimeout,
 	}
 }

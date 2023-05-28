@@ -5,6 +5,10 @@
 - Implement some fake logs generation, just to use in examples
 - Write docs
 - Fix an issue with reconnect tight loop
+- Fix error handling when we can't connect to a host
+- Fix a bug with total number of lines being wrong (it's too low)
+- Fix an issue with things like "[system]" in the log messages being interpreted
+  by tview
 
 ### Reimplement host selection
 

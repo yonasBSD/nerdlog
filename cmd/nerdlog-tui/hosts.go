@@ -9,6 +9,7 @@ import (
 	"github.com/kevinburke/ssh_config"
 )
 
+// TODO: use it when we support configs
 func makeConfigHosts() []core.ConfigHost {
 	if true {
 		hosts := []core.ConfigHost{}

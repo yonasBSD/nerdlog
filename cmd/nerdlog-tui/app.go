@@ -149,7 +149,7 @@ func (app *nerdlogApp) runTViewApp() error {
 }
 
 // NOTE: initHostsManager has to be called _after_ app.mainView is initialized.
-func (app *nerdlogApp) initHostsManager(initialHostsFilter string) {
+func (app *nerdlogApp) initHostsManager(initialHosts string) {
 	updatesCh := make(chan core.HostsManagerUpdate, 128)
 	go func() {
 		// We don't want to necessarily update UI on _every_ state update, since
@@ -212,8 +212,8 @@ func (app *nerdlogApp) initHostsManager(initialHostsFilter string) {
 	envUser := os.Getenv("USER")
 
 	app.hm = core.NewHostsManager(core.HostsManagerParams{
-		ConfigHosts:        makeConfigHosts(),
-		InitialHostsFilter: initialHostsFilter,
+		PredefinedConfigHosts: makeConfigHosts(),
+		InitialHosts:          initialHosts,
 
 		ClientID: envUser,
 

@@ -1135,8 +1135,6 @@ func (mv *MainView) bumpStatusLineLeft() {
 	sb.WriteString(getStatuslineNumStr("🖳", numBusy, "orange"))
 	sb.WriteString(" ")
 	sb.WriteString(getStatuslineNumStr("🖳", numOther, "red"))
-	sb.WriteString(" ")
-	sb.WriteString(getStatuslineNumStr("🖳", hmState.NumUnused, "gray"))
 
 	sb.WriteString(" | ")
 	sb.WriteString(mv.hostsFilter)
