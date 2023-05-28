@@ -6,6 +6,7 @@ import (
 	"os/user"
 	"strings"
 
+	"github.com/dimonomid/nerdlog/shellescape"
 	"github.com/juju/errors"
 )
 
@@ -46,49 +47,75 @@ func (ch *ConfigHost) Key() string {
 
 // TODO: it should take a predefined config, to support globs
 func parseConfigHost(s string) ([]*ConfigHost, error) {
-	// Parse user, if present
-	var username string
-	atIdx := strings.IndexRune(s, '@')
-	if atIdx == 0 {
-		return nil, errors.Errorf("username is empty")
-	} else if atIdx > 0 {
-		username = s[:atIdx]
-		s = s[atIdx+1:]
+	parts, err := shellescape.Parse(s)
+	if err != nil {
+		return nil, errors.Trace(err)
 	}
 
-	if username == "" {
-		u, err := user.Current()
-		if err != nil {
-			return nil, errors.Trace(err)
+	username := ""
+	hostname := ""
+	logFileLast := ""
+	logFilePrev := ""
+	port := "22"
+
+	curFlag := ""
+	for _, part := range parts {
+		if curFlag == "" && len(part) > 0 && part[0] == '-' {
+			curFlag = part
+			continue
 		}
 
-		username = u.Username
-	}
+		switch curFlag {
+		case "-p", "--port":
+			port = part
 
-	// Split string by ":", expecting at most 3 parts:
-	// "hostname:/path/to/logfile:/path/to/logfile.1"
-	parts := strings.Split(s, ":")
-	if len(parts) == 0 {
-		return nil, errors.Errorf("no hostname")
-	}
+		case "":
+			// Parsing the host descriptor like
+			// "user@hostname:/path/to/logfile:/path/to/logfile.1"
+			// Parse user, if present
+			atIdx := strings.IndexRune(part, '@')
+			if atIdx == 0 {
+				return nil, errors.Errorf("username is empty")
+			} else if atIdx > 0 {
+				username = part[:atIdx]
+				part = part[atIdx+1:]
+			}
 
-	hostname := parts[0]
-	logFileLast := "/var/log/syslog"
-	if len(parts) >= 2 {
-		logFileLast = parts[1]
-	}
+			if username == "" {
+				u, err := user.Current()
+				if err != nil {
+					return nil, errors.Trace(err)
+				}
 
-	logFilePrev := logFileLast + ".1"
-	if len(parts) >= 3 {
-		logFilePrev = parts[2]
-	}
+				username = u.Username
+			}
 
-	if len(parts) > 3 {
-		return nil, errors.Errorf("malformed host descriptor: too many colons")
-	}
+			// Split string by ":", expecting at most 3 parts:
+			// "hostname:/path/to/logfile:/path/to/logfile.1"
+			parts2 := strings.Split(part, ":")
+			if len(parts2) == 0 {
+				return nil, errors.Errorf("no hostname")
+			}
 
-	// TODO: make port customizable
-	port := "22"
+			hostname = parts2[0]
+			logFileLast = "/var/log/syslog"
+			if len(parts2) >= 2 {
+				logFileLast = parts2[1]
+			}
+
+			logFilePrev = logFileLast + ".1"
+			if len(parts2) >= 3 {
+				logFilePrev = parts2[2]
+			}
+
+			if len(parts2) > 3 {
+				return nil, errors.Errorf("malformed host descriptor: too many colons")
+			}
+
+		default:
+			return nil, errors.Errorf("invalid flag %s", curFlag)
+		}
+	}
 
 	return []*ConfigHost{
 		{

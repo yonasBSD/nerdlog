@@ -23,7 +23,7 @@ func main() {
 	pflag.Parse()
 
 	initialTime := "-1h"
-	initialHosts := "my-node-*"
+	initialHosts := "localhost"
 	initialQuery := ""
 	initialSelectQuery := DefaultSelectQuery
 	connectRightAway := false

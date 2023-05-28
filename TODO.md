@@ -4,6 +4,9 @@
 - Reimplement message parsing (see details below)
 - Implement some fake logs generation, just to use in examples
 - Write docs
+- Fix issues with connecting to the same node twice for different log files
+  (try e.g. "localhost, localhost:/var/log/auth.log", and retry a few times:
+  you'll see errors)
 - Fix an issue with reconnect tight loop
 - Fix error handling when we can't connect to a host
 - Fix a bug with total number of lines being wrong (it's too low)
