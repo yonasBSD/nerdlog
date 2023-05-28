@@ -19,8 +19,8 @@ type ConfigLogSubject struct {
 	// "source" context tag.
 	Name string `yaml:"name"`
 
-	Host ConfigHost `yaml:"host"`
-	// TODO: some jumphost config
+	Host     ConfigHost  `yaml:"host"`
+	Jumphost *ConfigHost `yaml:"jumphost"`
 
 	LogFileLast string `yaml:"log_file_last"`
 	LogFilePrev string `yaml:"log_file_prev"`
@@ -37,6 +37,10 @@ type ConfigHost struct {
 	Addr string `yaml:"addr"`
 	// User is the username to authenticate as.
 	User string `yaml:"user"`
+}
+
+func (ch *ConfigHost) Key() string {
+	return fmt.Sprintf("%s@%s", ch.Addr, ch.User)
 }
 
 func (ch *ConfigLogSubject) Key() string {
@@ -56,6 +60,7 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 	}
 
 	var phost *parsedHost
+	var jhconf *ConfigHost
 
 	curFlag := ""
 	for _, part := range parts {
@@ -66,7 +71,19 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 
 		switch curFlag {
 		case "-J", "--jumphost":
-			return nil, errors.Errorf("Jumphost is not yet supported")
+			jhparsed, err := parseHostStr(part)
+			if err != nil {
+				return nil, errors.Annotatef(err, "parsing %q as a jumphost", part)
+			}
+
+			//if jhparsed.logFileLast != "" || jhparsed.logFilePrev != "" {
+			//return nil, errors.Annotatef(err, "jumphost config shouldn't contain files")
+			//}
+
+			jhconf = &ConfigHost{
+				Addr: jhparsed.addr,
+				User: jhparsed.user,
+			}
 
 		case "":
 			var err error
@@ -77,6 +94,8 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 		default:
 			return nil, errors.Errorf("invalid flag %s", curFlag)
 		}
+
+		curFlag = ""
 	}
 
 	if phost == nil {
@@ -91,6 +110,7 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 				Addr: phost.addr,
 				User: phost.user,
 			},
+			Jumphost: jhconf,
 
 			LogFileLast: phost.logFileLast,
 			LogFilePrev: phost.logFilePrev,

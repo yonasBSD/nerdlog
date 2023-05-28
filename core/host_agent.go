@@ -230,7 +230,7 @@ func (ha *HostAgent) changeState(newState HostAgentState) {
 	switch ha.state {
 	case HostAgentStateConnecting:
 		ha.connectResCh = make(chan hostConnectRes, 1)
-		go connectToHost(ha.params.Config.Host, ha.connectResCh)
+		go connectToLogSubj(ha.params.Config, ha.connectResCh)
 
 	case HostAgentStateConnectedIdle:
 		if len(ha.cmdQueue) > 0 {
@@ -598,8 +598,8 @@ type hostConnectRes struct {
 	err  error
 }
 
-func connectToHost(
-	config ConfigHost,
+func connectToLogSubj(
+	config ConfigLogSubject,
 	resCh chan<- hostConnectRes,
 ) (res hostConnectRes) {
 	defer func() {
@@ -608,24 +608,25 @@ func connectToHost(
 
 	var sshClient *ssh.Client
 
-	conf := getClientConfig(config.User)
+	conf := getClientConfig(config.Host.User)
 	//fmt.Println("hey2", conn, conf)
 
-	if false {
+	if config.Jumphost != nil {
 		// Use jumphost
-		jumphost, err := getJumphostClient()
+		jumphost, err := getJumphostClient(config.Jumphost)
 		if err != nil {
+			//log.Printf("jumphost failed: %s", err)
 			res.err = errors.Annotatef(err, "getting jumphost client")
 			return res
 		}
 
-		conn, err := dialWithTimeout(jumphost, "tcp", config.Addr, connectionTimeout)
+		conn, err := dialWithTimeout(jumphost, "tcp", config.Host.Addr, connectionTimeout)
 		if err != nil {
 			res.err = errors.Trace(err)
 			return res
 		}
 
-		authConn, chans, reqs, err := ssh.NewClientConn(conn, config.Addr, conf)
+		authConn, chans, reqs, err := ssh.NewClientConn(conn, config.Host.Addr, conf)
 		if err != nil {
 			res.err = errors.Trace(err)
 			return res
@@ -634,7 +635,7 @@ func connectToHost(
 		sshClient = ssh.NewClient(authConn, chans, reqs)
 	} else {
 		var err error
-		sshClient, err = ssh.Dial("tcp", config.Addr, conf)
+		sshClient, err = ssh.Dial("tcp", config.Host.Addr, conf)
 		if err != nil {
 			res.err = errors.Trace(err)
 			return res
@@ -718,17 +719,25 @@ func getClientConfig(username string) *ssh.ClientConfig {
 }
 
 var (
-	jumphostShared    *ssh.Client
-	jumphostSharedMtx sync.Mutex
+	jumphostsShared    = map[string]*ssh.Client{}
+	jumphostsSharedMtx sync.Mutex
 )
 
-func getJumphostClient() (*ssh.Client, error) {
-	jumphostSharedMtx.Lock()
-	defer jumphostSharedMtx.Unlock()
+func getJumphostClient(jhConfig *ConfigHost) (*ssh.Client, error) {
+	jumphostsSharedMtx.Lock()
+	defer jumphostsSharedMtx.Unlock()
 
-	if jumphostShared == nil {
-		//fmt.Println("Connecting to jumphost...")
-		addrs, err := net.LookupHost("dummyhost.com")
+	key := jhConfig.Key()
+	jh := jumphostsShared[key]
+	if jh == nil {
+		//log.Printf("Connecting to jumphost... %+v", jhConfig)
+
+		parts := strings.Split(jhConfig.Addr, ":")
+		if len(parts) != 2 {
+			return nil, errors.Errorf("malformed jumphost address %q", jhConfig.Addr)
+		}
+
+		addrs, err := net.LookupHost(parts[0])
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -737,18 +746,19 @@ func getJumphostClient() (*ssh.Client, error) {
 			return nil, errors.New("Address not found")
 		}
 
-		conf := getClientConfig("ubuntu")
+		conf := getClientConfig(jhConfig.User)
 
-		jumphost, err := ssh.Dial("tcp", "dummyhost.com:1234", conf)
+		jh, err = ssh.Dial("tcp", jhConfig.Addr, conf)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
 
-		//fmt.Println("Jumphost ok")
-		jumphostShared = jumphost
+		jumphostsShared[key] = jh
+
+		//log.Printf("Jumphost ok")
 	}
 
-	return jumphostShared, nil
+	return jh, nil
 }
 
 var (
