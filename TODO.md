@@ -4,6 +4,7 @@
 - Reimplement message parsing (see details below)
 - Implement some fake logs generation, just to use in examples
 - Write docs
+- Fix an issue with reconnect tight loop
 
 ### Reimplement host selection
 

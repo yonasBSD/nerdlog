@@ -1,51 +1,76 @@
 # Nerdlog: a fancy yet low-key terminal log viewer for distributed systems
 
-A proof-of-concept log fetcher and viewer. Features terminal-based UI, works by
-ssh-ing directly to the nodes and analyzing syslog files using
-`bash` + `tail` + `head` + `awk` hacks.
+First of all, a little demo. Here, we're dealing with logs from 4 remote nodes,
+each having about 2GB log file, generating about 600K log messages per hour in
+total.
 
-I said, a proof of concept. Implemented as fast as possible, spaghetti code
-abounds, almost no tests, poor error handling, etc.
-
-But it works. It's pretty usable and surprisingly fast.
+TODO: implement the demo, and update the numbers above.
 
 ![Nerdlog](images/nerdlog.png)
 
 ## Project history
 
+It might be useful to know the history to understand the project motivation and
+overall direction.
+
 My team and I were working on a project which was printing a fairly sizeable
 amount of logs from a distributed cluster of 20+ nodes: about 2-3M log messages
 per hour in total. We were using Graylog back then, and querying those logs for
-an hour was taking 1-2 seconds, so it was very decent.
+an hour was taking no more than 1-2 seconds, so it was pretty quick.
 
-Infra people hated Graylog though, since it required some annoying maintenance,
-and so at some point the decision was made to switch to Splunk instead. And when
-Splunk was finally rolled out, I had to find out that it was incredibly,
-ridiculously slow. Honestly looking at it, I don't quite understand how they are
-even selling it. If you've used Splunk, you might know that it has two modes:
-"Smart" and "Fast". In "Smart" mode, the same query for an hour of logs was
-taking _a few minutes_. And in so called "Fast" mode, it was taking 30-60s (and
-that "Fast" mode has some other limitations which makes it a lot less useful).
-It might have been a misconfiguration of some sort (I'm not an infra guy so I
-don't know), but no one knew how or wanted to fix it, and so it was clear that
-once Graylog is finally shut down, we'll lose our ability to query logs quickly,
-and it was a massive bummer for us.
+Infra people hated Graylog though, since it required some annoying maintenance
+from them, and so at some point the decision was made to switch to Splunk
+instead. And when Splunk was finally rolled out, I had to find out that it was
+incredibly, ridiculously slow. Honestly looking at it, I don't quite understand
+how they are even selling it. If you've used Splunk, you might know that it has
+two modes: "Smart" and "Fast". In "Smart" mode, the same query for an hour of
+logs was taking _a few minutes_. And in so called "Fast" mode, it was taking
+30-60s (and that "Fast" mode has some other limitations which makes it a lot
+less useful).  It might have been a misconfiguration of some sort (I'm not an
+infra guy so I don't know), but no one knew how or wanted to fix it, and so it
+was clear that once Graylog is finally shut down, we'll lose our ability to
+query logs quickly, and it was a massive bummer for us.
 
 And I thought that it's just ridiculous. 2-3M log messages doesn't sound like
-such a big amount of logs, and it seemed like some old-school shell hacks should
-be able to be about as fast as Graylog was, and it should be enough for our
+such a big amount of logs, and it seemed like some old-school shell hacks on
+plain log files, without having any centralized logging server, should be able
+to be about as fast as Graylog was, and it should be enough for most of our
 needs. And so that's how that project started: I couldn't stop thinking of it,
 so I took a week off, and went on a personal hackathon to implement this
-proof-of-concept log fetcher and viewer.
+proof-of-concept log fetcher and viewer, which is ssh-ing directly to the nodes,
+and analyzing plain log files using `bash` + `tail` + `head` + `awk` hacks.
 
-It has proven to be very capable of replacing Graylog. I almost never used
-Splunk to fetch logs from those 20+ nodes.
+It has proven to be very capable of replacing the essential features we had in
+Graylog: being fast, querying logs from multiple remote nodes simultaneously,
+drawing the histogram for the whole requested time period, supporting context
+(key-value pairs) for every message. Apart from that, it was actually refreshing
+to use a snappy keyboard-navigated terminal app instead of clunky web UIs, so in
+a sense I liked it even more than Graylog. As to Splunk, I ended up almost never
+using it to fetch logs from our nodes.
 
 So having that backstory, you can already get a feel of the goals and design of
-Nerdlog: aiming to replace Graylog for us, it is lazer-focused on being super
-efficient while querying logs from multiple remote machines simultaneously,
-filtering them by time range and patterns, and apart from showing the actual
-logs, also drawing the chart.
+Nerdlog: it is lazer-focused on being super efficient while querying logs from
+multiple remote machines simultaneously, filtering them by time range and
+patterns, and apart from showing the actual logs, also drawing the histogram.
+
+## Design highlights
+
+- No cetralized server required; nerdlog establishes an ssh connection to every
+  node that the user wants to collect logs from, and keeps them idle until a log
+  query is made;
+- Logs are never downloaded to the local machine in full: all the log filtering
+  is done on the remote nodes, and on each query, only the following data is
+  downloaded from each node, gzipped: up to 100 messages (configurable), and
+  stats for the histogram. It's obviously possible to paginate over the logs, to
+  get the next 100 messages, etc. Nerdlog then merges the responses from all
+  nodes together, and presents to the user in a unified form.
+
+## Project state
+
+It's still kinda in a proof-of-concept stage. Implemented as fast as possible,
+spaghetti code abounds, almost no tests, poor error handling, etc.
+
+But it works. It's pretty usable and surprisingly fast.
 
 ## Installation
 
