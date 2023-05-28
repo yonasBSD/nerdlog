@@ -61,6 +61,8 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 
 	var phost *parsedHost
 	var jhconf *ConfigHost
+	var logFileLast, logFilePrev string
+	port := "22"
 
 	curFlag := ""
 	for _, part := range parts {
@@ -70,6 +72,9 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 		}
 
 		switch curFlag {
+		case "-p", "--port":
+			port = part
+
 		case "-J", "--jumphost":
 			jhparsed, err := parseHostStr(part)
 			if err != nil {
@@ -80,8 +85,17 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 			//return nil, errors.Annotatef(err, "jumphost config shouldn't contain files")
 			//}
 
+			jhPort := "22"
+			if len(jhparsed.colonParts) > 0 {
+				jhPort = jhparsed.colonParts[0]
+			}
+
+			if len(jhparsed.colonParts) > 1 {
+				return nil, errors.Errorf("parsing %q as a jumphost: too many colons", part)
+			}
+
 			jhconf = &ConfigHost{
-				Addr: jhparsed.addr,
+				Addr: fmt.Sprintf("%s:%s", jhparsed.hostname, jhPort),
 				User: jhparsed.user,
 			}
 
@@ -90,6 +104,22 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 			phost, err = parseHostStr(part)
 			if err != nil {
 				return nil, errors.Annotatef(err, "parsing %q as a host", part)
+			}
+
+			if len(phost.colonParts) > 0 {
+				logFileLast = phost.colonParts[0]
+			} else {
+				logFileLast = "/var/log/syslog"
+			}
+
+			if len(phost.colonParts) > 1 {
+				logFilePrev = phost.colonParts[1]
+			} else {
+				logFilePrev = logFileLast + ".1"
+			}
+
+			if len(phost.colonParts) > 2 {
+				return nil, errors.Errorf("%q: too many colons", part)
 			}
 		default:
 			return nil, errors.Errorf("invalid flag %s", curFlag)
@@ -107,25 +137,22 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 			Name: s,
 
 			Host: ConfigHost{
-				Addr: phost.addr,
+				Addr: fmt.Sprintf("%s:%s", phost.hostname, port),
 				User: phost.user,
 			},
 			Jumphost: jhconf,
 
-			LogFileLast: phost.logFileLast,
-			LogFilePrev: phost.logFilePrev,
+			LogFileLast: logFileLast,
+			LogFilePrev: logFilePrev,
 		},
 	}, nil
 }
 
 type parsedHost struct {
-	// addr is "host:port"
-	addr string
-	// user is the username to use
-	user string
+	hostname string
+	user     string
 
-	logFileLast string
-	logFilePrev string
+	colonParts []string
 }
 
 func parseHostStr(s string) (*parsedHost, error) {
@@ -150,47 +177,51 @@ func parseHostStr(s string) (*parsedHost, error) {
 		username = u.Username
 	}
 
-	// Split string by ":", expecting at most 3 parts:
-	// "hostname:/path/to/logfile:/path/to/logfile.1"
 	parts := strings.Split(s, ":")
 	if len(parts) == 0 {
 		return nil, errors.Errorf("no hostname")
 	}
 
-	hostname := parts[0]
-
-	port := ""
-	if len(parts) >= 2 {
-		port = parts[1]
-	}
-	if port == "" {
-		port = "22"
-	}
-
-	logFileLast := ""
-	if len(parts) >= 3 {
-		logFileLast = parts[2]
-	}
-	if logFileLast == "" {
-		logFileLast = "/var/log/syslog"
-	}
-
-	logFilePrev := ""
-	if len(parts) >= 4 {
-		logFilePrev = parts[3]
-	}
-	if logFilePrev == "" {
-		logFilePrev = logFileLast + ".1"
-	}
-
-	if len(parts) > 4 {
-		return nil, errors.Errorf("malformed host descriptor: too many colons")
-	}
-
 	return &parsedHost{
-		addr:        fmt.Sprintf("%s:%s", hostname, port),
-		user:        username,
-		logFileLast: logFileLast,
-		logFilePrev: logFilePrev,
+		hostname:   parts[0],
+		user:       username,
+		colonParts: parts[1:],
 	}, nil
+
+	//hostname := parts[0]
+
+	//port := ""
+	//if len(parts) >= 2 {
+	//port = parts[1]
+	//}
+	//if port == "" {
+	//port = "22"
+	//}
+
+	//logFileLast := ""
+	//if len(parts) >= 3 {
+	//logFileLast = parts[2]
+	//}
+	//if logFileLast == "" {
+	//logFileLast = "/var/log/syslog"
+	//}
+
+	//logFilePrev := ""
+	//if len(parts) >= 4 {
+	//logFilePrev = parts[3]
+	//}
+	//if logFilePrev == "" {
+	//logFilePrev = logFileLast + ".1"
+	//}
+
+	//if len(parts) > 4 {
+	//return nil, errors.Errorf("malformed host descriptor: too many colons")
+	//}
+
+	//return &parsedHost{
+	//addr:        fmt.Sprintf("%s:%s", hostname, port),
+	//user:        username,
+	//logFileLast: logFileLast,
+	//logFilePrev: logFilePrev,
+	//}, nil
 }
