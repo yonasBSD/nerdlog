@@ -132,7 +132,7 @@ func (c *connCtx) getStderrLinesCh() chan string {
 // populated and it's the host's name, and from all the other fields, exactly
 // one field must be non-nil.
 type HostAgentUpdate struct {
-	Key string
+	Name string
 
 	State *HostAgentUpdateState
 
@@ -589,7 +589,7 @@ func (ha *HostAgent) run() {
 }
 
 func (ha *HostAgent) sendUpdate(upd *HostAgentUpdate) {
-	upd.Key = ha.params.Config.Key()
+	upd.Name = ha.params.Config.Name
 	ha.params.UpdatesCh <- upd
 }
 

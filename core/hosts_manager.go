@@ -93,7 +93,7 @@ func (hm *HostsManager) setHostsFilter(hostsStr string) error {
 		}
 
 		for _, ch := range cfs {
-			key := ch.Key()
+			key := ch.Name
 
 			if _, exists := parsedLogSubjects[key]; exists {
 				return errors.Errorf("the host %s is present at least twice", key)
@@ -174,21 +174,21 @@ func (hm *HostsManager) run() {
 		select {
 		case upd := <-hm.hostUpdatesCh:
 			if upd.State != nil {
-				if _, ok := hm.haStates[upd.Key]; !ok {
+				if _, ok := hm.haStates[upd.Name]; !ok {
 					continue
 				}
 
-				hm.haStates[upd.Key] = upd.State.NewState
+				hm.haStates[upd.Name] = upd.State.NewState
 
 				// Maintain hm.haBusyStages
 				if upd.State.NewState != HostAgentStateConnectedBusy {
-					delete(hm.haBusyStages, upd.Key)
+					delete(hm.haBusyStages, upd.Name)
 				}
 
 				hm.updateHostsByState()
 				hm.sendStateUpdate()
 			} else if upd.BusyStage != nil {
-				hm.haBusyStages[upd.Key] = *upd.BusyStage
+				hm.haBusyStages[upd.Name] = *upd.BusyStage
 				hm.sendStateUpdate()
 			} else if upd.TornDown {
 				// do we need this event at all?

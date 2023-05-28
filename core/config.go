@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/json"
 	"fmt"
 	"os/user"
 	"strings"
@@ -16,7 +15,7 @@ type Config struct {
 
 type ConfigLogSubject struct {
 	// Name is an arbitrary string which will be included in log messages as the
-	// "source" context tag.
+	// "source" context tag; it must unique identify the ConfigLogSubject.
 	Name string `yaml:"name"`
 
 	Host     ConfigHost  `yaml:"host"`
@@ -41,15 +40,6 @@ type ConfigHost struct {
 
 func (ch *ConfigHost) Key() string {
 	return fmt.Sprintf("%s@%s", ch.Addr, ch.User)
-}
-
-func (ch *ConfigLogSubject) Key() string {
-	d, err := json.Marshal(ch)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	return string(d)
 }
 
 // TODO: it should take a predefined config, to support globs
