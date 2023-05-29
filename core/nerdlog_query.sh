@@ -138,7 +138,7 @@ function logFieldsToTimestamp(monthStr, day, hhmmss) {
 }
 
 function formatNerdlogTime(timestamp) {
-  return strftime("%b-%d-%H:%M", timestamp, 1)
+  return strftime("%b-%d-%H:%M", timestamp)
 }
 
 function nerdlogTimestrToTimestamp(timestr) {
