@@ -61,7 +61,7 @@ const (
 //
 // To avoid reformatting things manually and thus slowing them down, we just use
 // different formats.
-const queryLogsArgsTimeLayout = "Jan-02-15:04"
+const queryLogsArgsTimeLayout = "2006-01-02-15:04"
 const queryLogsMstatsTimeLayout = "Jan2-15:04"
 
 const syslogTimeLayout = "Jan _2 15:04:05"

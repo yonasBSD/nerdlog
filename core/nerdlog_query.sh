@@ -115,7 +115,7 @@ function refresh_cache { # {{{
   # Add new entries to cache, if needed
 
   awk_functions='
-function logFieldsToTimestamp(monthStr, day, hhmmss) {
+function syslogFieldsToTimestamp(monthStr, day, hhmmss) {
   monthByName["Jan"] = "01";
   monthByName["Feb"] = "02";
   monthByName["Mar"] = "03";
@@ -137,12 +137,19 @@ function logFieldsToTimestamp(monthStr, day, hhmmss) {
   return mktime(year " " month " " day " " hour " " min " " 0)
 }
 
+function nerdlogFieldsToTimestamp(year, month, day, hhmmss) {
+  hour = substr(hhmmss, 1, 2)
+  min = substr(hhmmss, 4, 2)
+
+  return mktime(year " " month " " day " " hour " " min " " 0)
+}
+
 function formatNerdlogTime(timestamp) {
-  return strftime("%b-%d-%H:%M", timestamp)
+  return strftime("%Y-%m-%d-%H:%M", timestamp)
 }
 
 function nerdlogTimestrToTimestamp(timestr) {
-  return logFieldsToTimestamp(substr(timestr, 1, 3), substr(timestr, 5, 2), substr(timestr, 8, 5));
+  return nerdlogFieldsToTimestamp(substr(timestr, 1, 4), substr(timestr, 6, 2), substr(timestr, 9, 2), substr(timestr, 12, 5));
 }
 
 function printIndexLine(outfile, timestr, linenr, bytenr) {
@@ -187,7 +194,7 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
     lastHHMM = substr(lastTimestr, 8, 5);
     last3 = lastHHMM ":00"'
 
-  scriptSetCurTimestr='bytenr_cur = bytenr_next-length($0)-1; curTimestamp = logFieldsToTimestamp($1, $2, $3); curTimestr = formatNerdlogTime(curTimestamp)'
+  scriptSetCurTimestr='bytenr_cur = bytenr_next-length($0)-1; curTimestamp = syslogFieldsToTimestamp($1, $2, $3); curTimestr = formatNerdlogTime(curTimestamp)'
   scriptSetLastTimestrEtc='lastTimestr = curTimestr; lastTimestamp = curTimestamp; lastHHMM = curHHMM'
 
   script1='BEGIN { bytenr_next=1; lastPercent=0 }
