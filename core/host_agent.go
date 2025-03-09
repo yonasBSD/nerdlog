@@ -605,6 +605,10 @@ func connectToLogSubj(
 	resCh chan<- hostConnectRes,
 ) (res hostConnectRes) {
 	defer func() {
+		if res.err != nil {
+			log.Printf("Connection failed: %s", res.err)
+		}
+
 		resCh <- res
 	}()
 
@@ -614,10 +618,11 @@ func connectToLogSubj(
 	//fmt.Println("hey2", conn, conf)
 
 	if config.Jumphost != nil {
+		log.Printf("Connecting via jumphost")
 		// Use jumphost
 		jumphost, err := getJumphostClient(config.Jumphost)
 		if err != nil {
-			//log.Printf("jumphost failed: %s", err)
+			log.Printf("Jumphost connection failed: %s", err)
 			res.err = errors.Annotatef(err, "getting jumphost client")
 			return res
 		}
@@ -636,6 +641,7 @@ func connectToLogSubj(
 
 		sshClient = ssh.NewClient(authConn, chans, reqs)
 	} else {
+		log.Printf("Connecting to %s (%+v)", config.Host.Addr, conf)
 		var err error
 		sshClient, err = ssh.Dial("tcp", config.Host.Addr, conf)
 		if err != nil {
@@ -645,7 +651,7 @@ func connectToLogSubj(
 	}
 	//defer client.Close()
 
-	//fmt.Println("sshClient ok", sshClient)
+	log.Printf("Connected to %s", config.Host.Addr)
 
 	sshSession, err := sshClient.NewSession()
 	if err != nil {
@@ -773,8 +779,10 @@ func getSSHAgentAuth() (ssh.AuthMethod, error) {
 	defer sshAuthMethodSharedMtx.Unlock()
 
 	if sshAuthMethodShared == nil {
+		log.Printf("Initializing sshAuthMethodShared...")
 		sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
 		if err != nil {
+			log.Printf("Failed to initialize sshAuthMethodShared: %s", err.Error())
 			return nil, errors.Trace(err)
 		}
 

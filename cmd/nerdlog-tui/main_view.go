@@ -10,6 +10,7 @@ import (
 	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/dimonomid/nerdlog/cmd/nerdlog-tui/ui"
 	"github.com/dimonomid/nerdlog/core"
+	"github.com/dimonomid/nerdlog/log"
 	"github.com/gdamore/tcell/v2"
 	"github.com/juju/errors"
 	"github.com/rivo/tview"
@@ -817,6 +818,7 @@ func (mv *MainView) applyQueryEditData(data QueryFull, dqp doQueryParams) error 
 	// there, we'll do the query.
 	mv.doQueryParamsOnceConnected = &dqp
 
+	log.Printf("Applying hosts: %s", data.HostsFilter)
 	err = mv.params.OnHostsFilterChange(data.HostsFilter)
 	if err != nil {
 		return errors.Annotate(err, "hosts")

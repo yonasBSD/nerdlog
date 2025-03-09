@@ -52,7 +52,6 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 	var phost *parsedHost
 	var jhconf *ConfigHost
 	var logFileLast, logFilePrev string
-	port := "22"
 
 	curFlag := ""
 	for _, part := range parts {
@@ -62,9 +61,6 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 		}
 
 		switch curFlag {
-		case "-p", "--port":
-			port = part
-
 		case "-J", "--jumphost":
 			jhparsed, err := parseHostStr(part)
 			if err != nil {
@@ -75,10 +71,7 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 			//return nil, errors.Annotatef(err, "jumphost config shouldn't contain files")
 			//}
 
-			jhPort := "22"
-			if len(jhparsed.colonParts) > 0 {
-				jhPort = jhparsed.colonParts[0]
-			}
+			jhPort := jhparsed.port
 
 			if len(jhparsed.colonParts) > 1 {
 				return nil, errors.Errorf("parsing %q as a jumphost: too many colons", part)
@@ -127,7 +120,7 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 			Name: s,
 
 			Host: ConfigHost{
-				Addr: fmt.Sprintf("%s:%s", phost.hostname, port),
+				Addr: fmt.Sprintf("%s:%s", phost.hostname, phost.port),
 				User: phost.user,
 			},
 			Jumphost: jhconf,
@@ -141,6 +134,7 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 type parsedHost struct {
 	hostname string
 	user     string
+	port     string
 
 	colonParts []string
 }
@@ -167,15 +161,26 @@ func parseHostStr(s string) (*parsedHost, error) {
 		username = u.Username
 	}
 
+	port := "22"
+	colonParts := []string{}
 	parts := strings.Split(s, ":")
 	if len(parts) == 0 {
 		return nil, errors.Errorf("no hostname")
 	}
 
+	if len(parts) > 1 {
+		port = parts[1]
+	}
+
+	if len(parts) > 2 {
+		colonParts = parts[2:]
+	}
+
 	return &parsedHost{
 		hostname:   parts[0],
 		user:       username,
-		colonParts: parts[1:],
+		port:       port,
+		colonParts: colonParts,
 	}, nil
 
 	//hostname := parts[0]

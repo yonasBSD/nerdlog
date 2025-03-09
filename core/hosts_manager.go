@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/juju/errors"
+
+	"github.com/dimonomid/nerdlog/log"
 )
 
 type HostsManager struct {
@@ -274,6 +276,7 @@ func (hm *HostsManager) run() {
 
 			case req.updHostsFilter != nil:
 				r := req.updHostsFilter
+				log.Printf("Hosts manager: update hosts filter: %s", r.filter)
 				if hm.numNotConnected > 0 {
 					r.resCh <- errors.Errorf("not connected to all hosts yet")
 					continue
