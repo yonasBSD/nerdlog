@@ -19,6 +19,9 @@ type HostsManager struct {
 
 	has      map[string]*HostAgent
 	haStates map[string]HostAgentState
+	// haConnDetails only contains items for hosts which are in the
+	// HostAgentStateConnectinConnecting state.
+	haConnDetails map[string]ConnDetails
 	// haBusyStages only contains items for hosts which are in the
 	// HostAgentStateConnectedBusy state.
 	haBusyStages map[string]BusyStage
@@ -55,9 +58,10 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 	hm := &HostsManager{
 		params: params,
 
-		has:          map[string]*HostAgent{},
-		haStates:     map[string]HostAgentState{},
-		haBusyStages: map[string]BusyStage{},
+		has:           map[string]*HostAgent{},
+		haStates:      map[string]HostAgentState{},
+		haConnDetails: map[string]ConnDetails{},
+		haBusyStages:  map[string]BusyStage{},
 
 		hostUpdatesCh: make(chan *HostAgentUpdate, 1024),
 		reqCh:         make(chan hostsManagerReq, 8),
@@ -181,12 +185,22 @@ func (hm *HostsManager) run() {
 
 				hm.haStates[upd.Name] = upd.State.NewState
 
+				// Maintain hm.haConnDetails
+				if upd.State.NewState == HostAgentStateConnectedIdle ||
+					upd.State.NewState == HostAgentStateConnectedBusy {
+					delete(hm.haConnDetails, upd.Name)
+				}
+
 				// Maintain hm.haBusyStages
 				if upd.State.NewState != HostAgentStateConnectedBusy {
 					delete(hm.haBusyStages, upd.Name)
 				}
 
 				hm.updateHostsByState()
+				hm.sendStateUpdate()
+			} else if upd.ConnDetails != nil {
+				log.Printf("ConnDetails for %s: %+v", upd.Name, *upd.ConnDetails)
+				hm.haConnDetails[upd.Name] = *upd.ConnDetails
 				hm.sendStateUpdate()
 			} else if upd.BusyStage != nil {
 				hm.haBusyStages[upd.Name] = *upd.BusyStage
@@ -427,7 +441,8 @@ type HostsManagerState struct {
 	// Busy is true when a query is in progress.
 	Busy bool
 
-	BusyStageByHost map[string]BusyStage
+	ConnDetailsByHost map[string]ConnDetails
+	BusyStageByHost   map[string]BusyStage
 }
 
 func (hm *HostsManager) updateHostsByState() {
@@ -457,6 +472,11 @@ func (hm *HostsManager) sendStateUpdate() {
 		}
 	}
 
+	connDetailsCopy := make(map[string]ConnDetails, len(hm.haConnDetails))
+	for k, v := range hm.haConnDetails {
+		connDetailsCopy[k] = v
+	}
+
 	busyStagesCopy := make(map[string]BusyStage, len(hm.haBusyStages))
 	for k, v := range hm.haBusyStages {
 		busyStagesCopy[k] = v
@@ -464,13 +484,14 @@ func (hm *HostsManager) sendStateUpdate() {
 
 	upd := HostsManagerUpdate{
 		State: &HostsManagerState{
-			NumHosts:        len(hm.has),
-			HostsByState:    hm.hostsByState,
-			NumConnected:    numConnected,
-			NoMatchingHosts: hm.numNotConnected == 0 && numConnected == 0,
-			Connected:       hm.numNotConnected == 0 && numConnected > 0,
-			Busy:            hm.curQueryLogsCtx != nil,
-			BusyStageByHost: busyStagesCopy,
+			NumHosts:          len(hm.has),
+			HostsByState:      hm.hostsByState,
+			NumConnected:      numConnected,
+			NoMatchingHosts:   hm.numNotConnected == 0 && numConnected == 0,
+			Connected:         hm.numNotConnected == 0 && numConnected > 0,
+			Busy:              hm.curQueryLogsCtx != nil,
+			ConnDetailsByHost: connDetailsCopy,
+			BusyStageByHost:   busyStagesCopy,
 		},
 	}
 

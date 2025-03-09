@@ -114,6 +114,11 @@ type BusyStage struct {
 	Percentage int
 }
 
+type ConnDetails struct {
+	// Err is an error message from the last connection attempt.
+	Err string
+}
+
 func (c *connCtx) getStdoutLinesCh() chan string {
 	if c == nil {
 		return nil
@@ -138,7 +143,8 @@ type HostAgentUpdate struct {
 
 	State *HostAgentUpdateState
 
-	BusyStage *BusyStage
+	ConnDetails *ConnDetails
+	BusyStage   *BusyStage
 
 	// If TornDown is true, it means it's the last update from that agent.
 	TornDown bool
@@ -274,6 +280,12 @@ func (ha *HostAgent) run() {
 		select {
 		case res := <-ha.connectResCh:
 			if res.err != nil {
+				ha.sendUpdate(&HostAgentUpdate{
+					ConnDetails: &ConnDetails{
+						Err: res.err.Error(),
+					},
+				})
+
 				// TODO: backoff
 				ha.changeState(HostAgentStateDisconnected)
 				ha.changeState(HostAgentStateConnecting)

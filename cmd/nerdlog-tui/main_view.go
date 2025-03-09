@@ -844,7 +844,16 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 	var overlayMsg string
 
 	if !mv.curHMState.Connected && !mv.curHMState.NoMatchingHosts {
-		overlayMsg = "Connecting to hosts..."
+		var sb strings.Builder
+
+		sb.WriteString("Connecting to hosts...")
+
+		for host, connDetails := range hmState.ConnDetailsByHost {
+			sb.WriteString("\n")
+			sb.WriteString(fmt.Sprintf("%s: %s", host, connDetails.Err))
+		}
+
+		overlayMsg = sb.String()
 	} else if mv.curHMState.Busy {
 		var sb strings.Builder
 
@@ -900,7 +909,7 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 					Buttons: []string{},
 					NoFocus: true,
 					Width:   70,
-					Height:  6,
+					Height:  8,
 
 					BackgroundColor: tcell.ColorDarkBlue,
 				},
