@@ -1229,42 +1229,44 @@ func parseLineUnstructured(
 
 	ctxMap := map[string]string{}
 
-	// Extract context tags from msg
-	lastEqIdx := strings.LastIndexByte(msg, '=')
-tagsLoop:
-	for ; lastEqIdx >= 0; lastEqIdx = strings.LastIndexByte(msg, '=') {
-		val := msg[lastEqIdx+1:]
-		msg = msg[:lastEqIdx]
-		var key string
+	if false {
+		// Extract context tags from msg
+		lastEqIdx := strings.LastIndexByte(msg, '=')
+	tagsLoop:
+		for ; lastEqIdx >= 0; lastEqIdx = strings.LastIndexByte(msg, '=') {
+			val := msg[lastEqIdx+1:]
+			msg = msg[:lastEqIdx]
+			var key string
 
-		lastSpaceIdx := strings.LastIndexByte(msg, ' ')
-		if lastSpaceIdx >= 0 {
-			key = msg[lastSpaceIdx+1:]
-			msg = msg[:lastSpaceIdx]
-		} else {
-			key = msg
-			msg = ""
-		}
-
-		for _, r := range key {
-			if !unicode.IsLetter(r) && !unicode.IsNumber(r) && r != '_' && r != '-' {
-				continue tagsLoop
+			lastSpaceIdx := strings.LastIndexByte(msg, ' ')
+			if lastSpaceIdx >= 0 {
+				key = msg[lastSpaceIdx+1:]
+				msg = msg[:lastSpaceIdx]
+			} else {
+				key = msg
+				msg = ""
 			}
+
+			for _, r := range key {
+				if !unicode.IsLetter(r) && !unicode.IsNumber(r) && r != '_' && r != '-' {
+					continue tagsLoop
+				}
+			}
+
+			ctxMap[key] = val
 		}
 
-		ctxMap[key] = val
-	}
-
-	// Another hack: often our messages contain a prefix like
-	// "[ foo.bar.baz.info ]", but this is redundant since
-	// "foo.bar.baz" is already present as a namespace, and "info"
-	// is present as level_name. So we check if such redundant prefix
-	// exists, and strip it.
-	if strings.HasPrefix(msg, "[ ") {
-		if idx := strings.Index(msg, " ] "); idx >= 0 {
-			if msg[2:idx] == ctxMap["namespace"]+"."+ctxMap["level_name"] {
-				// Prefix exists and is redundant, strip it.
-				msg = msg[idx+3:]
+		// Another hack: often our messages contain a prefix like
+		// "[ foo.bar.baz.info ]", but this is redundant since
+		// "foo.bar.baz" is already present as a namespace, and "info"
+		// is present as level_name. So we check if such redundant prefix
+		// exists, and strip it.
+		if strings.HasPrefix(msg, "[ ") {
+			if idx := strings.Index(msg, " ] "); idx >= 0 {
+				if msg[2:idx] == ctxMap["namespace"]+"."+ctxMap["level_name"] {
+					// Prefix exists and is redundant, strip it.
+					msg = msg[idx+3:]
+				}
 			}
 		}
 	}
