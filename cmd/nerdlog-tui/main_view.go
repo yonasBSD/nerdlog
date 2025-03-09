@@ -1072,7 +1072,25 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 
 		// TODO: make it configurable
 		msgColor := tcell.ColorWhite
-		switch msg.Context["level_name"] {
+		levelName := "info"
+		if ln, ok := msg.Context["level_name"]; ok {
+			levelName = ln
+		} else if strings.Contains(msg.Msg, "[D]") {
+			levelName = "debug"
+		} else if strings.Contains(msg.Msg, "[I]") {
+			levelName = "info"
+		} else if strings.Contains(msg.Msg, "[W]") {
+			levelName = "warn"
+		} else if strings.Contains(msg.Msg, "[E]") {
+			levelName = "error"
+		}
+
+		switch levelName {
+		case "debug":
+			msgColor = tcell.ColorLightGreen
+		case "info":
+			// Same as default, but just to mention it explicitly
+			msgColor = tcell.ColorWhite
 		case "warn":
 			msgColor = tcell.ColorYellow
 		case "error":
@@ -1091,7 +1109,7 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 			case FieldNameTime:
 				cell = newTableCellLogmsg(timeStr).SetTextColor(tcell.ColorLightBlue)
 			case FieldNameMessage:
-				cell = newTableCellLogmsg(msg.Msg).SetTextColor(msgColor)
+				cell = newTableCellLogmsg(tview.Escape(msg.Msg)).SetTextColor(msgColor)
 			default:
 				cell = newTableCellLogmsg(msg.Context[colName]).SetTextColor(msgColor)
 			}
@@ -1467,7 +1485,7 @@ func (mv *MainView) showOriginalMsg(msg core.LogMsg) {
 	s := fmt.Sprintf(
 		"ssh -t %s 'vim +\"set ft=messages\" +%d <(tail -n +%d %s | head -n %d)'\n\n%s",
 		msg.Context["source"], lnOffsetUp+1, lnBegin, msg.LogFilename, lnOffsetUp+lnOffsetDown,
-		msg.OrigLine,
+		tview.Escape(msg.OrigLine),
 	)
 
 	mv.showMessagebox("msg", "Message", s, &MessageboxParams{

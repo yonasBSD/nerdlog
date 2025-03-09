@@ -769,7 +769,7 @@ func (rdv *RowDetailsView) updateUI() {
 		}
 		rdv.tbl.SetCell(nRow, rdvColIdxName, nameCell)
 
-		valStr := val
+		valStr := tview.Escape(val)
 		if filteredByValue {
 			valStr = "🔍 " + valStr
 		}
