@@ -130,7 +130,7 @@ function syslogFieldsToTimestamp(monthStr, day, hhmmss) {
   monthByName["Dec"] = "12";
 
   month = monthByName[monthStr]
-  year = 2022
+  year = 2025
   hour = substr(hhmmss, 1, 2)
   min = substr(hhmmss, 4, 2)
 
@@ -180,7 +180,7 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
 #         fortunately they all use UTC as local time, so shouldn't be an issue.
 #         Harder to debug locally though.
 # TODO: ^ move initialization of monthByName out of logFieldsToTimestamp somehow
-# TODO: ^ year needs to be inferred instead of hardcoding 2022
+# TODO: ^ year needs to be inferred instead of hardcoding 2025
 # TODO: ^ if we fail to find the next timestamp and abort on 1000, print an error,
 # and then the Go part should see this error and report it to user
 

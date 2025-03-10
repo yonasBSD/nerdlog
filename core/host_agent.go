@@ -531,6 +531,8 @@ func (ha *HostAgent) run() {
 				continue
 			}
 
+			//log.Printf("hey stderr line(%s): %s", ha.params.Config.Name, line)
+
 			lastUpdTime = time.Now()
 
 			// NOTE: the "p:" lines (process-related) are here in stderr, because

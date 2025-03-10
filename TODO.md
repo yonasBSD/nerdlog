@@ -1,5 +1,6 @@
 ## TODO before publishing
 
+- Year is being hardcoded in `nerdlog_query.sh`, obviously that needs to be fixed.
 - Reimplement host selection (see details below)
   - Aliases to be used as "source"
   - Parsing of things like {foo,bar}: so that
