@@ -1,4 +1,4 @@
-neither --from or --to are given, but index doesn't exist at all, gonna rebuild
+debug:neither --from or --to are given, but index doesn't exist at all, gonna rebuild
 p:stage:1:indexing from scratch
 p:p:15
 p:p:20
@@ -11,7 +11,7 @@ p:p:70
 p:p:75
 p:p:80
 p:p:95
-from  () to  ()
+debug:from  () to  ()
 p:stage:3:querying logs
-Getting logs from the very beginning in /tmp/nerdlog_query_test_output/001_basic/logfile.1 until the end of /tmp/nerdlog_query_test_output/001_basic/logfile
+debug:Getting logs from the very beginning in /tmp/nerdlog_query_test_output/001_basic/logfile.1 until the end of /tmp/nerdlog_query_test_output/001_basic/logfile
 p:stage:4:done

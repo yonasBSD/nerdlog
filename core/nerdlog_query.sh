@@ -235,9 +235,9 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
     local last_bytenr="$(tail -n 1 $cachefile | cut -f4)"
     local size_to_index=$((total_size-last_bytenr))
 
-    echo hey $lastTimestr 1>&2
-    echo hey2 $last_linenr $last_bytenr 1>&2
-    echo hey3 $size_to_index 1>&2
+    echo debug:hey $lastTimestr 1>&2
+    echo debug:hey2 $last_linenr $last_bytenr 1>&2
+    echo debug:hey3 $size_to_index 1>&2
 
     tail -c +$((last_bytenr-prevlog_bytes)) $logfile_last | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
   '"$script1"'
@@ -269,7 +269,7 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
   # in index before the first line in the $logfile_last.
   # TODO: make sure that if there are no logs in the $lotfile1, we don't screw up.
     local lastTimestr="$(tail -n 2 $cachefile | head -n 1 | cut -f2)"
-    #echo hey3 $lastTimestr 1>&2
+    #echo debug:hey3 $lastTimestr 1>&2
     awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
   '"$script1"'
   ( lastHHMM != curHHMM ) {
@@ -314,12 +314,12 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   logfile_prev_stored_modtime="$(get_prevlog_modtime_from_cache)"
   logfile_prev_cur_modtile=$(stat -c %y $logfile_prev)
   if [[ "$logfile_prev_stored_modtime" != "$logfile_prev_cur_modtile" ]]; then
-    echo "logfile has changed: stored '$logfile_prev_stored_modtime', actual '$logfile_prev_cur_modtile', deleting it" 1>&2
+    echo "debug:logfile has changed: stored '$logfile_prev_stored_modtime', actual '$logfile_prev_cur_modtile', deleting it" 1>&2
     rm -f $cachefile
   fi
 
   if ! get_prevlog_lines_from_cache > /dev/null; then
-    echo "broken cache file (no prevlog lines), deleting it" 1>&2
+    echo "debug:broken cache file (no prevlog lines), deleting it" 1>&2
     rm -f $cachefile
   fi
 
@@ -330,7 +330,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   if [[ "$from" != "" ]]; then
     read -r from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from)
     if [[ "$from_bytenr" == "" ]]; then
-      echo "the from isn't found, gonna refresh the cache" 1>&2
+      echo "debug:the from isn't found, gonna refresh the cache" 1>&2
       refresh_and_retry=1
     fi
   fi
@@ -338,7 +338,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   if [[ "$to" != "" ]]; then
     read -r to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to)
     if [[ "$to_bytenr" == "" ]]; then
-      echo "the to isn't found, gonna refresh the cache" 1>&2
+      echo "debug:the to isn't found, gonna refresh the cache" 1>&2
       refresh_and_retry=1
     fi
   fi
@@ -349,27 +349,27 @@ if [[ "$from" != "" || "$to" != "" ]]; then
     if [[ "$from" != "" ]]; then
       read -r from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from)
       if [[ "$from_bytenr" == "" ]]; then
-        echo "the from isn't found, will use the beginning" 1>&2
+        echo "debug:the from isn't found, will use the beginning" 1>&2
       fi
     fi
 
     if [[ "$to" != "" ]]; then
       read -r to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to)
       if [[ "$to_bytenr" == "" ]]; then
-        echo "the to isn't found, will use the end" 1>&2
+        echo "debug:the to isn't found, will use the end" 1>&2
       fi
     fi
 
   fi
 else
   if ! [ -s $cachefile ]; then
-    echo "neither --from or --to are given, but index doesn't exist at all, gonna rebuild" 1>&2
+    echo "debug:neither --from or --to are given, but index doesn't exist at all, gonna rebuild" 1>&2
     refresh_cache
   fi
 fi
 
 
-echo "from $from_linenr ($from_bytenr) to $to_linenr ($to_bytenr)" 1>&2
+echo "debug:from $from_linenr ($from_bytenr) to $to_linenr ($to_bytenr)" 1>&2
 
 echo "p:stage:$STAGE_QUERYING:querying logs" 1>&2
 
@@ -395,19 +395,19 @@ num_bytes_to_scan=0
 if [[ "$from_bytenr" == "" && "$to_bytenr" == "" ]]; then
   # Getting _all_ available logs
   num_bytes_to_scan=$total_size
-  echo hey1 $num_bytes_to_scan 2>&1
+  echo debug:hey1 $num_bytes_to_scan 2>&1
 elif [[ "$from_bytenr" != "" && "$to_bytenr" == "" ]]; then
   # Getting logs from some point in time to the very end (most frequent case)
   num_bytes_to_scan=$((total_size-from_bytenr))
-  echo hey2 "|$num_bytes_to_scan,$total_size,$from_bytenr|" 2>&1
+  echo debug:hey2 "|$num_bytes_to_scan,$total_size,$from_bytenr|" 2>&1
 elif [[ "$from_bytenr" == "" && "$to_bytenr" != "" ]]; then
   # Getting logs from the beginning until some point in time
   num_bytes_to_scan=$((to_bytenr))
-  echo hey3 $num_bytes_to_scan 2>&1
+  echo debug:hey3 $num_bytes_to_scan 2>&1
 else
   # Getting logs between two points T1 and T2
   num_bytes_to_scan=$((to_bytenr-from_bytenr))
-  echo hey4 $num_bytes_to_scan 2>&1
+  echo debug:hey4 $num_bytes_to_scan 2>&1
 fi
 
 # NOTE: this script MUST be executed with the "-b" awk key, which means that
@@ -498,20 +498,20 @@ if [[ "$from_bytenr" != "" && $(( from_bytenr > prevlog_bytes )) == 1 ]]; then
   from_bytenr=$(( from_bytenr - prevlog_bytes ))
   if [[ "$to_bytenr" != "" ]]; then
     to_bytenr=$(( to_bytenr - prevlog_bytes ))
-    echo "Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the $logfile_last" 1>&2
+    echo "debug:Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the $logfile_last" 1>&2
     cmds+=("tail -c +$from_bytenr $logfile_last | head -c $((to_bytenr - from_bytenr))")
   else
     # Most common case
-    echo "Getting logs from offset $from_bytenr until the end of $logfile_last." 1>&2
+    echo "debug:Getting logs from offset $from_bytenr until the end of $logfile_last." 1>&2
     cmds+=("tail -c +$from_bytenr $logfile_last")
   fi
 elif [[ "$to_bytenr" != "" && $(( to_bytenr <= prevlog_bytes )) == 1 ]]; then
   # Only $logfile_prev is used.
   if [[ "$from_bytenr" != "" ]]; then
-    echo "Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the $logfile_prev" 1>&2
+    echo "debug:Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the $logfile_prev" 1>&2
     cmds+=("tail -c +$from_bytenr $logfile_prev | head -c $((to_bytenr - from_bytenr))")
   else
-    echo "Getting logs from the very beginning to offset $(( to_bytenr - 1 )), all in the $logfile_prev." 1>&2
+    echo "debug:Getting logs from the very beginning to offset $(( to_bytenr - 1 )), all in the $logfile_prev." 1>&2
     cmds+=("head -c $(( to_bytenr - 1)) $logfile_prev")
   fi
 else
@@ -532,7 +532,7 @@ else
     cmds+=("cat $logfile_last")
   fi
 
-  echo "$info" 1>&2
+  echo "debug:$info" 1>&2
 fi
 
 # Now execute all those commands, and feed those logs to the awk script
