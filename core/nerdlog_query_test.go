@@ -63,9 +63,11 @@ func TestReadFileRelativeToThisFile(t *testing.T) {
 			continue
 		}
 
-		if err := runTestCase(t, nerdlogQuerySh, testCasesDir, entry.Name()); err != nil {
-			t.Fatalf("running test case %s: %s", entry.Name(), err.Error())
-		}
+		t.Run(entry.Name(), func(t *testing.T) {
+			if err := runTestCase(t, nerdlogQuerySh, testCasesDir, entry.Name()); err != nil {
+				t.Fatalf("running test case %s: %s", entry.Name(), err.Error())
+			}
+		})
 	}
 }
 
