@@ -29,5 +29,5 @@ p:p:90
 p:p:95
 debug:from 280 (18618) to 295 (19615)
 p:stage:3:querying logs
-debug:Getting logs from offset 18618 in /tmp/nerdlog_query_test_output/edge_of_two_fles/03_basic_more_less_than_max/logfile.1 to offset 458 in /tmp/nerdlog_query_test_output/edge_of_two_fles/03_basic_more_less_than_max/logfile
+debug:Getting logs from offset 18618 in prev /tmp/nerdlog_query_test_output/edge_of_two_fles/03_basic_more_less_than_max/logfile.1 to offset 458 in latest /tmp/nerdlog_query_test_output/edge_of_two_fles/03_basic_more_less_than_max/logfile
 p:stage:4:done

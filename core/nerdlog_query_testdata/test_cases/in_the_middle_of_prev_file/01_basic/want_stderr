@@ -29,5 +29,5 @@ p:p:90
 p:p:95
 debug:from 132 (8680) to 148 (9734)
 p:stage:3:querying logs
-debug:Getting logs from offset 8680, only 1054 bytes, all in the /tmp/nerdlog_query_test_output/in_the_middle_of_prev_file/01_basic/logfile.1
+debug:Getting logs from offset 8680, only 1054 bytes, all in the prev /tmp/nerdlog_query_test_output/in_the_middle_of_prev_file/01_basic/logfile.1
 p:stage:4:done

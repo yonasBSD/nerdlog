@@ -27,5 +27,5 @@ p:p:90
 p:p:95
 debug:from 1033 (68556) to  ()
 p:stage:3:querying logs
-debug:Getting logs from offset 49400 until the end of /tmp/nerdlog_query_test_output/latest_logs_same_file/02_basic_more_full_amount/logfile.
+debug:Getting logs from offset 49400 until the end of latest /tmp/nerdlog_query_test_output/latest_logs_same_file/02_basic_more_full_amount/logfile.
 p:stage:4:done

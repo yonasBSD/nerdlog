@@ -497,37 +497,37 @@ if [[ "$from_bytenr" != "" && $(( from_bytenr > prevlog_bytes )) == 1 ]]; then
   from_bytenr=$(( from_bytenr - prevlog_bytes ))
   if [[ "$to_bytenr" != "" ]]; then
     to_bytenr=$(( to_bytenr - prevlog_bytes ))
-    echo "debug:Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the $logfile_last" 1>&2
+    echo "debug:Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the latest $logfile_last" 1>&2
     cmds+=("tail -c +$from_bytenr $logfile_last | head -c $((to_bytenr - from_bytenr))")
   else
     # Most common case
-    echo "debug:Getting logs from offset $from_bytenr until the end of $logfile_last." 1>&2
+    echo "debug:Getting logs from offset $from_bytenr until the end of latest $logfile_last." 1>&2
     cmds+=("tail -c +$from_bytenr $logfile_last")
   fi
 elif [[ "$to_bytenr" != "" && $(( to_bytenr <= prevlog_bytes )) == 1 ]]; then
   # Only $logfile_prev is used.
   if [[ "$from_bytenr" != "" ]]; then
-    echo "debug:Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the $logfile_prev" 1>&2
+    echo "debug:Getting logs from offset $from_bytenr, only $((to_bytenr - from_bytenr)) bytes, all in the prev $logfile_prev" 1>&2
     cmds+=("tail -c +$from_bytenr $logfile_prev | head -c $((to_bytenr - from_bytenr))")
   else
-    echo "debug:Getting logs from the very beginning to offset $(( to_bytenr - 1 )), all in the $logfile_prev." 1>&2
+    echo "debug:Getting logs from the very beginning to offset $(( to_bytenr - 1 )), all in the prev $logfile_prev." 1>&2
     cmds+=("head -c $(( to_bytenr - 1)) $logfile_prev")
   fi
 else
   # Both log files are used
   if [[ "$from_bytenr" != "" ]]; then
-    info="Getting logs from offset $from_bytenr in $logfile_prev"
+    info="Getting logs from offset $from_bytenr in prev $logfile_prev"
     cmds+=("tail -c +$from_bytenr $logfile_prev")
   else
-    info="Getting logs from the very beginning in $logfile_prev"
+    info="Getting logs from the very beginning in prev $logfile_prev"
     cmds+=("cat $logfile_prev")
   fi
 
   if [[ "$to_bytenr" != "" ]]; then
-    info="$info to offset $(( to_bytenr - prevlog_bytes - 1 )) in $logfile_last"
+    info="$info to offset $(( to_bytenr - prevlog_bytes - 1 )) in latest $logfile_last"
     cmds+=("head -c $(( to_bytenr - prevlog_bytes - 1 )) $logfile_last")
   else
-    info="$info until the end of $logfile_last"
+    info="$info until the end of latest $logfile_last"
     cmds+=("cat $logfile_last")
   fi
 
