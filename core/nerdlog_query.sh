@@ -114,6 +114,23 @@ function refresh_cache { # {{{
 
   # Add new entries to cache, if needed
 
+  # NOTE: syslogFieldsToTimestamp parses the traditional systemd timestamp
+  # format, like this: "Apr  5 11:07:46". But in the recent versions of
+  # rsyslog, it's not the default; that traditional timestamp format can be
+  # enabled by adding this line:
+  #
+  # $ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat
+  #
+  # to /etc/rsyslog.conf
+  #
+  # To use ISO 1806 instead (which is the default in recent rsyslog versions),
+  # like "2025-04-05T11:07:46.161001+03:00":
+  #
+  # $ActionFileDefaultTemplate RSYSLOG_FileFormat
+  #
+  # But this function (and its usages) need to be updated to support it, and a
+  # bunch of other time-filtering logic here. Although it's cool since it
+  # includes the year, microseconds, and timezone.
   awk_functions='
 function syslogFieldsToTimestamp(monthStr, day, hhmmss) {
   monthByName["Jan"] = "01";
