@@ -25,6 +25,19 @@
 - Fix an issue with things like "[system]" in the log messages being interpreted
   by tview
 
+### TODO testing
+
+- Benchmarks, with both short and big log files, at least for the most common case
+  with --from but no --to
+- Try to move the monthByName definitions outside of the function, see if it improves
+  performance
+- Add support for the new syslog format: we need to change these parts:
+    - syslogFieldsToTimestamp needs to detect which format it is, and use it,
+      seems easy
+    - "curHHMM = substr($3, 1, 5)": also gotta detect which format it is, and
+      take the HHMM from the right offsets
+    - hopefully that's all, but maybe there's something that I'm missing
+
 ### Reimplement host selection
 
 Reimplement host selection: instead of always having to have an exhaustive list

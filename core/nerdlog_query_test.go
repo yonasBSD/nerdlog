@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -75,8 +76,6 @@ func runTestCase(t *testing.T, nerdlogQuerySh, testCasesDir, testName string) er
 	testCaseDir := filepath.Join(testCasesDir, testName)
 	testCaseDescrFname := filepath.Join(testCaseDir, testCaseYamlFname)
 
-	assertArgs := []interface{}{"test case %s", testName}
-
 	testOutputDir := filepath.Join(testOutputRoot, testName)
 	if err := os.MkdirAll(testOutputDir, 0755); err != nil {
 		return errors.Annotatef(err, "unable to create test output dir %s", testOutputDir)
@@ -124,15 +123,8 @@ func runTestCase(t *testing.T, nerdlogQuerySh, testCasesDir, testName string) er
 	}
 
 	indexFname := filepath.Join(testOutputDir, "nerdlog_query_index")
-	stdoutFname := filepath.Join(testOutputDir, "nerdlog_query_stdout")
-	stderrFname := filepath.Join(testOutputDir, "nerdlog_query_stderr")
 
 	os.Remove(indexFname)
-	os.Remove(stdoutFname)
-	os.Remove(stderrFname)
-
-	stdoutFile, err := os.Create(stdoutFname)
-	stderrFile, err := os.Create(stderrFname)
 
 	cmdArgs := append(
 		[]string{
@@ -144,15 +136,110 @@ func runTestCase(t *testing.T, nerdlogQuerySh, testCasesDir, testName string) er
 		tc.Args...,
 	)
 
-	cmd := exec.Command("/bin/bash", cmdArgs...)
+	// Do the full run, with the provided initial index (which in most cases
+	// means, without any index)
+	if err := runNerdlogQuery(t, cmdArgs, testCaseDir, testName, testNerdlogQueryParams{
+		checkStderr: true,
+	}); err != nil {
+		return errors.Trace(err)
+	}
+
+	// Backup the resulting fully-built index
+	indexFullFname := filepath.Join(testOutputDir, "nerdlog_query_index_full")
+	if err := copyFile(indexFname, indexFullFname); err != nil {
+		return errors.Annotatef(err, "backing up index as full index: from %s to %s", indexFname, indexFullFname)
+	}
+
+	// Now, keep running the same query with smaller index: on every iteration,
+	// we'll remove one more line from the index end, and expect the same stdout
+	// (not stderr though, this one will be different).
+
+	numLines, err := getNumLines(indexFullFname)
+	if err != nil {
+		return errors.Annotatef(err, "getting numer of lines in %s", indexFullFname)
+	}
+
+	// We can only remove the "idx" lines from the index.
+	minLineno, err := getLastNonMatchingLine(indexFullFname, "idx")
+	if err != nil {
+		return errors.Annotatef(err, "getLastNonMatchingLine")
+	}
+
+	// minLineno points to the line containing the last non-"idx" entry, but
+	// we actually need at least one "idx" entry in the index file for it to work,
+	// so we increment it.
+	minLineno += 1
+
+	for keepLines := numLines - 1; ; keepLines -= 100 {
+		// If we step too much below the min, use the min (and we'll break below).
+		if keepLines < minLineno {
+			keepLines = minLineno
+		}
+
+		_, err := copyUpToNumLines(indexFullFname, indexFname, keepLines)
+		if err != nil {
+			return errors.Annotatef(
+				err, "copying up to %d lines from %s to %s",
+				keepLines, indexFullFname, indexFname,
+			)
+		}
+
+		t.Run(fmt.Sprintf("keep_%d_lines", keepLines), func(t *testing.T) {
+			if err := runNerdlogQuery(t, cmdArgs, testCaseDir, testName, testNerdlogQueryParams{
+				// When changing the index, stderr would change too.
+				checkStderr: false,
+			}); err != nil {
+				t.Fatalf("error: %s", err.Error())
+			}
+		})
+
+		if keepLines <= minLineno {
+			break
+		}
+	}
+
+	// TODO: the stats lines in stdout (these starting from "s:") are printed in
+	// arbitrary order because they come from a hashmap, so simply comparing the
+	// output is a bad idea. Gotta do some post-processing, like sorting these "s:"
+	// lines, before comparing them.
+
+	// TODO: gotta also do some benchmarks. Very useful for refactorings.
+
+	return nil
+}
+
+type testNerdlogQueryParams struct {
+	checkStderr bool
+}
+
+func runNerdlogQuery(
+	t *testing.T, bashArgs []string, testCaseDir, testName string,
+	params testNerdlogQueryParams,
+) error {
+	assertArgs := []interface{}{"test case %s", testName}
+
+	testOutputDir := filepath.Join(testOutputRoot, testName)
+
+	stdoutFname := filepath.Join(testOutputDir, "nerdlog_query_stdout")
+	stderrFname := filepath.Join(testOutputDir, "nerdlog_query_stderr")
+	os.Remove(stdoutFname)
+	os.Remove(stderrFname)
+
+	stdoutFile, err := os.Create(stdoutFname)
+	defer stdoutFile.Close()
+
+	stderrFile, err := os.Create(stderrFname)
+	defer stderrFile.Close()
+
+	cmd := exec.Command("/bin/bash", bashArgs...)
 
 	cmd.Env = append(os.Environ(), "TZ=UTC")
 	cmd.Stdout = stdoutFile
 	cmd.Stderr = stderrFile
 
-	fmt.Printf("Running %+v\n", cmdArgs)
+	fmt.Printf("Running %+v\n", bashArgs)
 	if err := cmd.Run(); err != nil {
-		return errors.Annotatef(err, "running nerdlog query command %+v", cmdArgs)
+		return errors.Annotatef(err, "running nerdlog query command %+v", bashArgs)
 	}
 
 	wantStdout, err := os.ReadFile(filepath.Join(testCaseDir, "want_stdout"))
@@ -176,18 +263,10 @@ func runTestCase(t *testing.T, nerdlogQuerySh, testCasesDir, testName string) er
 	}
 
 	assert.Equal(t, string(wantStdout), string(gotStdout), assertArgs...)
-	assert.Equal(t, string(wantStderr), string(gotStderr), assertArgs...)
 
-	// TODO: somehow also test with incomplete index: maybe just remove lines one by
-	// one from the end (until the "prevlog_lines" line), rerunning the same command,
-	// and making sure that the stdout is the same (stderr might differ though).
-
-	// TODO: the stats lines in stdout (these starting from "s:") are printed in
-	// arbitrary order because they come from a hashmap, so simply comparing the
-	// output is a bad idea. Gotta do some post-processing, like sorting these "s:"
-	// lines, before comparing them.
-
-	// TODO: gotta also do some benchmarks. Very useful for refactorings.
+	if params.checkStderr {
+		assert.Equal(t, string(wantStderr), string(gotStderr), assertArgs...)
+	}
 
 	return nil
 }
@@ -299,8 +378,6 @@ func setSyslogFileModTime(fname string) error {
 		return errors.Annotatef(err, "getting timestamp of the last log message in %s", fname)
 	}
 
-	fmt.Println("Hey setting time", fname, lastLogTime)
-
 	if err := os.Chtimes(fname, lastLogTime, lastLogTime); err != nil {
 		return errors.Annotatef(err, "setting mod time of %s", fname)
 	}
@@ -349,4 +426,97 @@ func getTestCaseDirs(testCasesDir string) ([]string, error) {
 	}
 
 	return result, nil
+}
+
+// getNumLines returns the number of lines in the given file.
+func getNumLines(fname string) (int, error) {
+	file, err := os.Open(fname)
+	if err != nil {
+		return 0, errors.Annotatef(err, "failed to open file %q", fname)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	lineCount := 0
+	for scanner.Scan() {
+		lineCount++
+	}
+
+	if err := scanner.Err(); err != nil {
+		return 0, errors.Annotate(err, "error while scanning file")
+	}
+
+	return lineCount, nil
+}
+
+// getLastNonMatchingLine returns the number of the last line which does not start
+// with the given string. Line numbers are 1-based.
+func getLastNonMatchingLine(fname string, prefix string) (int, error) {
+	file, err := os.Open(fname)
+	if err != nil {
+		return 0, errors.Annotatef(err, "failed to open file: %s", fname)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	lineNumber := 0
+	lastNonMatchingLine := 0
+
+	for scanner.Scan() {
+		lineNumber++
+		line := scanner.Text()
+		if !strings.HasPrefix(line, prefix) {
+			lastNonMatchingLine = lineNumber
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return 0, errors.Annotate(err, "error scanning file")
+	}
+
+	return lastNonMatchingLine, nil
+}
+
+// copyUpToNumLines copies srcPath as destPath, but only the first maxNumLines.
+// It returns the last line.
+func copyUpToNumLines(srcPath, destPath string, maxNumLines int) (string, error) {
+	srcFile, err := os.Open(srcPath)
+	if err != nil {
+		return "", errors.Annotatef(err, "failed to open source file: %s", srcPath)
+	}
+	defer srcFile.Close()
+
+	destFile, err := os.Create(destPath)
+	if err != nil {
+		return "", errors.Annotatef(err, "failed to create destination file: %s", destPath)
+	}
+	defer destFile.Close()
+
+	scanner := bufio.NewScanner(srcFile)
+	writer := bufio.NewWriter(destFile)
+	defer writer.Flush()
+
+	var lastLine string
+	lineCount := 0
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if lineCount < maxNumLines {
+			_, err := writer.WriteString(line + "\n")
+			if err != nil {
+				return "", errors.Annotate(err, "failed to write line to destination file")
+			}
+		}
+		lastLine = line
+		lineCount++
+		if lineCount >= maxNumLines {
+			break
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", errors.Annotate(err, "error while scanning source file")
+	}
+
+	return lastLine, nil
 }
