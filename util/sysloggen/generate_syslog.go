@@ -1,10 +1,12 @@
-package main
+package sysloggen
 
 import (
 	"fmt"
 	"math/rand"
 	"os"
 	"time"
+
+	"github.com/juju/errors"
 )
 
 var facilities = []string{
@@ -169,41 +171,98 @@ func generateSyslogEntry(ts time.Time) string {
 	return fmt.Sprintf("%s %s %s[%d]: <%s> %s", timestamp, hostname, tag, pid, severity, message)
 }
 
-func randomStep() time.Duration {
-	if rand.Float64() < 0.2 {
-		// 2% chance of 1ms burst
-		return 1 * time.Millisecond
-	}
-	// Otherwise, pick between 2ms and 10min
-	min := int64(2 * time.Millisecond)
-	max := int64(10 * time.Minute)
+func randomStep(params *Params) time.Duration {
+	//if rand.Float64() < 0.2 {
+	//return 1 * time.Millisecond
+	//}
+
+	min := int64(params.MinDelayMS) * int64(time.Millisecond)
+	max := int64(params.MaxDelayMS) * int64(time.Millisecond)
 	return time.Duration(rand.Int63n(max-min) + min)
 }
 
-func main() {
-	rand.Seed(time.Now().UnixNano())
+type Params struct {
+	StartTime     time.Time
+	SecondLogTime time.Time
 
-	file, err := os.Create("random_syslog.log")
-	if err != nil {
-		fmt.Println("Error creating file:", err)
-		return
-	}
-	defer file.Close()
+	// LogBasename is a name like "mylog", can be "/path/to/mylog" as well.
+	// The first (older) log will have the ".1" appended to it.
+	LogBasename string
 
-	curTime, err := time.Parse(time.RFC3339, "2025-03-09T15:04:05Z")
-	if err != nil {
-		panic(err.Error())
-	}
+	NumLogs int
 
-	for i := 0; i < 1000; i++ {
-		curTime = curTime.Add(randomStep())
-		logEntry := generateSyslogEntry(curTime)
-		_, err := file.WriteString(logEntry + "\n")
-		if err != nil {
-			fmt.Println("Error writing to file:", err)
-			return
+	MinDelayMS int
+	MaxDelayMS int
+
+	RandomSeed int
+
+	// SkipIfPrevLogSizeIs and SkipIfLastLogSizeIs are an optimization:
+	// if the log files already exist and are of these exact sizes, don't
+	// generate anything.
+	SkipIfPrevLogSizeIs int64
+	SkipIfLastLogSizeIs int64
+}
+
+func GenerateSyslog(params Params) error {
+	rand.Seed(int64(params.RandomSeed))
+
+	curTime := params.StartTime
+
+	prevlogFname := params.LogBasename + ".1"
+	lastlogFname := params.LogBasename
+
+	if params.SkipIfPrevLogSizeIs != 0 && params.SkipIfLastLogSizeIs != 0 {
+		var prevlogSize int64
+		var lastlogSize int64
+
+		prevlogStat, err := os.Stat(prevlogFname)
+		if err == nil {
+			prevlogSize = prevlogStat.Size()
+		}
+
+		lastlogStat, err := os.Stat(lastlogFname)
+		if err == nil {
+			lastlogSize = lastlogStat.Size()
+		}
+
+		if params.SkipIfPrevLogSizeIs == prevlogSize &&
+			params.SkipIfLastLogSizeIs == lastlogSize {
+			// Nothing to do
+			//fmt.Println("Log files already exist and are of expected sizes, skipping generation")
+			return nil
 		}
 	}
 
-	fmt.Println("Generated 1000 syslog entries with random steps and 2% 1ms bursts.")
+	fmt.Println("Generating log files...")
+
+	file, err := os.Create(prevlogFname)
+	if err != nil {
+		return errors.Annotatef(err, "creating first log file")
+	}
+	defer file.Close()
+
+	numLogFile := 0
+
+	for i := 0; i < params.NumLogs; i++ {
+		curTime = curTime.Add(randomStep(&params))
+		if !curTime.Before(params.SecondLogTime) && numLogFile == 0 {
+			numLogFile += 1
+			file.Close()
+
+			var err error
+			file, err = os.Create(lastlogFname)
+			if err != nil {
+				return errors.Annotatef(err, "creating second log file")
+			}
+			defer file.Close()
+		}
+
+		logEntry := generateSyslogEntry(curTime)
+		_, err := file.WriteString(logEntry + "\n")
+		if err != nil {
+			return errors.Annotatef(err, "writing to log file")
+		}
+	}
+
+	return nil
 }
