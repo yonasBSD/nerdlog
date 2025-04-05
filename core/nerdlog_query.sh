@@ -17,18 +17,6 @@ cachefile=/tmp/nerdlog_query_cache
 logfile_prev=/var/log/syslog.1
 logfile_last=/var/log/syslog
 
-# Just a hack to account for cases when /var/log/syslog.1 doesn't exist:
-# create an empty file and pretend that it's an empty log file.
-if [ ! -e "$logfile_prev"  ]; then
-  logfile_prev="/tmp/nerdlog-empty-file"
-  rm -f $logfile_prev
-  touch $logfile_prev
-fi
-
-logfile_prev_size=$(stat -c%s $logfile_prev)
-logfile_last_size=$(stat -c%s $logfile_last)
-total_size=$((logfile_prev_size+logfile_last_size))
-
 positional_args=()
 
 max_num_lines=100
@@ -86,6 +74,18 @@ while [[ $# -gt 0 ]]; do
 done
 
 set -- "${positional_args[@]}" # restore positional parameters
+
+# Just a hack to account for cases when /var/log/syslog.1 doesn't exist:
+# create an empty file and pretend that it's an empty log file.
+if [ ! -e "$logfile_prev"  ]; then
+  logfile_prev="/tmp/nerdlog-empty-file"
+  rm -f $logfile_prev
+  touch $logfile_prev
+fi
+
+logfile_prev_size=$(stat -c%s $logfile_prev)
+logfile_last_size=$(stat -c%s $logfile_last)
+total_size=$((logfile_prev_size+logfile_last_size))
 
 user_pattern=$1
 
