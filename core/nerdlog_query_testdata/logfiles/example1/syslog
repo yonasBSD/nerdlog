@@ -30,7 +30,7 @@ Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
 Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
 Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
 Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
-Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:49:44 myhost authpriv[2883]: non-ascii chars: тест тест
 Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
 Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
 Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful

@@ -11,6 +11,7 @@ p:p:15
 p:p:20
 p:p:25
 p:p:25
+p:p:30
 p:p:35
 p:p:40
 p:p:45
@@ -24,7 +25,7 @@ p:p:80
 p:p:85
 p:p:90
 p:p:95
-debug:from 1033 (68535) to  ()
+debug:from 1033 (68556) to  ()
 p:stage:3:querying logs
-debug:Getting logs from offset 49392 until the end of /tmp/nerdlog_query_test_output/latest_logs_same_file/03_basic_more_less_than_max/logfile.
+debug:Getting logs from offset 49400 until the end of /tmp/nerdlog_query_test_output/latest_logs_same_file/03_basic_more_less_than_max/logfile.
 p:stage:4:done
