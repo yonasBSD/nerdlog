@@ -1,0 +1,16 @@
+Mar 10 10:00:01 myhost kern[5159]: <emerg> Disk space reclaimed
+Mar 10 10:14:05 myhost auth[8368]: <err> Database schema updated
+Mar 10 10:20:17 myhost syslog[4163]: <emerg> System health check failed
+Mar 10 10:20:46 myhost lpr[891]: <warning> User session timed out
+Mar 10 10:24:32 myhost user[8515]: <warning> Cache cleared
+Mar 10 10:27:26 myhost kern[2205]: <crit> Session token expired
+Mar 10 10:27:26 myhost cron[9005]: <notice> File transfer completed
+Mar 10 10:32:21 myhost daemon[8000]: <notice> Failed login attempt
+Mar 10 10:32:21 myhost mail[7726]: <notice> Error reading file
+Mar 10 10:33:00 myhost kern[4506]: <emerg> Service request queued
+Mar 10 10:34:31 myhost cron[935]: <err> Database connection error
+Mar 10 10:36:14 myhost user[2831]: <debug> File system full
+Mar 10 10:38:25 myhost mail[8342]: <emerg> User account disabled
+Mar 10 10:45:04 myhost authpriv[7892]: <err> Memory usage high
+Mar 10 10:51:01 myhost user[3758]: <crit> System running low on resources
+Mar 10 10:57:37 myhost news[5185]: <alert> Insufficient privileges
