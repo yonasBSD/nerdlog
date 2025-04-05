@@ -13,5 +13,5 @@ p:p:80
 p:p:95
 from  () to  ()
 p:stage:3:querying logs
-Getting logs from the very beginning in /tmp/nerdlog_query_test_output/01_basic/logfile.1 until the end of /tmp/nerdlog_query_test_output/01_basic/logfile
+Getting logs from the very beginning in /tmp/nerdlog_query_test_output/001_basic/logfile.1 until the end of /tmp/nerdlog_query_test_output/001_basic/logfile
 p:stage:4:done
