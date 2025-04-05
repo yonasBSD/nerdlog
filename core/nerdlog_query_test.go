@@ -145,6 +145,9 @@ func runTestCase(t *testing.T, nerdlogQueryShFname, testCasesDir, testName strin
 		return errors.Trace(err)
 	}
 
+	// TODO: add an env var or something to disable the tests for indexing up.
+	//return nil
+
 	// Backup the resulting fully-built index
 	indexFullFname := filepath.Join(testOutputDir, "nerdlog_query_index_full")
 	if err := copyFile(indexFname, indexFullFname); err != nil {
