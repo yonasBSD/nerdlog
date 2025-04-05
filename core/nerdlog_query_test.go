@@ -1,14 +1,17 @@
 package core
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/juju/errors"
 	"github.com/stretchr/testify/assert"
@@ -111,8 +114,16 @@ func runTestCase(t *testing.T, nerdlogQuerySh, testCasesDir, testName string) er
 		return errors.Annotatef(err, "copying logfile last: from %s to %s", logfiles[0], logfileLast)
 	}
 
+	if err := setSyslogFileModTime(logfileLast); err != nil {
+		return errors.Trace(err)
+	}
+
 	if err := copyFile(logfiles[1], logfilePrev); err != nil {
 		return errors.Annotatef(err, "copying logfile prev: from %s to %s", logfiles[1], logfilePrev)
+	}
+
+	if err := setSyslogFileModTime(logfilePrev); err != nil {
+		return errors.Trace(err)
 	}
 
 	indexFname := filepath.Join(testOutputDir, "nerdlog_query_index")
@@ -138,6 +149,7 @@ func runTestCase(t *testing.T, nerdlogQuerySh, testCasesDir, testName string) er
 
 	cmd := exec.Command("/bin/bash", cmdArgs...)
 
+	cmd.Env = append(os.Environ(), "TZ=UTC")
 	cmd.Stdout = stdoutFile
 	cmd.Stderr = stderrFile
 
@@ -240,4 +252,66 @@ func copyFile(srcPath, destPath string) error {
 	}
 
 	return nil
+}
+
+// Function to extract the latest timestamp from a syslog file
+func getLatestSyslogTimestamp(filePath string) (time.Time, error) {
+	// Open the syslog file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return time.Time{}, err
+	}
+	defer file.Close()
+
+	// Regular expression to match a typical syslog timestamp (e.g., "Apr  5 14:33:22")
+	re := regexp.MustCompile(`^([A-Za-z]{3} \s?\d{1,2} \d{2}:\d{2}:\d{2})`)
+
+	var latestTimestamp time.Time
+
+	// Read the file backwards (find the last line)
+	var lastLine string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lastLine = scanner.Text() // Keep updating lastLine until the last line
+	}
+
+	if err := scanner.Err(); err != nil {
+		return time.Time{}, err
+	}
+
+	// Extract the timestamp from the last line
+	matches := re.FindStringSubmatch(lastLine)
+	if len(matches) > 0 {
+		timestampStr := matches[1]
+		latestTimestamp, err = time.ParseInLocation("Jan 2 15:04:05", timestampStr, time.UTC)
+		if err != nil {
+			return time.Time{}, err
+		}
+
+		latestTimestamp = setYear(latestTimestamp, time.Now().Year())
+	}
+
+	return latestTimestamp, nil
+}
+
+// setSyslogFileModTime takes the path to a syslog file, and sets its modification
+// time to the timestamp of the last log message from that file.
+func setSyslogFileModTime(fname string) error {
+	lastLogTime, err := getLatestSyslogTimestamp(fname)
+	if err != nil {
+		return errors.Annotatef(err, "getting timestamp of the last log message in %s", fname)
+	}
+
+	fmt.Println("Hey setting time", fname, lastLogTime)
+
+	if err := os.Chtimes(fname, lastLogTime, lastLogTime); err != nil {
+		return errors.Annotatef(err, "setting mod time of %s", fname)
+	}
+
+	return nil
+}
+
+func setYear(t time.Time, year int) time.Time {
+	// Return a new time.Time with the desired year
+	return time.Date(year, t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), t.Location())
 }

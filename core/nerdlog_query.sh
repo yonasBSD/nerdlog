@@ -2,8 +2,7 @@
 
 # Arguments:
 #
-# --from, --to: time in the format Jan-02-15:04. NOTE it's important to keep
-#               the leading zero!
+# --from, --to: time in the format "2006-01-02-15:04".
 
 # Those numbers are supposed to go up as the query progresses; the Go app
 # will then be able to tell which node is the slowest and show info for it.
