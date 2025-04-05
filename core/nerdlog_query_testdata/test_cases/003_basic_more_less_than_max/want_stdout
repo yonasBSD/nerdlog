@@ -1,0 +1,20 @@
+debug:hey2 |1446,69981,68535|
+logfile:/tmp/nerdlog_query_test_output/003_basic_more_less_than_max/logfile.1:0
+logfile:/tmp/nerdlog_query_test_output/003_basic_more_less_than_max/logfile:287
+s:Mar12-10:45,1
+s:Mar12-10:27,1
+s:Mar12-10:19,1
+s:Mar12-10:56,1
+s:Mar12-10:38,1
+s:Mar12-10:10,9
+s:Mar12-10:01,1
+s:Mar12-10:03,1
+s:Mar12-10:32,1
+s:Mar12-10:14,1
+s:Mar12-10:16,2
+s:Mar12-10:53,1
+m:1033:Mar 12 10:01:02 myhost lpr[6903]: <debug> User account enabled
+m:1034:Mar 12 10:03:46 myhost syslog[2812]: <info> Database query failed
+m:1035:Mar 12 10:10:05 myhost authpriv[3500]: <notice> System clock synchronized
+m:1036:Mar 12 10:10:05 myhost authpriv[3500]: <notice> System clock synchronized
+m:1037:Mar 12 10:10:05 myhost authpriv[3500]: <notice> System clock synchronized
