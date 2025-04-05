@@ -1,0 +1,9 @@
+descr: "Initial basic test case"
+logfiles:
+  kind: all_from_dir
+  dir: ../../../logfiles/example1
+args: [
+  "--max-num-lines", "8",
+  "--from", "2025-03-08-16:00",
+  "--to",   "2025-03-09-16:00"
+]
