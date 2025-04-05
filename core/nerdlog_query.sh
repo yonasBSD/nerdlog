@@ -377,7 +377,7 @@ prevlog_bytes=$(get_prevlog_bytenr)
 
 from_linenr_int=$from_linenr
 if [[ "$from_linenr" == "" ]]; then
-  from_linenr_int=0
+  from_linenr_int=1
 fi
 
 awk_pattern=''

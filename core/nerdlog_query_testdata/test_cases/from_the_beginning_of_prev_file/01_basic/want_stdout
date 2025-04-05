@@ -10,11 +10,11 @@ s:Mar9-15:07,1
 s:Mar9-15:44,1
 s:Mar9-15:35,1
 s:Mar9-15:36,1
-m:3:Mar  9 15:23:17 myhost syslog[4229]: <notice> Security patch applied
-m:4:Mar  9 15:23:17 myhost lpr[8539]: <emerg> Cache update completed
-m:5:Mar  9 15:23:17 myhost kern[3862]: <debug> Permission denied
-m:6:Mar  9 15:32:07 myhost news[596]: <alert> User permissions updated
-m:7:Mar  9 15:35:19 myhost authpriv[7019]: <alert> Disk usage critical
-m:8:Mar  9 15:36:33 myhost authpriv[7830]: <crit> Certificate expiration warning
-m:9:Mar  9 15:44:23 myhost lpr[3187]: <alert> Service initialization failed
-m:10:Mar  9 15:52:34 myhost lpr[3574]: <notice> Disk space low
+m:4:Mar  9 15:23:17 myhost syslog[4229]: <notice> Security patch applied
+m:5:Mar  9 15:23:17 myhost lpr[8539]: <emerg> Cache update completed
+m:6:Mar  9 15:23:17 myhost kern[3862]: <debug> Permission denied
+m:7:Mar  9 15:32:07 myhost news[596]: <alert> User permissions updated
+m:8:Mar  9 15:35:19 myhost authpriv[7019]: <alert> Disk usage critical
+m:9:Mar  9 15:36:33 myhost authpriv[7830]: <crit> Certificate expiration warning
+m:10:Mar  9 15:44:23 myhost lpr[3187]: <alert> Service initialization failed
+m:11:Mar  9 15:52:34 myhost lpr[3574]: <notice> Disk space low
