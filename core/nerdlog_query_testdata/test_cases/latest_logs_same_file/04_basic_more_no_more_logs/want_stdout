@@ -1,6 +1,6 @@
 debug:hey2 |1446,69981,68535|
-logfile:/tmp/nerdlog_query_test_output/004_basic_more_no_more_logs/logfile.1:0
-logfile:/tmp/nerdlog_query_test_output/004_basic_more_no_more_logs/logfile:287
+logfile:/tmp/nerdlog_query_test_output/latest_logs_same_file/04_basic_more_no_more_logs/logfile.1:0
+logfile:/tmp/nerdlog_query_test_output/latest_logs_same_file/04_basic_more_no_more_logs/logfile:287
 s:Mar12-10:45,1
 s:Mar12-10:27,1
 s:Mar12-10:19,1

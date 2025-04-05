@@ -19,6 +19,7 @@ import (
 )
 
 const testOutputRoot = "/tmp/nerdlog_query_test_output"
+const testCaseYamlFname = "test_case.yaml"
 
 type TestCaseYaml struct {
 	Descr    string           `yaml:"descr"`
@@ -56,19 +57,15 @@ func TestReadFileRelativeToThisFile(t *testing.T) {
 		t.Fatalf("unable to create test output root dir %s: %s", testOutputRoot, err.Error())
 	}
 
-	entries, err := os.ReadDir(testCasesDir)
+	testCaseDirs, err := getTestCaseDirs(testCasesDir)
 	if err != nil {
 		panic(err)
 	}
 
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
-
-		t.Run(entry.Name(), func(t *testing.T) {
-			if err := runTestCase(t, nerdlogQuerySh, testCasesDir, entry.Name()); err != nil {
-				t.Fatalf("running test case %s: %s", entry.Name(), err.Error())
+	for _, testCaseDir := range testCaseDirs {
+		t.Run(testCaseDir, func(t *testing.T) {
+			if err := runTestCase(t, nerdlogQuerySh, testCasesDir, testCaseDir); err != nil {
+				t.Fatalf("running test case %s: %s", testCaseDir, err.Error())
 			}
 		})
 	}
@@ -76,7 +73,7 @@ func TestReadFileRelativeToThisFile(t *testing.T) {
 
 func runTestCase(t *testing.T, nerdlogQuerySh, testCasesDir, testName string) error {
 	testCaseDir := filepath.Join(testCasesDir, testName)
-	testCaseDescrFname := filepath.Join(testCaseDir, "test_case.yaml")
+	testCaseDescrFname := filepath.Join(testCaseDir, testCaseYamlFname)
 
 	assertArgs := []interface{}{"test case %s", testName}
 
@@ -314,4 +311,42 @@ func setSyslogFileModTime(fname string) error {
 func setYear(t time.Time, year int) time.Time {
 	// Return a new time.Time with the desired year
 	return time.Date(year, t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), t.Location())
+}
+
+// getTestCaseDirs scans the dir recursively and returns relative paths
+// to all the dirs which contain the file "test_case.yaml". For example:
+//
+// []string{"mytest1_foo", "some_group/mytest1", "some_group/mytest2"}
+func getTestCaseDirs(testCasesDir string) ([]string, error) {
+	var result []string
+
+	// Walk the directory recursively
+	err := filepath.Walk(testCasesDir, func(path string, info os.FileInfo, err error) error {
+		// If there's an error walking, wrap and return it
+		if err != nil {
+			return errors.Annotate(err, "failed to walk path: "+path)
+		}
+
+		// If it's a directory and contains testCaseYamlFname
+		if info.IsDir() {
+			// Check if testCaseYamlFname exists in the current directory
+			testCaseFile := filepath.Join(path, testCaseYamlFname)
+			if _, err := os.Stat(testCaseFile); err == nil {
+				// If the file exists, add the relative path to the result
+				relPath, err := filepath.Rel(testCasesDir, path)
+				if err != nil {
+					return errors.Annotate(err, "failed to get relative path for: "+path)
+				}
+				// Add the relative path to the result
+				result = append(result, relPath)
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to scan directories")
+	}
+
+	return result, nil
 }
