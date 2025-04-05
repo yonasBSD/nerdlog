@@ -1,0 +1,21 @@
+debug:hey4 997
+logfile:/tmp/nerdlog_query_test_output/edge_of_two_fles/03_basic_more_less_than_max/logfile.1:0
+logfile:/tmp/nerdlog_query_test_output/edge_of_two_fles/03_basic_more_less_than_max/logfile:287
+s:Mar10-10:27,2
+s:Mar10-09:53,1
+s:Mar10-09:44,1
+s:Mar10-09:35,2
+s:Mar10-10:00,1
+s:Mar10-10:20,2
+s:Mar10-09:39,1
+s:Mar10-09:59,1
+s:Mar10-10:14,1
+s:Mar10-10:24,1
+s:Mar10-09:31,2
+m:280:Mar 10 09:31:23 myhost authpriv[5771]: <debug> User session ended
+m:281:Mar 10 09:31:23 myhost authpriv[2976]: <emerg> Cache cleared
+m:282:Mar 10 09:35:23 myhost kern[3027]: <alert> SMTP server connection error
+m:283:Mar 10 09:35:23 myhost syslog[3626]: <debug> Application crash reported
+m:284:Mar 10 09:39:31 myhost auth[8464]: <info> User session started
+m:285:Mar 10 09:44:56 myhost news[3840]: <err> System health check completed
+m:286:Mar 10 09:53:11 myhost news[816]: <alert> System configuration restored
