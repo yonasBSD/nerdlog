@@ -1,0 +1,43 @@
+debug:hey1 2320
+logfile:/tmp/nerdlog_query_test_output/whole_latest_whole_prev_file/03_basic_more_less_than_max/logfile.1:0
+logfile:/tmp/nerdlog_query_test_output/whole_latest_whole_prev_file/03_basic_more_less_than_max/logfile:19
+s:Mar10-10:45,1
+s:Mar10-10:36,1
+s:Mar10-10:27,2
+s:Mar10-10:38,1
+s:Mar10-09:53,1
+s:Mar10-09:44,1
+s:Mar10-09:35,2
+s:Mar10-10:57,1
+s:Mar10-10:00,1
+s:Mar10-09:28,1
+s:Mar10-10:20,2
+s:Mar10-09:39,1
+s:Mar10-09:00,1
+s:Mar10-09:59,1
+s:Mar10-10:32,2
+s:Mar10-10:14,1
+s:Mar10-09:02,3
+s:Mar10-10:51,1
+s:Mar10-10:33,1
+s:Mar10-10:24,1
+s:Mar10-10:34,1
+s:Mar10-09:31,2
+s:Mar10-09:22,1
+s:Mar10-09:14,1
+s:Mar10-09:05,4
+m:1:Mar 10 09:00:36 myhost ftp[3406]: <err> Timeout occurred
+m:2:Mar 10 09:02:02 myhost authpriv[1893]: <warning> CPU temperature critical
+m:3:Mar 10 09:02:02 myhost cron[424]: <alert> System running low on resources
+m:4:Mar 10 09:02:02 myhost authpriv[1827]: <crit> Cache cleared
+m:5:Mar 10 09:05:07 myhost cron[5530]: <emerg> Firewall rule deleted
+m:6:Mar 10 09:05:07 myhost daemon[5617]: <crit> File upload completed
+m:7:Mar 10 09:05:44 myhost auth[6052]: <err> Certificate expiration warning
+m:8:Mar 10 09:05:46 myhost auth[4149]: <notice> Memory leak detected
+m:9:Mar 10 09:14:40 myhost authpriv[3851]: <debug> Log file archived
+m:10:Mar 10 09:22:23 myhost auth[3925]: <info> Server started successfully
+m:11:Mar 10 09:28:01 myhost news[9026]: <warning> Error reading file
+m:12:Mar 10 09:31:23 myhost authpriv[5771]: <debug> User session ended
+m:13:Mar 10 09:31:23 myhost authpriv[2976]: <emerg> Cache cleared
+m:14:Mar 10 09:35:23 myhost kern[3027]: <alert> SMTP server connection error
+m:15:Mar 10 09:35:23 myhost syslog[3626]: <debug> Application crash reported

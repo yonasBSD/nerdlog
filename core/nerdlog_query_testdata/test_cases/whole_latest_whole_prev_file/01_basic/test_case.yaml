@@ -1,0 +1,5 @@
+descr: ""
+logfiles:
+  kind: all_from_dir
+  dir: ../../../logfiles/tiny
+args: ["--max-num-lines", "20", "--from", "2025-03-01-00:00"]
