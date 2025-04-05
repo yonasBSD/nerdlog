@@ -52,7 +52,7 @@ func TestReadFileRelativeToThisFile(t *testing.T) {
 	// Get directory of the current file
 	parentDir := filepath.Dir(filename)
 	testCasesDir := filepath.Join(parentDir, "nerdlog_query_testdata", "test_cases")
-	nerdlogQuerySh := filepath.Join(parentDir, "nerdlog_query.sh")
+	nerdlogQueryShFname := filepath.Join(parentDir, "nerdlog_query.sh")
 
 	if err := os.MkdirAll(testOutputRoot, 0755); err != nil {
 		t.Fatalf("unable to create test output root dir %s: %s", testOutputRoot, err.Error())
@@ -65,14 +65,14 @@ func TestReadFileRelativeToThisFile(t *testing.T) {
 
 	for _, testCaseDir := range testCaseDirs {
 		t.Run(testCaseDir, func(t *testing.T) {
-			if err := runTestCase(t, nerdlogQuerySh, testCasesDir, testCaseDir); err != nil {
+			if err := runTestCase(t, nerdlogQueryShFname, testCasesDir, testCaseDir); err != nil {
 				t.Fatalf("running test case %s: %s", testCaseDir, err.Error())
 			}
 		})
 	}
 }
 
-func runTestCase(t *testing.T, nerdlogQuerySh, testCasesDir, testName string) error {
+func runTestCase(t *testing.T, nerdlogQueryShFname, testCasesDir, testName string) error {
 	testCaseDir := filepath.Join(testCasesDir, testName)
 	testCaseDescrFname := filepath.Join(testCaseDir, testCaseYamlFname)
 
@@ -128,7 +128,7 @@ func runTestCase(t *testing.T, nerdlogQuerySh, testCasesDir, testName string) er
 
 	cmdArgs := append(
 		[]string{
-			nerdlogQuerySh,
+			nerdlogQueryShFname,
 			"--logfile-last", logfileLast,
 			"--logfile-prev", logfilePrev,
 			"--cache-file", indexFname,
@@ -266,6 +266,20 @@ func runNerdlogQuery(
 
 	if params.checkStderr {
 		assert.Equal(t, string(wantStderr), string(gotStderr), assertArgs...)
+	}
+
+	return nil
+}
+
+func runNerdlogQueryForBenchmark(
+	bashArgs []string,
+) error {
+	cmd := exec.Command("/bin/bash", bashArgs...)
+
+	cmd.Env = append(os.Environ(), "TZ=UTC")
+
+	if err := cmd.Run(); err != nil {
+		return errors.Annotatef(err, "running nerdlog query command %+v", bashArgs)
 	}
 
 	return nil
@@ -519,4 +533,75 @@ func copyUpToNumLines(srcPath, destPath string, maxNumLines int) (string, error)
 	}
 
 	return lastLine, nil
+}
+
+func BenchmarkNerdlogQuerySmallLogNoIndex(b *testing.B) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		b.Fatal("unable to get caller info")
+	}
+
+	parentDir := filepath.Dir(filename)
+	logfilesDir := filepath.Join(parentDir, "nerdlog_query_testdata", "logfiles", "example1")
+	nerdlogQueryShFname := filepath.Join(parentDir, "nerdlog_query.sh")
+
+	indexFname := filepath.Join(testOutputRoot, "bench1_index")
+
+	cmdArgs := append(
+		[]string{
+			nerdlogQueryShFname,
+			"--logfile-last", filepath.Join(logfilesDir, "syslog"),
+			"--logfile-prev", filepath.Join(logfilesDir, "syslog.1"),
+			"--cache-file", indexFname,
+			"--max-num-lines", "100",
+			"--from", "2025-03-12-10:00",
+		},
+	)
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		os.Remove(indexFname)
+		if err := runNerdlogQueryForBenchmark(cmdArgs); err != nil {
+			b.Fatalf("runNerdlogQueryForBenchmark failed: %s", err)
+		}
+	}
+}
+
+func BenchmarkNerdlogQuerySmallLogCompleteIndex(b *testing.B) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		b.Fatal("unable to get caller info")
+	}
+
+	parentDir := filepath.Dir(filename)
+	logfilesDir := filepath.Join(parentDir, "nerdlog_query_testdata", "logfiles", "example1")
+	nerdlogQueryShFname := filepath.Join(parentDir, "nerdlog_query.sh")
+
+	indexFname := filepath.Join(testOutputRoot, "bench1_index")
+
+	cmdArgs := append(
+		[]string{
+			nerdlogQueryShFname,
+			"--logfile-last", filepath.Join(logfilesDir, "syslog"),
+			"--logfile-prev", filepath.Join(logfilesDir, "syslog.1"),
+			"--cache-file", indexFname,
+			"--max-num-lines", "100",
+			"--from", "2025-03-12-10:00",
+		},
+	)
+
+	// Build the index
+	os.Remove(indexFname)
+	if err := runNerdlogQueryForBenchmark(cmdArgs); err != nil {
+		b.Fatalf("initial runNerdlogQueryForBenchmark failed: %s", err)
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		if err := runNerdlogQueryForBenchmark(cmdArgs); err != nil {
+			b.Fatalf("runNerdlogQueryForBenchmark failed: %s", err)
+		}
+	}
 }

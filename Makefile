@@ -16,3 +16,7 @@ test:
 	# The tests run rather slow so we use "-v -p 1" so that we get the unbuffered
 	# output.
 	go test ./... -count 1 -v -p 1
+
+bench:
+	# The -run=^$ is needed to avoid running the regular tests as well.
+	go test ./core -bench=BenchmarkNerdlogQuery -benchtime=3s -run=^$
