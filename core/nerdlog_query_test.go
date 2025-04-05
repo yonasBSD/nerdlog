@@ -164,44 +164,19 @@ func runTestCase(t *testing.T, nerdlogQuerySh, testCasesDir, testName string) er
 		return errors.Annotatef(err, "reading %s", stderrFname)
 	}
 
-	// TODO: compare index as well
-
 	assert.Equal(t, string(wantStdout), string(gotStdout), assertArgs...)
 	assert.Equal(t, string(wantStderr), string(gotStderr), assertArgs...)
 
-	//// Get the stdout and stderr pipes
-	//stdoutPipe, err := cmd.StdoutPipe()
-	//if err != nil {
-	//return errors.Annotatef(err, "getting stdout pipe")
-	//}
-	//stderrPipe, err := cmd.StderrPipe()
-	//if err != nil {
-	//return errors.Annotatef(err, "getting stderr pipe")
-	//}
+	// TODO: somehow also test with incomplete index: maybe just remove lines one by
+	// one from the end (until the "prevlog_lines" line), rerunning the same command,
+	// and making sure that the stdout is the same (stderr might differ though).
 
-	//// Start the command execution
-	//if err := cmd.Start(); err != nil {
-	//return errors.Annotatef(err, "starting the nerdlog_query.sh command")
-	//}
+	// TODO: the stats lines in stdout (these starting from "s:") are printed in
+	// arbitrary order because they come from a hashmap, so simply comparing the
+	// output is a bad idea. Gotta do some post-processing, like sorting these "s:"
+	// lines, before comparing them.
 
-	//// Read stdout and stderr
-	//stdoutData, err := ioutil.ReadAll(stdoutPipe)
-	//if err != nil {
-	//return errors.Annotatef(err, "reading stdout")
-	//}
-
-	//stderrData, err := ioutil.ReadAll(stderrPipe)
-	//if err != nil {
-	//return errors.Annotatef(err, "reading stderr")
-	//}
-
-	//// Wait for the command to finish
-	//if err := cmd.Wait(); err != nil {
-	//return errors.Annotatef(err, "calling cmd.Wait")
-	//}
-
-	//fmt.Println("HEY stdout\n", string(stdoutData))
-	//fmt.Println("HEY stderr\n", string(stderrData))
+	// TODO: gotta also do some benchmarks. Very useful for refactorings.
 
 	return nil
 }

@@ -361,7 +361,13 @@ if [[ "$from" != "" || "$to" != "" ]]; then
     fi
 
   fi
+else
+  if ! [ -s $cachefile ]; then
+    echo "neither --from or --to are given, but index doesn't exist at all, gonna rebuild" 1>&2
+    refresh_cache
+  fi
 fi
+
 
 echo "from $from_linenr ($from_bytenr) to $to_linenr ($to_bytenr)" 1>&2
 
