@@ -111,6 +111,21 @@ function refresh_cache { # {{{
   local last_bytenr=0
   local prevlog_bytes=$(get_prevlog_bytenr)
 
+  awk_vars='
+    monthByName["Jan"] = "01";
+    monthByName["Feb"] = "02";
+    monthByName["Mar"] = "03";
+    monthByName["Apr"] = "04";
+    monthByName["May"] = "05";
+    monthByName["Jun"] = "06";
+    monthByName["Jul"] = "07";
+    monthByName["Aug"] = "08";
+    monthByName["Sep"] = "09";
+    monthByName["Oct"] = "10";
+    monthByName["Nov"] = "11";
+    monthByName["Dec"] = "12";
+  '
+
   # Add new entries to cache, if needed
 
   # NOTE: syslogFieldsToTimestamp parses the traditional systemd timestamp
@@ -132,19 +147,6 @@ function refresh_cache { # {{{
   # includes the year, microseconds, and timezone.
   awk_functions='
 function syslogFieldsToTimestamp(monthStr, day, hhmmss) {
-  monthByName["Jan"] = "01";
-  monthByName["Feb"] = "02";
-  monthByName["Mar"] = "03";
-  monthByName["Apr"] = "04";
-  monthByName["May"] = "05";
-  monthByName["Jun"] = "06";
-  monthByName["Jul"] = "07";
-  monthByName["Aug"] = "08";
-  monthByName["Sep"] = "09";
-  monthByName["Oct"] = "10";
-  monthByName["Nov"] = "11";
-  monthByName["Dec"] = "12";
-
   month = monthByName[monthStr]
   year = 2025
   hour = substr(hhmmss, 1, 2)
@@ -238,7 +240,11 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
     echo debug:hey2 $last_linenr $last_bytenr 1>&2
     echo debug:hey3 $size_to_index 1>&2
 
-    tail -c +$((last_bytenr-prevlog_bytes)) $logfile_last | awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
+    tail -c +$((last_bytenr-prevlog_bytes)) $logfile_last | awk -b "$awk_functions
+  BEGIN {
+    $awk_vars
+    lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr
+  }"'
   '"$script1"'
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
@@ -252,7 +258,7 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
 
     echo "prevlog_modtime	$(stat -c %y $logfile_prev)" > $cachefile
 
-    awk -b "$awk_functions BEGIN { lastHHMM=\"\"; last3=\"\" }"'
+    awk -b "$awk_functions BEGIN { $awk_vars lastHHMM=\"\"; last3=\"\" }"'
   '"$script1"'
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
@@ -269,7 +275,7 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
   # TODO: make sure that if there are no logs in the $lotfile1, we don't screw up.
     local lastTimestr="$(tail -n 2 $cachefile | head -n 1 | cut -f2)"
     #echo debug:hey3 $lastTimestr 1>&2
-    awk -b "$awk_functions BEGIN { lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
+    awk -b "$awk_functions BEGIN { $awk_vars lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
   '"$script1"'
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
