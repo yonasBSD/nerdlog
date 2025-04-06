@@ -26,7 +26,14 @@ const testCaseYamlFname = "test_case.yaml"
 type TestCaseYaml struct {
 	Descr    string           `yaml:"descr"`
 	Logfiles TestCaseLogfiles `yaml:"logfiles"`
-	Args     []string         `yaml:"args"`
+
+	// CurYear and CurMonth specify today's date. If not specified, 1970-01 will
+	// be used. This matters for inferring the log's year (because traditional
+	// syslog timestamp format doesn't include year).
+	CurYear  int `yaml:"cur_year"`
+	CurMonth int `yaml:"cur_month"`
+
+	Args []string `yaml:"args"`
 }
 
 type TestCaseLogfiles struct {
@@ -139,7 +146,7 @@ func runTestCase(t *testing.T, nerdlogQueryShFname, testCasesDir, testName strin
 
 	// Do the full run, with the provided initial index (which in most cases
 	// means, without any index)
-	if err := runNerdlogQuery(t, cmdArgs, testCaseDir, testName, testNerdlogQueryParams{
+	if err := runNerdlogQuery(t, &tc, cmdArgs, testCaseDir, testName, testNerdlogQueryParams{
 		checkStderr: true,
 	}); err != nil {
 		return errors.Trace(err)
@@ -189,7 +196,7 @@ func runTestCase(t *testing.T, nerdlogQueryShFname, testCasesDir, testName strin
 		}
 
 		t.Run(fmt.Sprintf("keep_%d_lines", keepLines), func(t *testing.T) {
-			if err := runNerdlogQuery(t, cmdArgs, testCaseDir, testName, testNerdlogQueryParams{
+			if err := runNerdlogQuery(t, &tc, cmdArgs, testCaseDir, testName, testNerdlogQueryParams{
 				// When changing the index, stderr would change too.
 				checkStderr: false,
 			}); err != nil {
@@ -217,7 +224,7 @@ type testNerdlogQueryParams struct {
 }
 
 func runNerdlogQuery(
-	t *testing.T, bashArgs []string, testCaseDir, testName string,
+	t *testing.T, tc *TestCaseYaml, bashArgs []string, testCaseDir, testName string,
 	params testNerdlogQueryParams,
 ) error {
 	assertArgs := []interface{}{"test case %s", testName}
@@ -237,7 +244,22 @@ func runNerdlogQuery(
 
 	cmd := exec.Command("/bin/bash", bashArgs...)
 
-	cmd.Env = append(os.Environ(), "TZ=UTC")
+	curYear := tc.CurYear
+	if curYear == 0 {
+		curYear = 1970
+	}
+
+	curMonth := tc.CurMonth
+	if curMonth == 0 {
+		curMonth = 1
+	}
+
+	cmd.Env = append(
+		os.Environ(),
+		"TZ=UTC",
+		fmt.Sprintf("CUR_YEAR=%d", curYear),
+		fmt.Sprintf("CUR_MONTH=%d", curMonth),
+	)
 	cmd.Stdout = stdoutFile
 	cmd.Stderr = stderrFile
 
@@ -546,7 +568,7 @@ func BenchmarkNerdlogQuerySmallLogNoIndex(b *testing.B) {
 	}
 
 	parentDir := filepath.Dir(filename)
-	logfilesDir := filepath.Join(parentDir, "nerdlog_query_testdata", "logfiles", "example1")
+	logfilesDir := filepath.Join(parentDir, "nerdlog_query_testdata", "logfiles", "small_mar")
 	nerdlogQueryShFname := filepath.Join(parentDir, "nerdlog_query.sh")
 
 	indexFname := filepath.Join(testOutputRoot, "bench1_index")
@@ -579,7 +601,7 @@ func BenchmarkNerdlogQuerySmallLogCompleteIndex(b *testing.B) {
 	}
 
 	parentDir := filepath.Dir(filename)
-	logfilesDir := filepath.Join(parentDir, "nerdlog_query_testdata", "logfiles", "example1")
+	logfilesDir := filepath.Join(parentDir, "nerdlog_query_testdata", "logfiles", "small_mar")
 	nerdlogQueryShFname := filepath.Join(parentDir, "nerdlog_query.sh")
 
 	indexFname := filepath.Join(testOutputRoot, "bench1_index")

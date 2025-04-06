@@ -2,4 +2,6 @@ descr: ""
 logfiles:
   kind: all_from_dir
   dir: ../../../logfiles/tiny
+cur_year: 2025
+cur_month: 3
 args: ["--max-num-lines", "20", "--from", "2025-03-10-09:30"]

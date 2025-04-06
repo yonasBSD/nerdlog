@@ -1,0 +1,766 @@
+Jan  1 10:00:01 myhost kern[5159]: <emerg> Disk space reclaimed
+Jan  1 10:14:05 myhost auth[8368]: <err> Database schema updated
+Jan  1 10:20:17 myhost syslog[4163]: <emerg> System health check failed
+Jan  1 10:20:46 myhost lpr[891]: <warning> User session timed out
+Jan  1 10:24:32 myhost user[8515]: <warning> Cache cleared
+Jan  1 10:27:26 myhost kern[2205]: <crit> Session token expired
+Jan  1 10:27:26 myhost cron[9005]: <notice> File transfer completed
+Jan  1 10:32:21 myhost daemon[8000]: <notice> Failed login attempt
+Jan  1 10:32:21 myhost mail[7726]: <notice> Error reading file
+Jan  1 10:33:00 myhost kern[4506]: <emerg> Service request queued
+Jan  1 10:34:31 myhost cron[935]: <err> Database connection error
+Jan  1 10:36:14 myhost user[2831]: <debug> File system full
+Jan  1 10:38:25 myhost mail[8342]: <emerg> User account disabled
+Jan  1 10:45:04 myhost authpriv[7892]: <err> Memory usage high
+Jan  1 10:51:01 myhost user[3758]: <crit> System running low on resources
+Jan  1 10:57:37 myhost news[5185]: <alert> Insufficient privileges
+Jan  1 11:00:27 myhost authpriv[2865]: <alert> Database migration failed
+Jan  1 11:00:27 myhost mail[639]: <err> Resource utilization warning
+Jan  1 11:02:22 myhost mail[4173]: <notice> Database query failed
+Jan  1 11:02:35 myhost ftp[8645]: <info> File not found
+Jan  1 11:11:53 myhost uucp[1219]: <warning> File transfer completed
+Jan  1 11:17:27 myhost syslog[5562]: <info> Database migration completed
+Jan  1 11:26:38 myhost cron[5171]: <notice> Database schema updated
+Jan  1 11:33:00 myhost daemon[8540]: <emerg> User login successful
+Jan  1 11:39:29 myhost ftp[8120]: <debug> Process started
+Jan  1 11:41:03 myhost lpr[5285]: <notice> User session started
+Jan  1 11:46:34 myhost user[7798]: <err> Application crash reported
+Jan  1 11:47:58 myhost news[3646]: <notice> Disk space reclaimed
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost authpriv[2883]: non-ascii chars: тест тест
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:44 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:51 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:49:52 myhost syslog[581]: <emerg> User login successful
+Jan  1 11:58:51 myhost cron[3860]: <emerg> File download started
+Jan  1 12:07:19 myhost cron[8011]: <warning> Scheduled task executed
+Jan  1 12:14:29 myhost auth[1100]: <debug> Database connection error
+Jan  1 12:23:53 myhost lpr[8595]: <crit> IP address conflict detected
+Jan  1 12:32:50 myhost user[1625]: <emerg> Security alert raised
+Jan  1 12:34:00 myhost news[2627]: <debug> Disk space reclaimed
+Jan  1 12:40:35 myhost syslog[7547]: <notice> Configuration applied successfully
+Jan  1 12:49:19 myhost ftp[7645]: <crit> Service dependency failure
+Jan  1 12:57:19 myhost kern[3195]: <warning> Disk space reclaimed
+Jan  1 12:59:28 myhost lpr[1742]: <info> File system full
+Jan  1 13:03:17 myhost auth[1923]: <alert> User session ended
+Jan  1 13:06:35 myhost ftp[2193]: <debug> Hardware upgrade completed
+Jan  1 13:15:35 myhost daemon[9098]: <emerg> Database schema updated
+Jan  1 13:20:54 myhost authpriv[6551]: <alert> Configuration reload successful
+Jan  1 13:20:54 myhost ftp[1165]: <crit> File checksum mismatch
+Jan  1 13:24:15 myhost kern[3144]: <warning> Service dependency failure
+Jan  1 13:30:09 myhost news[4041]: <alert> Scheduled task failed
+Jan  1 13:30:09 myhost ftp[757]: <alert> User authentication successful
+Jan  1 13:35:38 myhost ftp[7343]: <debug> Database connection error
+Jan  1 13:39:41 myhost lpr[7601]: <crit> Scheduled task executed
+Jan  1 13:44:01 myhost cron[1073]: <notice> Network speed reduced
+Jan  1 13:44:01 myhost auth[6933]: <warning> Resource utilization warning
+Jan  1 13:44:01 myhost cron[8282]: <err> Software version updated
+Jan  1 13:46:03 myhost news[2951]: <emerg> Firewall rule deleted
+Jan  1 13:53:59 myhost news[4023]: <warning> IP address conflict detected
+Jan  1 13:55:36 myhost mail[2816]: <err> Authentication failure
+Jan  1 13:56:26 myhost news[3992]: <notice> Cache cleared
+Jan  1 14:03:15 myhost kern[6107]: <notice> Unauthorized access attempt
+Jan  1 14:03:15 myhost daemon[4875]: <alert> API request failed
+Jan  1 14:11:06 myhost news[8452]: <warning> Connection established
+Jan  1 14:17:20 myhost mail[6016]: <alert> File download started
+Jan  1 14:24:04 myhost user[1101]: <warning> Service health check failed
+Jan  1 14:30:41 myhost uucp[8848]: <emerg> Backup completed
+Jan  1 14:31:43 myhost uucp[6798]: <alert> Resource utilization warning
+Jan  1 14:40:07 myhost daemon[1292]: <err> Scheduled task failed
+Jan  1 14:40:07 myhost ftp[8281]: <notice> Service initialization failed
+Jan  1 14:40:07 myhost news[3332]: <crit> Session token expired
+Jan  1 14:40:31 myhost daemon[7633]: <debug> Process crashed
+Jan  1 14:40:31 myhost cron[5954]: <emerg> API request failed
+Jan  1 14:49:39 myhost cron[3244]: <err> Maintenance mode enabled
+Jan  1 14:55:47 myhost authpriv[6417]: <emerg> File not found
+Jan  1 15:03:29 myhost lpr[3475]: <warning> System configuration restored
+Jan  1 15:10:41 myhost daemon[7047]: <err> Data corruption detected
+Jan  1 15:18:01 myhost kern[4985]: <emerg> DNS resolution failed
+Jan  1 15:20:48 myhost user[7937]: <err> User password changed
+Jan  1 15:29:45 myhost authpriv[7718]: <emerg> Database query failed
+Jan  1 15:29:45 myhost ftp[5581]: <info> Update failed
+Jan  1 15:29:45 myhost ftp[2427]: <info> Network speed reduced
+Jan  1 15:29:45 myhost authpriv[2880]: <info> API response received
+Jan  1 15:32:31 myhost lpr[798]: <debug> Memory usage high
+Jan  1 15:37:35 myhost kern[4154]: <warning> Data corruption detected
+Jan  1 15:41:25 myhost lpr[1068]: <info> Insufficient privileges
+Jan  1 15:42:27 myhost cron[2625]: <warning> Network link restored
+Jan  1 15:50:07 myhost cron[1852]: <err> Failed login attempt
+Jan  1 15:50:07 myhost cron[5445]: <alert> Error reading file
+Jan  1 15:54:40 myhost ftp[4205]: <notice> Permission denied
+Jan  1 16:00:06 myhost authpriv[1924]: <debug> Insufficient privileges
+Jan  1 16:07:45 myhost auth[1051]: <crit> Process crashed
+Jan  1 16:16:34 myhost user[870]: <debug> Network congestion detected
+Jan  1 16:19:35 myhost uucp[1252]: <info> Network unreachable
+Jan  1 16:23:26 myhost news[8955]: <err> Firewall rule added
+Jan  1 16:31:57 myhost syslog[8257]: <warning> Configuration load failed
+Jan  1 16:35:56 myhost daemon[7460]: <info> Backup completed
+Jan  1 16:42:45 myhost authpriv[5121]: <debug> Resource utilization warning
+Jan  1 16:45:51 myhost mail[7837]: <err> File transfer failed
+Jan  1 16:54:16 myhost news[116]: <alert> System configuration restored
+Jan  1 17:02:56 myhost daemon[6500]: <debug> Process terminated
+Jan  1 17:02:56 myhost ftp[7625]: <notice> Connection established
+Jan  1 17:07:58 myhost uucp[8325]: <notice> Logging level changed
+Jan  1 17:12:18 myhost cron[2210]: <notice> Cache update completed
+Jan  1 17:14:29 myhost authpriv[8657]: <info> Service unavailable
+Jan  1 17:23:06 myhost syslog[7635]: <emerg> System time updated
+Jan  1 17:23:06 myhost auth[3044]: <alert> Logging level changed
+Jan  1 17:23:06 myhost kern[4725]: <alert> Security alert raised
+Jan  1 17:26:09 myhost ftp[1827]: <crit> Maintenance mode disabled
+Jan  1 17:31:00 myhost uucp[845]: <err> File transfer completed
+Jan  1 17:33:40 myhost lpr[1692]: <debug> Scheduled task executed
+Jan  1 17:37:49 myhost news[3166]: <debug> Backup completed
+Jan  1 17:44:59 myhost lpr[1885]: <debug> Maintenance mode enabled
+Jan  1 17:53:08 myhost cron[2736]: <alert> Software version updated
+Jan  1 18:01:32 myhost uucp[136]: <notice> Backup completed
+Jan  1 18:08:47 myhost cron[4553]: <emerg> Disk space low
+Jan  1 18:15:55 myhost news[4533]: <err> Security patch applied
+Jan  1 18:20:59 myhost news[8468]: <err> Service restart requested
+Jan  1 18:30:40 myhost uucp[8269]: <warning> Disk space low
+Jan  1 18:38:06 myhost mail[9031]: <debug> Invalid credentials provided
+Jan  1 18:41:16 myhost news[1829]: <err> Request successfully processed
+Jan  1 18:48:04 myhost authpriv[2374]: <emerg> System performance degraded
+Jan  1 18:53:22 myhost ftp[716]: <crit> Application crash reported
+Jan  1 19:01:48 myhost user[7979]: <alert> Disk usage critical
+Jan  1 19:04:29 myhost daemon[3829]: <err> Network unreachable
+Jan  1 19:04:29 myhost authpriv[3090]: <debug> Application configuration error
+Jan  1 19:12:56 myhost ftp[8617]: <notice> Unauthorized access attempt
+Jan  1 19:13:40 myhost ftp[8659]: <crit> Invalid credentials provided
+Jan  1 19:20:27 myhost user[5830]: <debug> User login successful
+Jan  1 19:22:41 myhost news[8112]: <notice> Cache cleared
+Jan  1 19:25:30 myhost mail[3535]: <debug> DNS resolution failed
+Jan  1 19:26:52 myhost authpriv[4268]: <err> Service restart requested
+Jan  1 19:26:52 myhost lpr[5171]: <crit> File transfer failed
+Jan  1 19:29:00 myhost authpriv[1237]: <emerg> Database migration failed
+Jan  1 19:38:47 myhost syslog[1170]: <warning> Backup restoration completed
+Jan  1 19:44:12 myhost kern[4977]: <notice> Service request queued
+Jan  1 19:50:33 myhost cron[1016]: <crit> User permissions updated
+Jan  1 19:54:08 myhost daemon[9061]: <notice> Configuration load failed
+Jan  1 20:03:59 myhost news[2174]: <alert> Authentication failure
+Jan  1 20:04:59 myhost user[560]: <notice> System time drift detected
+Jan  1 20:06:50 myhost syslog[6584]: <notice> Software upgrade completed
+Jan  1 20:11:42 myhost authpriv[4704]: <alert> File upload failed
+Jan  1 20:11:42 myhost authpriv[521]: <warning> Network interface reset
+Jan  1 20:12:48 myhost user[2673]: <crit> Disk space reclaimed
+Jan  1 20:14:50 myhost news[7596]: <debug> Error handling request
+Jan  1 20:14:50 myhost mail[278]: <crit> User session started
+Jan  1 20:22:05 myhost authpriv[5960]: <warning> Service request completed
+Jan  1 20:29:50 myhost news[4460]: <info> Failed login attempt
+Jan  1 20:32:01 myhost user[108]: <crit> Server started successfully
+Jan  1 20:39:37 myhost cron[2519]: <err> Out of memory error
+Jan  1 20:39:37 myhost news[5981]: <crit> File upload completed
+Jan  1 20:44:22 myhost auth[5411]: <notice> Network link restored
+Jan  1 20:47:48 myhost user[3681]: <crit> SMTP server connection error
+Jan  1 20:47:48 myhost kern[5893]: <debug> Server stopped unexpectedly
+Jan  1 20:55:20 myhost auth[6983]: <crit> Hardware upgrade completed
+Jan  1 21:02:56 myhost lpr[5218]: <warning> Disk write error
+Jan  1 21:04:23 myhost auth[6793]: <info> File not found
+Jan  1 21:09:56 myhost mail[4469]: <err> Network speed reduced
+Jan  1 21:17:46 myhost cron[7226]: <crit> Request timed out
+Jan  1 21:17:46 myhost mail[4911]: <debug> Network speed reduced
+Jan  1 21:20:16 myhost news[8996]: <warning> Service request completed
+Jan  1 21:28:49 myhost daemon[7045]: <err> User login successful
+Jan  1 21:28:49 myhost cron[2643]: <notice> Process started
+Jan  1 21:28:52 myhost auth[6658]: <err> Disk format completed
+Jan  1 21:33:31 myhost syslog[5901]: <err> File transfer failed
+Jan  1 21:33:31 myhost daemon[8676]: <err> Service health check failed
+Jan  1 21:36:16 myhost ftp[7402]: <info> Request timed out
+Jan  1 21:36:16 myhost uucp[7637]: <warning> Network interface reset
+Jan  1 21:44:46 myhost syslog[5442]: <notice> Backup failed
+Jan  1 21:44:46 myhost syslog[7410]: <alert> Certificate expiration warning
+Jan  1 21:46:16 myhost lpr[7017]: <warning> Timeout occurred
+Jan  1 21:50:45 myhost ftp[4963]: <alert> System configuration backed up
+Jan  1 21:50:45 myhost mail[5363]: <alert> File not found
+Jan  1 21:51:15 myhost mail[5688]: <warning> Authentication failure
+Jan  1 21:51:15 myhost auth[1179]: <debug> Invalid input detected
+Jan  1 21:59:53 myhost syslog[4953]: <warning> System performance degraded
+Jan  1 22:09:14 myhost mail[3664]: <err> Disk space low
+Jan  1 22:12:07 myhost user[3749]: <info> Port unreachable
+Jan  1 22:14:23 myhost cron[8002]: <crit> Disk error occurred
+Jan  1 22:23:08 myhost authpriv[7333]: <notice> Data corruption detected
+Jan  1 22:24:30 myhost ftp[483]: <alert> SSH connection closed
+Jan  1 22:24:30 myhost lpr[8047]: <alert> Firewall rule added
+Jan  1 22:32:28 myhost daemon[6893]: <crit> Software version updated
+Jan  1 22:37:32 myhost auth[6821]: <err> Network unreachable
+Jan  1 22:37:46 myhost ftp[1928]: <debug> System reboot required
+Jan  1 22:42:23 myhost mail[2011]: <crit> Database query failed
+Jan  1 22:45:27 myhost lpr[7712]: <err> User account enabled
+Jan  1 22:52:29 myhost ftp[4699]: <alert> Service stopped
+Jan  1 22:56:54 myhost user[3918]: <warning> Disk write error
+Jan  1 23:03:58 myhost daemon[3853]: <emerg> User login successful
+Jan  1 23:03:58 myhost lpr[3031]: <err> File system check completed
+Jan  1 23:11:17 myhost kern[523]: <notice> Maintenance mode enabled
+Jan  1 23:15:10 myhost syslog[1320]: <warning> System time drift detected
+Jan  1 23:15:10 myhost news[8691]: <debug> Error handling request
+Jan  1 23:15:10 myhost auth[1951]: <info> User session timed out
+Jan  1 23:15:10 myhost ftp[4079]: <info> User account disabled
+Jan  1 23:24:52 myhost syslog[6851]: <crit> Invalid password attempt
+Jan  1 23:31:40 myhost user[960]: <warning> Error handling request
+Jan  1 23:39:26 myhost mail[1569]: <err> Log file rotated
+Jan  1 23:41:57 myhost ftp[1951]: <emerg> Security breach detected
+Jan  1 23:42:22 myhost daemon[1690]: <info> Security alert raised
+Jan  1 23:48:44 myhost cron[2575]: <warning> Logging level changed
+Jan  1 23:48:44 myhost authpriv[5390]: <notice> System rebooted
+Jan  1 23:55:07 myhost cron[2868]: <info> System reboot required
+Jan  1 23:55:07 myhost mail[6154]: <debug> System clock synchronized
+Jan  2 00:02:52 myhost ftp[6349]: <emerg> Disk format completed
+Jan  2 00:07:04 myhost uucp[6940]: <warning> System configuration backed up
+Jan  2 00:10:41 myhost uucp[4992]: <crit> Out of memory error
+Jan  2 00:15:24 myhost cron[1695]: <info> Firewall rule added
+Jan  2 00:24:52 myhost uucp[5232]: <alert> Permission denied
+Jan  2 00:33:23 myhost auth[7375]: <crit> User session timed out
+Jan  2 00:41:33 myhost ftp[7618]: <debug> File system full
+Jan  2 00:50:29 myhost uucp[8353]: <debug> Security alert raised
+Jan  2 00:52:00 myhost mail[8658]: <notice> Cache update completed
+Jan  2 00:54:23 myhost syslog[5082]: <err> Database query failed
+Jan  2 01:02:39 myhost ftp[6575]: <warning> Service dependency initialized
+Jan  2 01:05:18 myhost syslog[8827]: <alert> Network interface reset
+Jan  2 01:13:33 myhost auth[693]: <crit> Network interface reset
+Jan  2 01:17:44 myhost daemon[7389]: <info> IP address conflict detected
+Jan  2 01:17:54 myhost kern[3203]: <alert> System time updated
+Jan  2 01:21:55 myhost uucp[7322]: <warning> Error reading file
+Jan  2 01:21:55 myhost auth[4861]: <debug> System reboot required
+Jan  2 01:21:55 myhost auth[1755]: <notice> Service unavailable
+Jan  2 01:25:19 myhost authpriv[1462]: <notice> Memory usage high
+Jan  2 01:29:20 myhost kern[3783]: <alert> SSH connection established
+Jan  2 01:37:02 myhost uucp[6662]: <err> File download started
+Jan  2 01:42:46 myhost daemon[4846]: <emerg> Port unreachable
+Jan  2 01:43:27 myhost user[4659]: <crit> Disk write error
+Jan  2 01:50:52 myhost daemon[8267]: <crit> Service stopped
+Jan  2 01:50:52 myhost lpr[1623]: <notice> SSH connection established
+Jan  2 01:57:42 myhost news[1912]: <crit> User account enabled
+Jan  2 01:57:42 myhost cron[7536]: <emerg> Certificate expiration warning
+Jan  2 02:01:04 myhost syslog[4117]: <emerg> Request successfully processed
+Jan  2 02:05:11 myhost mail[4570]: <alert> System configuration restored
+Jan  2 02:10:08 myhost daemon[7050]: <alert> User account disabled
+Jan  2 02:13:30 myhost news[6612]: <alert> User account enabled
+Jan  2 02:20:13 myhost news[5132]: <err> Service dependency initialized
+Jan  2 02:21:07 myhost auth[3155]: <err> File system full
+Jan  2 02:21:20 myhost syslog[663]: <debug> User session ended
+Jan  2 02:28:05 myhost syslog[682]: <crit> Session expired
+Jan  2 02:29:10 myhost uucp[1907]: <warning> Invalid password attempt
+Jan  2 02:30:32 myhost authpriv[8107]: <alert> Database connection error
+Jan  2 02:39:52 myhost news[8661]: <crit> Connection established
+Jan  2 02:40:34 myhost daemon[1898]: <warning> Disk write error
+Jan  2 02:40:34 myhost user[8956]: <alert> Network link restored
+Jan  2 02:45:10 myhost daemon[5016]: <emerg> New device connected
+Jan  2 02:51:35 myhost mail[2403]: <err> System running low on resources
+Jan  2 02:57:27 myhost daemon[3128]: <emerg> Security alert raised
+Jan  2 03:07:14 myhost mail[8115]: <err> Service dependency initialized
+Jan  2 03:07:35 myhost ftp[4693]: <alert> Data corruption detected
+Jan  2 03:08:51 myhost mail[6699]: <warning> File system check completed
+Jan  2 03:11:04 myhost uucp[3166]: <debug> Invalid credentials provided
+Jan  2 03:17:18 myhost kern[717]: <crit> IP address conflict detected
+Jan  2 03:25:38 myhost mail[7257]: <crit> File download started
+Jan  2 03:29:29 myhost kern[6205]: <info> High CPU usage detected
+Jan  2 03:29:29 myhost user[8941]: <alert> Security breach detected
+Jan  2 03:37:53 myhost uucp[7224]: <warning> User password changed
+Jan  2 03:37:53 myhost auth[368]: <debug> File download failed
+Jan  2 03:43:50 myhost mail[196]: <err> User authentication failed
+Jan  2 03:48:17 myhost mail[5007]: <debug> User permissions updated
+Jan  2 03:48:34 myhost cron[4046]: <info> System time updated
+Jan  2 03:58:31 myhost cron[4948]: <crit> Service initialization failed
+Jan  2 04:00:04 myhost mail[8288]: <alert> Disk format completed
+Jan  2 04:07:14 myhost cron[7311]: <info> Logging level changed
+Jan  2 04:07:14 myhost news[414]: <alert> Service initialization failed
+Jan  2 04:11:38 myhost syslog[6343]: <notice> System time drift detected
+Jan  2 04:14:58 myhost auth[479]: <crit> Service started
+Jan  2 04:24:36 myhost syslog[3076]: <info> Login attempt locked out
+Jan  2 04:26:36 myhost mail[3738]: <alert> Port unreachable
+Jan  2 04:26:36 myhost mail[1642]: <emerg> Insufficient privileges
+Jan  2 04:31:26 myhost uucp[7581]: <alert> IP address conflict detected
+Jan  2 04:41:14 myhost cron[2354]: <notice> SMTP server connection error
+Jan  2 04:41:45 myhost mail[8877]: <err> Configuration load failed
+Jan  2 04:44:16 myhost mail[8745]: <emerg> Network link restored
+Jan  2 04:44:16 myhost lpr[5097]: <warning> Failed login attempt
+Jan  2 04:53:14 myhost news[897]: <warning> Network unreachable
+Jan  2 04:58:49 myhost news[5234]: <info> Request successfully processed
+Jan  2 05:05:32 myhost kern[6241]: <crit> User session started
+Jan  2 05:05:49 myhost kern[7852]: <alert> Unauthorized access attempt
+Jan  2 05:09:06 myhost syslog[3368]: <alert> User session started
+Jan  2 05:12:25 myhost lpr[768]: <info> Network interface down
+Jan  2 05:18:46 myhost mail[4335]: <crit> Process terminated
+Jan  2 05:28:45 myhost cron[4581]: <crit> Process crashed
+Jan  2 05:36:43 myhost cron[6169]: <err> Timeout occurred
+Jan  2 05:43:01 myhost authpriv[1869]: <crit> Database migration failed
+Jan  2 05:51:36 myhost uucp[5879]: <warning> File system full
+Jan  2 05:51:36 myhost mail[1941]: <warning> File checksum mismatch
+Jan  2 05:56:01 myhost authpriv[4798]: <notice> SSH connection closed
+Jan  2 05:56:01 myhost mail[4371]: <debug> Firewall rule deleted
+Jan  2 06:01:25 myhost news[8395]: <notice> Login attempt locked out
+Jan  2 06:10:20 myhost syslog[1145]: <crit> Process crashed
+Jan  2 06:16:04 myhost authpriv[7774]: <debug> Network link restored
+Jan  2 06:20:38 myhost mail[8206]: <err> Request timed out
+Jan  2 06:20:38 myhost uucp[8086]: <emerg> Disk format completed
+Jan  2 06:20:38 myhost auth[6380]: <info> Memory leak detected
+Jan  2 06:28:06 myhost uucp[4796]: <debug> Error handling request
+Jan  2 06:36:23 myhost daemon[5296]: <info> Connection established
+Jan  2 06:39:18 myhost daemon[6998]: <info> Error reading file
+Jan  2 06:42:04 myhost lpr[7747]: <info> New device connected
+Jan  2 06:42:04 myhost daemon[6738]: <info> Cache cleared
+Jan  2 06:42:04 myhost news[4086]: <notice> Database migration completed
+Jan  2 06:44:38 myhost kern[5215]: <emerg> Network link restored
+Jan  2 06:52:56 myhost auth[7762]: <warning> User permissions updated
+Jan  2 06:53:52 myhost news[9076]: <notice> Certificate expiration warning
+Jan  2 06:54:17 myhost news[1958]: <notice> Disk usage critical
+Jan  2 06:54:17 myhost kern[7084]: <emerg> File not found
+Jan  2 06:57:34 myhost news[5086]: <err> Cache cleared
+Jan  2 07:00:53 myhost ftp[6162]: <emerg> File system check completed
+Jan  2 07:10:43 myhost mail[5587]: <warning> User account enabled
+Jan  2 07:11:05 myhost cron[8827]: <emerg> Process started
+Jan  2 07:16:31 myhost lpr[7386]: <crit> Process crashed
+Jan  2 07:19:45 myhost lpr[8625]: <notice> Network interface reset
+Jan  2 07:29:34 myhost news[7291]: <alert> Service restart requested
+Jan  2 07:39:34 myhost user[7164]: <debug> System performance degraded
+Jan  2 07:39:34 myhost cron[518]: <warning> Out of memory error
+Jan  2 07:46:57 myhost auth[7508]: <crit> Network unreachable
+Jan  2 07:49:53 myhost mail[895]: <emerg> Service request queued
+Jan  2 07:56:14 myhost mail[4492]: <debug> Network interface down
+Jan  2 07:58:43 myhost news[4689]: <alert> Scheduled task failed
+Jan  2 07:58:43 myhost news[5092]: <crit> High CPU usage detected
+Jan  2 07:58:43 myhost syslog[2772]: <crit> API response received
+Jan  2 07:58:43 myhost news[7443]: <notice> File transfer completed
+Jan  2 08:01:05 myhost syslog[3559]: <err> System performance degraded
+Jan  2 08:01:05 myhost news[5657]: <emerg> File system full
+Jan  2 08:09:49 myhost mail[3644]: <crit> System time drift detected
+Jan  2 08:10:49 myhost syslog[565]: <debug> Timeout occurred
+Jan  2 08:12:43 myhost authpriv[1663]: <notice> Data corruption detected
+Jan  2 08:21:42 myhost user[4017]: <warning> Backup completed
+Jan  2 08:27:00 myhost lpr[1072]: <info> Update failed
+Jan  2 08:31:37 myhost lpr[591]: <info> Firewall rule deleted
+Jan  2 08:33:50 myhost user[1735]: <crit> Memory leak detected
+Jan  2 08:40:54 myhost user[4663]: <crit> System time updated
+Jan  2 08:40:54 myhost daemon[6034]: <info> File system check completed
+Jan  2 08:43:32 myhost ftp[8424]: <info> Server stopped unexpectedly
+Jan  2 08:48:44 myhost kern[5330]: <warning> Configuration updated
+Jan  2 08:48:44 myhost auth[1779]: <err> Security alert raised
+Jan  2 08:49:06 myhost news[2482]: <alert> Application crash reported
+Jan  2 08:51:01 myhost kern[3160]: <warning> Server shutting down
+Jan  2 08:55:52 myhost syslog[3791]: <notice> Service started
+Jan  2 09:01:04 myhost news[3193]: <info> Error handling request
+Jan  2 09:01:04 myhost authpriv[6953]: <crit> System performance degraded
+Jan  2 09:02:54 myhost uucp[8526]: <warning> System running low on resources
+Jan  2 09:03:40 myhost lpr[7367]: <err> Database query failed
+Jan  2 09:03:51 myhost cron[3427]: <alert> Software version updated
+Jan  2 09:12:24 myhost lpr[6295]: <crit> User permissions updated
+Jan  2 09:19:38 myhost mail[3878]: <alert> Update failed
+Jan  2 09:21:53 myhost ftp[8561]: <crit> Process terminated
+Jan  2 09:21:53 myhost daemon[2433]: <debug> SMTP server connection error
+Jan  2 09:31:21 myhost syslog[6806]: <err> Backup restoration completed
+Jan  2 09:31:32 myhost user[4075]: <info> New update available
+Jan  2 09:34:30 myhost news[280]: <crit> System rebooted
+Jan  2 09:36:12 myhost authpriv[6867]: <alert> Cache update completed
+Jan  2 09:44:24 myhost uucp[4789]: <alert> Process terminated
+Jan  2 09:49:44 myhost lpr[8312]: <info> Connection established
+Jan  2 09:49:44 myhost authpriv[4837]: <debug> User session started
+Jan  2 09:49:44 myhost authpriv[3330]: <warning> User session started
+Jan  2 09:51:17 myhost uucp[540]: <notice> User session ended
+Jan  2 09:51:17 myhost syslog[1513]: <crit> Service restart requested
+Jan  2 09:59:44 myhost kern[1239]: <warning> System health check failed
+Jan  2 10:04:55 myhost kern[4353]: <emerg> Disk usage critical
+Jan  2 10:08:11 myhost kern[8812]: <err> Cache update completed
+Jan  2 10:11:01 myhost daemon[8154]: <notice> User session ended
+Jan  2 10:11:31 myhost ftp[2232]: <err> Disk format completed
+Jan  2 10:15:29 myhost user[5799]: <notice> Hardware upgrade completed
+Jan  2 10:19:01 myhost auth[3007]: <emerg> Scheduled task executed
+Jan  2 10:23:45 myhost uucp[5090]: <info> Disk error occurred
+Jan  2 10:30:29 myhost mail[5801]: <warning> Kernel panic
+Jan  2 10:30:29 myhost authpriv[8322]: <err> User account enabled
+Jan  2 10:35:44 myhost auth[5654]: <err> Invalid input detected
+Jan  2 10:38:56 myhost authpriv[2811]: <info> Cache update completed
+Jan  2 10:48:34 myhost lpr[1292]: <alert> File checksum mismatch
+Jan  2 10:58:09 myhost uucp[2970]: <warning> System health check failed
+Jan  2 11:03:33 myhost authpriv[5336]: <alert> Database query failed
+Jan  2 11:05:28 myhost ftp[5258]: <crit> User permissions updated
+Jan  2 11:09:33 myhost lpr[3009]: <err> Resource allocation failed
+Jan  2 11:15:18 myhost daemon[7528]: <debug> Disk write error
+Jan  2 11:16:07 myhost cron[6608]: <crit> Configuration updated
+Jan  2 11:23:41 myhost uucp[2659]: <notice> Software upgrade completed
+Jan  2 11:25:18 myhost kern[1784]: <emerg> System configuration backed up
+Jan  2 11:32:42 myhost uucp[8025]: <crit> Network link restored
+Jan  2 11:34:30 myhost daemon[3837]: <emerg> Unexpected error occurred
+Jan  2 11:34:30 myhost daemon[7854]: <alert> Service initialization failed
+Jan  2 11:34:47 myhost user[5116]: <crit> Software version updated
+Jan  2 11:44:43 myhost news[5543]: <crit> Disk write error
+Jan  2 11:50:59 myhost auth[205]: <err> Timeout occurred
+Jan  2 11:54:05 myhost uucp[332]: <crit> System reboot required
+Jan  2 11:58:04 myhost uucp[7235]: <emerg> Service health check failed
+Jan  2 12:05:27 myhost user[5341]: <crit> Server stopped unexpectedly
+Jan  2 12:12:52 myhost syslog[1875]: <crit> Server shutting down
+Jan  2 12:14:51 myhost mail[3069]: <warning> Permission denied
+Jan  2 12:14:51 myhost news[7101]: <warning> Kernel panic
+Jan  2 12:23:41 myhost user[2904]: <info> Process crashed
+Jan  2 12:31:13 myhost syslog[4419]: <err> Network speed reduced
+Jan  2 12:31:31 myhost uucp[6879]: <alert> Hardware failure detected
+Jan  2 12:32:22 myhost auth[1323]: <err> Certificate expiration warning
+Jan  2 12:35:05 myhost news[1611]: <crit> Process terminated
+Jan  2 12:39:31 myhost uucp[5743]: <notice> Database query failed
+Jan  2 12:49:19 myhost mail[8538]: <emerg> Service restart requested
+Jan  2 12:49:19 myhost cron[2498]: <info> High CPU usage detected
+Jan  2 12:51:06 myhost syslog[3582]: <alert> New update available
+Jan  2 12:51:06 myhost lpr[3459]: <emerg> Software upgrade completed
+Jan  2 13:01:03 myhost ftp[801]: <debug> User account enabled
+Jan  2 13:01:03 myhost auth[6827]: <info> System performance degraded
+Jan  2 13:01:03 myhost uucp[6957]: <emerg> Log file rotated
+Jan  2 13:03:23 myhost kern[5702]: <err> Hardware upgrade completed
+Jan  2 13:12:27 myhost authpriv[278]: <debug> Configuration applied successfully
+Jan  2 13:18:42 myhost authpriv[4122]: <debug> Log file archived
+Jan  2 13:19:14 myhost syslog[520]: <emerg> Package installation completed
+Jan  2 13:27:20 myhost cron[624]: <debug> Maintenance mode disabled
+Jan  2 13:32:42 myhost authpriv[5228]: <notice> Database schema updated
+Jan  2 13:34:50 myhost mail[8963]: <info> Kernel panic
+Jan  2 13:40:12 myhost syslog[6352]: <info> Network unreachable
+Jan  2 13:40:12 myhost user[3820]: <warning> Disk format completed
+Jan  2 13:47:35 myhost cron[5263]: <info> Package installation completed
+Jan  2 13:54:48 myhost news[2085]: <debug> System health check completed
+Jan  2 13:56:18 myhost uucp[8088]: <info> Backup completed
+Jan  2 14:03:42 myhost news[539]: <emerg> System rebooted
+Jan  2 14:05:35 myhost kern[7954]: <notice> Request timed out
+Jan  2 14:13:17 myhost kern[962]: <err> Failed login attempt
+Jan  2 14:17:50 myhost kern[7031]: <info> Configuration applied successfully
+Jan  2 14:17:50 myhost lpr[4307]: <err> System clock synchronized
+Jan  2 14:26:46 myhost ftp[4721]: <info> Update failed
+Jan  2 14:27:04 myhost daemon[6085]: <info> Login attempt locked out
+Jan  2 14:34:11 myhost cron[6030]: <emerg> Disk usage critical
+Jan  2 14:34:11 myhost mail[9004]: <warning> Service dependency failure
+Jan  2 14:38:15 myhost auth[5117]: <err> Database query failed
+Jan  2 14:42:40 myhost kern[6116]: <warning> Maintenance mode enabled
+Jan  2 14:51:17 myhost ftp[6746]: <alert> User session started
+Jan  2 14:51:37 myhost uucp[4464]: <warning> Network unreachable
+Jan  2 14:56:56 myhost news[6793]: <emerg> IP address conflict detected
+Jan  2 15:01:40 myhost user[5694]: <alert> Database migration completed
+Jan  2 15:10:28 myhost auth[6119]: <info> Data corruption detected
+Jan  2 15:18:51 myhost uucp[4747]: <debug> Request timed out
+Jan  2 15:25:37 myhost authpriv[1956]: <info> Invalid credentials provided
+Jan  2 15:25:37 myhost lpr[7600]: <err> Certificate expiration warning
+Jan  2 15:30:12 myhost user[766]: <emerg> Update failed
+Jan  2 15:34:33 myhost authpriv[9004]: <crit> Application crash reported
+Jan  2 15:37:49 myhost ftp[4139]: <emerg> Disk format completed
+Jan  2 15:43:05 myhost mail[2174]: <alert> Invalid password attempt
+Jan  2 15:43:05 myhost cron[3451]: <debug> Permission denied
+Jan  2 15:44:04 myhost news[6614]: <crit> Database query failed
+Jan  2 15:46:50 myhost auth[1735]: <emerg> Software version updated
+Jan  2 15:54:42 myhost auth[2654]: <emerg> Error reading file
+Jan  2 16:04:20 myhost auth[8836]: <err> Certificate expiration warning
+Jan  2 16:12:18 myhost kern[5834]: <info> Insufficient privileges
+Jan  2 16:12:29 myhost lpr[3542]: <emerg> API request failed
+Jan  2 16:21:28 myhost user[8711]: <notice> Configuration load failed
+Jan  2 16:26:43 myhost uucp[3682]: <crit> System health check failed
+Jan  2 16:32:57 myhost ftp[1626]: <alert> SSH connection established
+Jan  2 16:39:31 myhost uucp[3324]: <emerg> File download failed
+Jan  2 16:44:58 myhost daemon[1818]: <info> Request successfully processed
+Jan  2 16:53:48 myhost news[7821]: <crit> System health check completed
+Jan  2 16:54:38 myhost auth[6172]: <emerg> Service initialization failed
+Jan  2 16:55:14 myhost auth[701]: <err> Error handling request
+Jan  2 17:01:21 myhost syslog[7413]: <debug> Disk usage critical
+Jan  2 17:04:44 myhost uucp[6836]: <err> System time updated
+Jan  2 17:14:27 myhost news[1945]: <warning> File system check completed
+Jan  2 17:15:06 myhost lpr[3269]: <crit> Database query failed
+Jan  2 17:23:39 myhost auth[5291]: <debug> User login successful
+Jan  2 17:23:51 myhost mail[306]: <err> User login successful
+Jan  2 17:32:58 myhost user[2102]: <alert> System reboot required
+Jan  2 17:32:58 myhost daemon[1956]: <alert> Network unreachable
+Jan  2 17:40:35 myhost auth[1768]: <emerg> Package installation completed
+Jan  2 17:49:07 myhost lpr[2596]: <info> Resource allocation failed
+Jan  2 17:56:13 myhost user[5244]: <alert> Configuration applied successfully
+Jan  2 17:56:13 myhost auth[4969]: <emerg> System health check completed
+Jan  2 18:03:29 myhost cron[5021]: <emerg> File download started
+Jan  2 18:03:45 myhost authpriv[2182]: <crit> Memory usage high
+Jan  2 18:07:20 myhost auth[2299]: <notice> Service dependency initialized
+Jan  2 18:14:42 myhost cron[3890]: <err> User session ended
+Jan  2 18:19:37 myhost syslog[7166]: <warning> Maintenance mode enabled
+Jan  2 18:27:31 myhost kern[3107]: <debug> Out of memory error
+Jan  2 18:35:56 myhost daemon[339]: <err> Invalid credentials provided
+Jan  2 18:35:56 myhost syslog[2975]: <warning> New device connected
+Jan  2 18:38:52 myhost user[4608]: <info> Service request completed
+Jan  2 18:40:41 myhost daemon[3122]: <emerg> System time drift detected
+Jan  2 18:49:08 myhost authpriv[366]: <warning> Configuration load failed
+Jan  2 18:52:55 myhost kern[5691]: <notice> Cache cleared
+Jan  2 18:52:55 myhost kern[4255]: <notice> Package installation completed
+Jan  2 18:53:59 myhost ftp[5567]: <warning> Out of memory error
+Jan  2 18:53:59 myhost authpriv[3367]: <notice> Backup restoration completed
+Jan  2 18:53:59 myhost uucp[6515]: <alert> Application crash reported
+Jan  2 19:02:44 myhost authpriv[5794]: <emerg> System health check failed
+Jan  2 19:02:44 myhost authpriv[7866]: <emerg> Data corruption detected
+Jan  2 19:11:34 myhost cron[4589]: <crit> File not found
+Jan  2 19:20:06 myhost uucp[340]: <warning> Application configuration error
+Jan  2 19:20:06 myhost syslog[8539]: <warning> Error handling request
+Jan  2 19:25:07 myhost syslog[5974]: <alert> Server stopped unexpectedly
+Jan  2 19:33:29 myhost mail[3257]: <err> Service started
+Jan  2 19:33:29 myhost uucp[4366]: <warning> User password changed
+Jan  2 19:34:39 myhost lpr[4517]: <warning> Failed login attempt
+Jan  2 19:41:05 myhost kern[4963]: <notice> Data corruption detected
+Jan  2 19:51:03 myhost uucp[7423]: <notice> Log file archived
+Jan  2 19:52:32 myhost mail[2178]: <err> System running low on resources
+Jan  2 19:52:32 myhost lpr[2850]: <crit> Kernel panic
+Jan  2 20:01:16 myhost authpriv[6907]: <debug> System rebooted
+Jan  2 20:01:16 myhost mail[3350]: <info> Database connection error
+Jan  2 20:02:17 myhost cron[5245]: <err> Connection established
+Jan  2 20:08:18 myhost cron[5731]: <debug> Out of memory error
+Jan  2 20:16:08 myhost news[7897]: <alert> Backup restoration completed
+Jan  2 20:16:35 myhost auth[2183]: <crit> Scheduled task failed
+Jan  2 20:26:18 myhost mail[7967]: <emerg> Permission denied
+Jan  2 20:35:19 myhost authpriv[2313]: <alert> API response received
+Jan  2 20:38:49 myhost syslog[8476]: <crit> High CPU usage detected
+Jan  2 20:44:22 myhost daemon[7571]: <info> Backup failed
+Jan  2 20:50:28 myhost auth[2171]: <alert> SMTP server connection error
+Jan  2 20:51:18 myhost mail[3017]: <warning> User password changed
+Jan  2 21:00:43 myhost auth[711]: <crit> High memory usage detected
+Jan  2 21:07:57 myhost news[5393]: <info> Scheduled task executed
+Jan  2 21:07:57 myhost mail[5131]: <info> File checksum mismatch
+Jan  2 21:12:15 myhost auth[1817]: <warning> Backup completed
+Jan  2 21:12:15 myhost lpr[4676]: <emerg> System configuration backed up
+Jan  2 21:17:56 myhost mail[228]: <debug> Hardware failure detected
+Jan  2 21:22:27 myhost news[9051]: <crit> SMTP server connection error
+Jan  2 21:23:58 myhost lpr[8221]: <warning> User password changed
+Jan  2 21:24:23 myhost syslog[8510]: <info> Error handling request
+Jan  2 21:33:10 myhost lpr[386]: <crit> Service stopped
+Jan  2 21:33:10 myhost syslog[2830]: <err> System clock synchronized
+Jan  2 21:35:29 myhost news[5762]: <debug> Database connection error
+Jan  2 21:36:19 myhost lpr[8842]: <info> Service initialization failed
+Jan  2 21:43:30 myhost news[4182]: <warning> Database schema updated
+Jan  2 21:48:11 myhost kern[1206]: <alert> File upload completed
+Jan  2 21:52:41 myhost syslog[138]: <warning> Security alert raised
+Jan  2 22:01:21 myhost kern[7717]: <crit> User password changed
+Jan  2 22:02:58 myhost lpr[8723]: <crit> Service restart completed
+Jan  2 22:07:05 myhost lpr[6150]: <debug> Server stopped unexpectedly
+Jan  2 22:13:12 myhost mail[1370]: <alert> System configuration backed up
+Jan  2 22:22:41 myhost ftp[6650]: <info> User authentication failed
+Jan  2 22:27:44 myhost lpr[2013]: <emerg> File upload failed
+Jan  2 22:31:02 myhost daemon[7852]: <debug> System running low on resources
+Jan  2 22:40:21 myhost mail[7364]: <err> Out of memory error
+Jan  2 22:48:02 myhost authpriv[5881]: <debug> Security breach detected
+Jan  2 22:57:37 myhost cron[8964]: <debug> Package installation completed
+Jan  2 23:07:27 myhost daemon[8592]: <emerg> Disk write error
+Jan  2 23:07:27 myhost uucp[669]: <alert> Database query failed
+Jan  2 23:07:27 myhost cron[1602]: <info> User account enabled
+Jan  2 23:11:28 myhost kern[5520]: <crit> Scheduled task failed
+Jan  2 23:14:27 myhost uucp[6180]: <warning> Network interface down
+Jan  2 23:14:27 myhost lpr[4549]: <alert> Package installation completed
+Jan  2 23:17:21 myhost auth[3895]: <notice> API response received
+Jan  2 23:17:21 myhost kern[4588]: <warning> Service stopped
+Jan  2 23:17:49 myhost uucp[8238]: <notice> System rebooted
+Jan  2 23:17:49 myhost authpriv[5910]: <info> Network unreachable
+Jan  2 23:21:39 myhost syslog[1007]: <crit> File download started
+Jan  2 23:24:44 myhost lpr[5410]: <debug> Disk space reclaimed
+Jan  2 23:32:51 myhost kern[8823]: <debug> Network congestion detected
+Jan  2 23:40:06 myhost news[7348]: <emerg> Network unreachable
+Jan  2 23:40:47 myhost kern[6503]: <crit> File download failed
+Jan  2 23:40:47 myhost daemon[645]: <crit> Network speed reduced
+Jan  2 23:40:47 myhost authpriv[1491]: <warning> Software upgrade completed
+Jan  2 23:40:47 myhost ftp[8037]: <notice> Out of memory error
+Jan  2 23:50:03 myhost syslog[757]: <alert> System reboot required
+Jan  2 23:59:45 myhost ftp[6224]: <alert> Unexpected error occurred
+Jan  3 00:03:14 myhost uucp[1606]: <debug> Network interface down
+Jan  3 00:10:13 myhost user[6429]: <debug> Cache cleared
+Jan  3 00:10:13 myhost lpr[5325]: <alert> File upload completed
+Jan  3 00:19:37 myhost syslog[5003]: <err> File download failed
+Jan  3 00:19:55 myhost mail[4820]: <warning> API request failed
+Jan  3 00:23:43 myhost cron[7278]: <notice> Disk format completed
+Jan  3 00:24:01 myhost syslog[6388]: <info> Error handling request
+Jan  3 00:24:01 myhost lpr[4078]: <notice> Disk write error
+Jan  3 00:29:30 myhost syslog[695]: <alert> Configuration updated
+Jan  3 00:31:02 myhost auth[6484]: <emerg> Resource utilization warning
+Jan  3 00:31:22 myhost syslog[2693]: <info> Disk space low
+Jan  3 00:34:37 myhost mail[4011]: <err> Software version updated
+Jan  3 00:34:37 myhost cron[6881]: <crit> File upload failed
+Jan  3 00:44:20 myhost kern[8548]: <crit> System health check completed
+Jan  3 00:48:09 myhost news[4903]: <warning> Service request completed
+Jan  3 00:49:24 myhost auth[3315]: <notice> Log file archived
+Jan  3 00:58:18 myhost kern[6539]: <err> DNS resolution failed
+Jan  3 00:59:00 myhost mail[6289]: <emerg> Memory usage normal
+Jan  3 01:04:51 myhost news[5039]: <alert> CPU temperature critical
+Jan  3 01:04:51 myhost lpr[2974]: <alert> Memory usage normal
+Jan  3 01:04:51 myhost uucp[5731]: <emerg> System reboot required
+Jan  3 01:04:51 myhost cron[4277]: <info> Database connection error
+Jan  3 01:08:18 myhost syslog[4317]: <warning> Kernel panic
+Jan  3 01:14:38 myhost auth[4545]: <warning> Insufficient privileges
+Jan  3 01:21:18 myhost uucp[7931]: <info> API response received
+Jan  3 01:27:00 myhost authpriv[7207]: <alert> High memory usage detected
+Jan  3 01:31:53 myhost daemon[4593]: <crit> System reboot required
+Jan  3 01:39:23 myhost daemon[6989]: <emerg> Configuration reload successful
+Jan  3 01:40:36 myhost news[631]: <crit> Package installation completed
+Jan  3 01:43:23 myhost lpr[3401]: <emerg> File copied successfully
+Jan  3 01:44:42 myhost auth[8618]: <emerg> User permissions updated
+Jan  3 01:44:42 myhost news[1964]: <alert> User account disabled
+Jan  3 01:52:14 myhost syslog[7863]: <notice> File system full
+Jan  3 01:54:11 myhost syslog[7404]: <debug> Security alert raised
+Jan  3 01:55:08 myhost authpriv[611]: <alert> Permission denied
+Jan  3 02:02:25 myhost daemon[2246]: <warning> Disk format completed
+Jan  3 02:02:25 myhost news[2163]: <debug> File checksum mismatch
+Jan  3 02:09:57 myhost lpr[5474]: <alert> DNS resolution failed
+Jan  3 02:11:15 myhost cron[1734]: <notice> Backup failed
+Jan  3 02:13:52 myhost authpriv[5192]: <warning> Scheduled task failed
+Jan  3 02:22:09 myhost daemon[8219]: <info> Service unavailable
+Jan  3 02:25:36 myhost auth[7017]: <info> Log file archived
+Jan  3 02:30:59 myhost uucp[4336]: <alert> Firewall rule added
+Jan  3 02:37:44 myhost user[5299]: <crit> Scheduled task failed
+Jan  3 02:45:07 myhost auth[8218]: <warning> Security breach detected
+Jan  3 02:52:05 myhost daemon[3687]: <warning> Application configuration error
+Jan  3 02:52:05 myhost user[3774]: <warning> File download failed
+Jan  3 02:57:14 myhost ftp[6314]: <warning> Configuration applied successfully
+Jan  3 03:03:10 myhost ftp[4030]: <err> Maintenance mode enabled
+Jan  3 03:04:54 myhost uucp[355]: <emerg> API request failed
+Jan  3 03:10:17 myhost lpr[4051]: <notice> Backup completed
+Jan  3 03:16:08 myhost kern[3654]: <err> Backup failed
+Jan  3 03:16:34 myhost kern[7982]: <alert> Service stopped
+Jan  3 03:23:59 myhost kern[8309]: <crit> User session started
+Jan  3 03:23:59 myhost mail[3005]: <warning> Request successfully processed
+Jan  3 03:26:51 myhost cron[1749]: <crit> System time updated
+Jan  3 03:26:51 myhost daemon[5222]: <emerg> Resource allocation failed
+Jan  3 03:30:10 myhost news[986]: <notice> Service restart completed
+Jan  3 03:36:52 myhost authpriv[8234]: <alert> Service health check failed
+Jan  3 03:41:53 myhost cron[483]: <emerg> Process started
+Jan  3 03:41:53 myhost kern[4842]: <emerg> Cache update completed
+Jan  3 03:45:50 myhost syslog[1720]: <warning> User permissions updated
+Jan  3 03:46:18 myhost cron[8623]: <err> Service stopped
+Jan  3 03:51:37 myhost uucp[5573]: <notice> Service stopped
+Jan  3 03:59:45 myhost authpriv[6930]: <info> SSH connection established
+Jan  3 04:08:44 myhost news[3756]: <crit> Security alert raised
+Jan  3 04:17:25 myhost authpriv[8460]: <err> Software version updated
+Jan  3 04:26:54 myhost mail[1145]: <info> Service started
+Jan  3 04:26:54 myhost auth[5541]: <alert> Timeout occurred
+Jan  3 04:26:54 myhost uucp[5703]: <warning> System health check failed
+Jan  3 04:30:49 myhost news[5378]: <warning> Service restart completed
+Jan  3 04:35:12 myhost auth[1283]: <notice> Scheduled task failed
+Jan  3 04:35:12 myhost cron[2289]: <notice> Network link restored
+Jan  3 04:45:05 myhost auth[3052]: <err> User session timed out
+Jan  3 04:47:22 myhost uucp[7028]: <notice> Certificate expiration warning
+Jan  3 04:57:16 myhost uucp[8248]: <notice> Out of memory error
+Jan  3 05:01:59 myhost kern[376]: <err> Service restart completed
+Jan  3 05:07:25 myhost daemon[5669]: <debug> File not found
+Jan  3 05:13:50 myhost auth[274]: <crit> Error handling request
+Jan  3 05:19:32 myhost user[6592]: <alert> System running low on resources
+Jan  3 05:19:32 myhost auth[2076]: <info> Memory usage normal
+Jan  3 05:23:37 myhost user[8674]: <notice> Security patch applied
+Jan  3 05:29:04 myhost auth[1754]: <info> File transfer completed
+Jan  3 05:33:17 myhost cron[7666]: <crit> Invalid input detected
+Jan  3 05:40:06 myhost authpriv[3048]: <err> System performance degraded
+Jan  3 05:48:41 myhost auth[4269]: <crit> Application configuration error
+Jan  3 05:58:04 myhost uucp[7572]: <notice> Service request completed
+Jan  3 06:01:58 myhost uucp[116]: <info> Firewall rule deleted
+Jan  3 06:11:01 myhost kern[8299]: <crit> File upload completed
+Jan  3 06:17:46 myhost authpriv[6996]: <notice> Permission denied
+Jan  3 06:21:31 myhost kern[4466]: <warning> Disk usage critical
+Jan  3 06:21:31 myhost mail[7726]: <debug> Service request completed
+Jan  3 06:25:33 myhost auth[810]: <alert> Process terminated
+Jan  3 06:25:33 myhost news[8644]: <info> System health check failed
+Jan  3 06:25:33 myhost user[7259]: <crit> Update failed
+Jan  3 06:35:07 myhost syslog[3522]: <debug> Service unavailable
+Jan  3 06:39:54 myhost ftp[558]: <err> Authentication failure
+Jan  3 06:42:43 myhost kern[8063]: <alert> Cache cleared
+Jan  3 06:42:43 myhost mail[657]: <emerg> Certificate expiration warning
+Jan  3 06:43:44 myhost ftp[5284]: <debug> Disk space low
+Jan  3 06:43:44 myhost syslog[8935]: <debug> Process crashed
+Jan  3 06:44:49 myhost news[5653]: <debug> Error handling request
+Jan  3 06:45:20 myhost mail[1825]: <alert> Backup restoration completed
+Jan  3 06:52:26 myhost auth[5797]: <err> File system full
+Jan  3 06:59:46 myhost auth[5902]: <emerg> Hardware upgrade completed
+Jan  3 07:00:33 myhost auth[7335]: <notice> Database migration completed
+Jan  3 07:00:33 myhost kern[3260]: <emerg> Application crash reported
+Jan  3 07:06:47 myhost kern[2764]: <alert> Invalid input detected
+Jan  3 07:13:36 myhost syslog[5592]: <notice> API response received
+Jan  3 07:13:42 myhost mail[2192]: <notice> User account enabled
+Jan  3 07:22:28 myhost ftp[932]: <warning> File transfer completed
+Jan  3 07:26:05 myhost kern[8939]: <warning> Cache update completed
+Jan  3 07:34:24 myhost auth[1773]: <debug> File system check completed
+Jan  3 07:34:24 myhost mail[873]: <warning> User session ended
+Jan  3 07:44:20 myhost lpr[2054]: <info> User account disabled
+Jan  3 07:52:15 myhost authpriv[809]: <debug> Service stopped
+Jan  3 07:54:29 myhost uucp[5514]: <notice> System reboot required
+Jan  3 07:54:35 myhost uucp[5087]: <info> User authentication successful
+Jan  3 08:01:56 myhost news[8634]: <debug> Invalid input detected
+Jan  3 08:07:06 myhost authpriv[8539]: <emerg> Network interface down
+Jan  3 08:11:21 myhost syslog[3165]: <err> Memory leak detected
+Jan  3 08:12:36 myhost lpr[8340]: <emerg> Network speed reduced
+Jan  3 08:19:05 myhost daemon[2571]: <info> Permission denied
+Jan  3 08:24:18 myhost authpriv[6441]: <alert> System health check completed
+Jan  3 08:33:23 myhost lpr[7756]: <alert> Hardware upgrade completed
+Jan  3 08:35:44 myhost news[1005]: <notice> Firewall rule deleted
+Jan  3 08:35:44 myhost daemon[837]: <debug> CPU temperature critical
+Jan  3 08:37:10 myhost authpriv[7902]: <warning> CPU temperature critical
+Jan  3 08:43:36 myhost kern[955]: <crit> User session ended
+Jan  3 08:52:18 myhost kern[6192]: <alert> Invalid credentials provided
+Jan  3 08:56:04 myhost kern[3799]: <info> Kernel panic
+Jan  3 08:58:34 myhost syslog[4528]: <warning> Network interface down
+Jan  3 08:58:34 myhost syslog[7205]: <alert> Service request completed
+Jan  3 09:05:46 myhost daemon[7290]: <debug> SMTP server connection error
+Jan  3 09:09:30 myhost cron[3864]: <notice> Software version updated
+Jan  3 09:15:54 myhost ftp[6693]: <info> Database migration completed
+Jan  3 09:15:54 myhost lpr[8694]: <notice> File copied successfully
+Jan  3 09:22:38 myhost auth[7805]: <notice> Service dependency failure
+Jan  3 09:31:50 myhost news[1141]: <alert> User session ended
+Jan  3 09:33:12 myhost daemon[8974]: <notice> Cache update completed
+Jan  3 09:42:44 myhost news[1075]: <warning> System configuration restored
+Jan  3 09:42:44 myhost user[3514]: <alert> Service initialization failed
+Jan  3 09:42:46 myhost syslog[2812]: <info> Database query failed
+Jan  3 09:52:46 myhost user[7102]: <alert> Insufficient privileges
+Jan  3 10:01:02 myhost lpr[6903]: <debug> User account enabled
+Jan  3 10:03:46 myhost syslog[2812]: <info> Database query failed
+Jan  3 10:10:05 myhost authpriv[3500]: <notice> System clock synchronized
+Jan  3 10:10:05 myhost authpriv[3500]: <notice> System clock synchronized
+Jan  3 10:10:05 myhost authpriv[3500]: <notice> System clock synchronized
+Jan  3 10:10:05 myhost authpriv[3500]: <notice> System clock synchronized
+Jan  3 10:10:10 myhost authpriv[3500]: <notice> Database query failed
+Jan  3 10:10:12 myhost authpriv[3500]: <notice> System clock synchronized
+Jan  3 10:10:15 myhost authpriv[3500]: <notice> System clock synchronized
+Jan  3 10:10:15 myhost authpriv[3500]: <notice> System clock synchronized
+Jan  3 10:10:15 myhost authpriv[3500]: <notice> System clock synchronized
+Jan  3 10:14:06 myhost mail[173]: <warning> User session ended
+Jan  3 10:16:00 myhost ftp[8866]: <emerg> User session started
+Jan  3 10:16:59 myhost cron[3281]: <notice> Timeout occurred
+Jan  3 10:19:44 myhost user[3462]: <alert> User session timed out
+Jan  3 10:27:16 myhost mail[8396]: <alert> New update available
+Jan  3 10:32:05 myhost syslog[6387]: <emerg> System clock synchronized
+Jan  3 10:38:23 myhost auth[1783]: <debug> User login successful
+Jan  3 10:45:36 myhost lpr[6125]: <err> Service request queued
+Jan  3 10:53:36 myhost ftp[4422]: <warning> Configuration reload successful
+Jan  3 10:56:46 myhost cron[3690]: <alert> Memory leak detected

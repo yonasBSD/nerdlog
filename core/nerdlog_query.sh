@@ -72,6 +72,15 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Either use the provided current year and month (for tests), or get the actual ones.
+if [[ "$CUR_YEAR" == "" ]]; then
+  CUR_YEAR="$(date +'%Y')"
+fi
+
+if [[ "$CUR_MONTH" == "" ]]; then
+  CUR_MONTH="$(date +'%m')"
+fi
+
 set -- "${positional_args[@]}" # restore positional parameters
 
 # Just a hack to account for cases when /var/log/syslog.1 doesn't exist:
@@ -124,6 +133,22 @@ function refresh_cache { # {{{
     monthByName["Oct"] = "10";
     monthByName["Nov"] = "11";
     monthByName["Dec"] = "12";
+
+    curYear = '${CUR_YEAR}';
+    curMonth = '${CUR_MONTH}';
+
+    yearByMonthName["Jan"] = inferYear(1, curYear, curMonth) "";
+    yearByMonthName["Feb"] = inferYear(2, curYear, curMonth) "";
+    yearByMonthName["Mar"] = inferYear(3, curYear, curMonth) "";
+    yearByMonthName["Apr"] = inferYear(4, curYear, curMonth) "";
+    yearByMonthName["May"] = inferYear(5, curYear, curMonth) "";
+    yearByMonthName["Jun"] = inferYear(6, curYear, curMonth) "";
+    yearByMonthName["Jul"] = inferYear(7, curYear, curMonth) "";
+    yearByMonthName["Aug"] = inferYear(8, curYear, curMonth) "";
+    yearByMonthName["Sep"] = inferYear(9, curYear, curMonth) "";
+    yearByMonthName["Oct"] = inferYear(10, curYear, curMonth) "";
+    yearByMonthName["Nov"] = inferYear(11, curYear, curMonth) "";
+    yearByMonthName["Dec"] = inferYear(12, curYear, curMonth) "";
   '
 
   # Add new entries to cache, if needed
@@ -146,20 +171,31 @@ function refresh_cache { # {{{
   # bunch of other time-filtering logic here. Although it's cool since it
   # includes the year, microseconds, and timezone.
   awk_functions='
+function inferYear(logMonth, curYear, curMonth) {
+  delta = logMonth - curMonth
+
+  if (delta <= -11)       # log month is Jan, current is Dec -> next year
+    return curYear + 1
+  else if (delta >= 11)   # log month is Dec, current is Jan -> previous year
+    return curYear - 1
+  else
+    return curYear
+}
+
 function syslogFieldsToTimestamp(monthStr, day, hhmmss) {
   month = monthByName[monthStr]
-  year = 2025
+  year = yearByMonthName[monthStr]
   hour = substr(hhmmss, 1, 2)
   min = substr(hhmmss, 4, 2)
 
-  return mktime(year " " month " " day " " hour " " min " " 0)
+  return mktime(year " " month " " day " " hour " " min " " "0")
 }
 
 function nerdlogFieldsToTimestamp(year, month, day, hhmmss) {
   hour = substr(hhmmss, 1, 2)
   min = substr(hhmmss, 4, 2)
 
-  return mktime(year " " month " " day " " hour " " min " " 0)
+  return mktime(year " " month " " day " " hour " " min " " "0")
 }
 
 function formatNerdlogTime(timestamp) {
@@ -198,7 +234,6 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
 #         fortunately they all use UTC as local time, so shouldn't be an issue.
 #         Harder to debug locally though.
 # TODO: ^ move initialization of monthByName out of logFieldsToTimestamp somehow
-# TODO: ^ year needs to be inferred instead of hardcoding 2025
 # TODO: ^ if we fail to find the next timestamp and abort on 1000, print an error,
 # and then the Go part should see this error and report it to user
 
