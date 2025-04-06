@@ -211,7 +211,7 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
     last3 = lastHHMM ":00"'
 
   scriptSetCurTimestr='
-    bytenr_cur = bytenr_next-length($0)-1;
+    bytenr_cur = bytenr_next - length($0) - 1;
     curTimestr = syslogFieldsToIndexTimestr($1, $2, $3);
   '
   scriptSetLastTimestrEtc='
@@ -292,20 +292,36 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
   fi
 } # }}}
 
-# Prints linenumber and bytenumber, space-separated.
-# One possible use is:
-#   read -r my_linenr my_bytenr <<<$(get_linenr_and_bytenr_from_cache my_timestr)
+# Performs index lookup by a timestr like "2006-01-02-15:04" (typically given
+# as --from or --to, and it's also stored in the index in the same form).
 #
-# Now we can use those vars $my_linenr and $my_bytenr
+# Prints result: one of "found", "before" or "after"; and if the result
+# is "found", then also prints linenumber and bytenumber, space-separated.
+# "before" means the given timestr is earlier than the earliest log we have,
+# and "after" obviously means that it's later than the latest log we have.
+#
+# One possible use is:
+#   read -r my_result my_linenr my_bytenr <<<$(get_linenr_and_bytenr_from_cache my_timestr)
+#
+# Now we can use those vars $my_result, $my_linenr and $my_bytenr
 function get_linenr_and_bytenr_from_cache() { # {{{
   awk -F"\t" '
-    BEGIN { prev3 = ""; prev4 = ""; }
-    $1 == "idx" && $2 == "'$1'" { print "found " $3 " " $4; exit }
-    $1 == "idx" && $2 >  "'$1'" {
-      if (prev3 == "") { print "before"; } else { print "found " $3 " " $4; }
-      exit
+    BEGIN { isFirstIdx = 1; }
+    $1 == "idx" {
+      if ("'$1'" == $2) {
+        print "found " $3 " " $4;
+        exit
+      } else if ("'$1'" < $2) {
+        if (isFirstIdx) {
+          print "before";
+        } else {
+          print "found " $3 " " $4;
+        }
+        exit
+      } else {
+        isFirstIdx = 0;
+      }
     }
-    $1 == "idx" { prev3 = $3; prev4 = $4; }
     END { print "after"; exit }
   ' $cachefile
 } # }}}
