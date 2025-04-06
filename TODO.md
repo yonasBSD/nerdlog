@@ -31,6 +31,7 @@
 - Ideally, if ssh-agent doesn't have the key, try to add it and request
   passphrase interactively (e.g. ssh itself is able to figure which key to open
   and to add to ssh agent)
+- In histogram, when selecting, show not only time but also date of the cursor.
 
 ### TODO testing
 
@@ -133,6 +134,9 @@ Need to check what https://lnav.org/ uses, maybe get some ideas from there.
 - Inputs with history (use for all inputs: command line, query line, all the
   Edit form fields), with state being stored somewhere under profile dir
 - Proper shutdown, with connections being terminated
+- Make configurable whether we use case-insensitive pattern matching
+  (iirc slows down the query significantly): both the global value, with
+  the ability to override it per host in nerdlog config
 
 ## TODO
 

@@ -1,4 +1,4 @@
-# Nerdlog: a fancy yet low-key terminal log viewer for distributed systems
+# Nerdlog: a fast, remote-first TUI log viewer for distributed systems, with a timeline historam, loosely inspired by Graylog/Kibana
 
 First of all, a little demo. Here, we're dealing with logs from 4 remote nodes,
 each having about 2GB log file, generating about 600K log messages per hour in
