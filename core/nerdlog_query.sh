@@ -233,7 +233,6 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
 #         use UTC. Sadly versions deployed to our machines have older awk, but
 #         fortunately they all use UTC as local time, so shouldn't be an issue.
 #         Harder to debug locally though.
-# TODO: ^ move initialization of monthByName out of logFieldsToTimestamp somehow
 # TODO: ^ if we fail to find the next timestamp and abort on 1000, print an error,
 # and then the Go part should see this error and report it to user
 

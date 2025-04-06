@@ -1,6 +1,8 @@
 ## TODO before publishing
 
-- Year is being hardcoded in `nerdlog_query.sh`, obviously that needs to be fixed.
+- Implement parsing of the new syslog format: instead of "Apr  5 11:07:46",
+  it can be "2025-04-05T11:07:46.161001+03:00" if `/etc/rsyslog.conf`
+  doesn't contain `$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat`
 - Reimplement host selection (see details below)
   - Aliases to be used as "source"
   - Parsing of things like {foo,bar}: so that
@@ -9,6 +11,10 @@
   - Config file with a list of predefined stuff
 - Reimplement message parsing (see details below)
 - Implement some fake logs generation, just to use in examples
+- If requesting docs e.g. too far in the future, or in the past (so that
+  the requested period doesn't overlap with the available logs), then nerdlog
+  currently returns ALL logs. Instead it should figure that the periods don't
+  overlap, and return none.
 - Write docs
 - Fix the issue with UTC time: histogram only works fine with UTC time, but when
   we check e.g. local logs (which are in UTC+3), and we're looking at e.g. just
