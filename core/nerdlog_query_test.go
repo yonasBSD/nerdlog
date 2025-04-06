@@ -181,7 +181,7 @@ func runTestCase(t *testing.T, nerdlogQueryShFname, testCasesDir, testName strin
 	// so we increment it.
 	minLineno += 1
 
-	for keepLines := numLines - 1; ; keepLines -= 100 {
+	for keepLines := numLines - 1; ; keepLines -= 25 {
 		// If we step too much below the min, use the min (and we'll break below).
 		if keepLines < minLineno {
 			keepLines = minLineno

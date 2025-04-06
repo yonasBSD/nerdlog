@@ -3,10 +3,8 @@
 - Implement parsing of the new syslog format: instead of "Apr  5 11:07:46",
   it can be "2025-04-05T11:07:46.161001+03:00" if `/etc/rsyslog.conf`
   doesn't contain `$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat`
-- If there is a gap in the logs more than 1000 mins (which is just 16 hours),
-  the index ends up being incomplete, which can result in more logs than
-  necessary being returned. We should maybe at least just bump this limit, or
-  maybe do something smarter.
+- Handle corner cases like only having a single log file, or the old one is empty
+- Ideally support more than 2 log files
 - Reimplement host selection (see details below)
   - Aliases to be used as "source"
   - Parsing of things like {foo,bar}: so that
@@ -30,6 +28,8 @@
 - Ideally, during node agent initialization, we should check the tools and their
   versions available on the host (such as awk), and error out if they're too old
   or otherwise incompatible.
+- Add some kind of index format version, so when we change the format in future
+  versions, we can automatically rebuild the index without issues
 
 ### TODO testing
 

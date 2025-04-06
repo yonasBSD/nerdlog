@@ -191,63 +191,27 @@ function syslogFieldsToTimestamp(monthStr, day, hhmmss) {
   return mktime(year " " month " " day " " hour " " min " " "0")
 }
 
-function nerdlogFieldsToTimestamp(year, month, day, hhmmss) {
-  hour = substr(hhmmss, 1, 2)
-  min = substr(hhmmss, 4, 2)
-
-  return mktime(year " " month " " day " " hour " " min " " "0")
-}
-
 function formatNerdlogTime(timestamp) {
   return strftime("%Y-%m-%d-%H:%M", timestamp)
-}
-
-function nerdlogTimestrToTimestamp(timestr) {
-  return nerdlogFieldsToTimestamp(substr(timestr, 1, 4), substr(timestr, 6, 2), substr(timestr, 9, 2), substr(timestr, 12, 5));
 }
 
 function printIndexLine(outfile, timestr, linenr, bytenr) {
   print "idx\t" timestr "\t" linenr "\t" bytenr >> outfile;
 }
 
-function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimestr, linenr, bytenr) {
-  if (lastTimestr == "") {
-    printIndexLine(outfile, curTimestr, linenr, bytenr);
-    return;
-  }
-
-  i = 0;
-  do {
-    nextTimestamp = lastTimestamp + 60
-    nextTimestr = formatNerdlogTime(nextTimestamp)
-
-    printIndexLine(outfile, nextTimestr, linenr, bytenr);
-
-    lastTimestamp = nextTimestamp
-  } while (nextTimestamp < curTimestamp && i++ < 1000);
-}
-
 '$awk_func_print_percentage'
   '
-# TODO: ^ newer versions of awk support one more argument for mktime, which is to
-#         use UTC. Sadly versions deployed to our machines have older awk, but
-#         fortunately they all use UTC as local time, so shouldn't be an issue.
-#         Harder to debug locally though.
-# TODO: ^ if we fail to find the next timestamp and abort on 1000, print an error,
-# and then the Go part should see this error and report it to user
-
 # NOTE: this script MUST be executed with the "-b" awk key, which means that
 # awk will work in terms of bytes, not characters. We use length($0) there and
 # we rely on it being number of bytes.
 # TODO: better rewrite this indexing stuff in perl.
 
   scriptInitFromLastTimestr='
-    lastTimestamp = nerdlogTimestrToTimestamp(lastTimestr);
     lastHHMM = substr(lastTimestr, 8, 5);
     last3 = lastHHMM ":00"'
 
   scriptSetCurTimestr='bytenr_cur = bytenr_next-length($0)-1; curTimestamp = syslogFieldsToTimestamp($1, $2, $3); curTimestr = formatNerdlogTime(curTimestamp)'
-  scriptSetLastTimestrEtc='lastTimestr = curTimestr; lastTimestamp = curTimestamp; lastHHMM = curHHMM'
+  scriptSetLastTimestrEtc='lastTimestr = curTimestr; lastHHMM = curHHMM'
 
   script1='BEGIN { bytenr_next=1; lastPercent=0 }
 {
@@ -282,7 +246,7 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
   '"$script1"'
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
-    printAllNew("'$cachefile'", lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(( last_linenr-1 ))', bytenr_cur+'$(( last_bytenr-1 ))');
+    printIndexLine("'$cachefile'", curTimestr, NR+'$(( last_linenr-1 ))', bytenr_cur+'$(( last_bytenr-1 ))');
     printPercentage(bytenr_cur, '$size_to_index');
     '"$scriptSetLastTimestrEtc"'
   }
@@ -296,7 +260,7 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
   '"$script1"'
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
-    printAllNew("'$cachefile'", lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR, bytenr_cur);
+    printIndexLine("'$cachefile'", curTimestr, NR, bytenr_cur);
     printPercentage(bytenr_cur, '$total_size');
     '"$scriptSetLastTimestrEtc"'
   }
@@ -314,7 +278,7 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
     bytenr = bytenr_cur+'$prevlog_bytes';
-    printAllNew("'$cachefile'", lastTimestamp, lastTimestr, curTimestamp, curTimestr, NR+'$(get_prevlog_lines_from_cache)', bytenr);
+    printIndexLine("'$cachefile'", curTimestr, NR+'$(get_prevlog_lines_from_cache)', bytenr);
     printPercentage(bytenr, '$total_size');
     '"$scriptSetLastTimestrEtc"'
   }
