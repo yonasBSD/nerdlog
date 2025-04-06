@@ -748,6 +748,48 @@ func BenchmarkNerdlogQueryLargeLogTinyPortionCompleteIndex(b *testing.B) {
 	}
 }
 
+func BenchmarkNerdlogQueryHugeLogOneHourCompleteIndex(b *testing.B) {
+	if err := generateLogfilesHuge(); err != nil {
+		b.Fatalf("failed to generate log files: %s", err.Error())
+	}
+
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		b.Fatal("unable to get caller info")
+	}
+
+	parentDir := filepath.Dir(filename)
+	nerdlogQueryShFname := filepath.Join(parentDir, "nerdlog_query.sh")
+
+	indexFname := filepath.Join(testOutputRoot, "bench_huge_index")
+
+	cmdArgs := append(
+		[]string{
+			nerdlogQueryShFname,
+			"--logfile-last", "/tmp/nerdlog_query_test_output/randomlog_huge",
+			"--logfile-prev", "/tmp/nerdlog_query_test_output/randomlog_huge.1",
+			"--cache-file", indexFname,
+			"--max-num-lines", "100",
+			"--from", "2025-03-11-12:30",
+		},
+	)
+
+	// Build the index
+	os.Remove(indexFname)
+	if err := runNerdlogQueryForBenchmark(cmdArgs); err != nil {
+		b.Fatalf("initial runNerdlogQueryForBenchmark failed: %s", err)
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		start := time.Now()
+		if err := runNerdlogQueryForBenchmark(cmdArgs); err != nil {
+			b.Fatalf("runNerdlogQueryForBenchmark failed: %s", err)
+		}
+	}
+}
+
 func generateLogfilesLarge() error {
 	t, err := time.Parse(time.RFC3339, "2025-03-09T06:00:00Z")
 	if err != nil {
@@ -773,6 +815,39 @@ func generateLogfilesLarge() error {
 
 		SkipIfPrevLogSizeIs: 143841612,
 		SkipIfLastLogSizeIs: 122432250,
+	})
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
+}
+
+func generateLogfilesHuge() error {
+	t, err := time.Parse(time.RFC3339, "2025-03-09T06:00:00Z")
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	t2, err := time.Parse(time.RFC3339, "2025-03-09T09:00:00Z")
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	err = sysloggen.GenerateSyslog(sysloggen.Params{
+		StartTime:     t,
+		SecondLogTime: t2,
+
+		LogBasename: "/tmp/nerdlog_query_test_output/randomlog_huge",
+
+		NumLogs:    40000000,
+		MinDelayMS: 0,
+		MaxDelayMS: 10,
+
+		RandomSeed: 123,
+
+		SkipIfPrevLogSizeIs: 143833610,
+		SkipIfLastLogSizeIs: 2518973348,
 	})
 	if err != nil {
 		return errors.Trace(err)
