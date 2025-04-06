@@ -1,4 +1,6 @@
-# Nerdlog: a fast, remote-first TUI log viewer for distributed systems, with a timeline historam, loosely inspired by Graylog/Kibana
+# Nerdlog: fast, remote-first, multi-host TUI log viewer with timeline histogram and no central server
+
+Loosely inspired by Graylog/Kibana, but without the bloat.
 
 First of all, a little demo. Here, we're dealing with logs from 4 remote nodes,
 each having about 2GB log file, generating about 600K log messages per hour in
