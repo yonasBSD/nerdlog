@@ -25,7 +25,7 @@ p:p:80
 p:p:85
 p:p:90
 p:p:95
-debug:from 411 (27328) to  ()
+debug:the from is found: 411 (27328)
 p:stage:3:querying logs
 debug:Getting logs from offset 8172 until the end of latest /tmp/nerdlog_query_test_output/latest_logs_same_file_pattern1/03_basic_more_less_than_max/logfile.
 p:p:15

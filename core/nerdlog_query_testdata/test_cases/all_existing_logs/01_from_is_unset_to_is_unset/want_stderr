@@ -1,0 +1,22 @@
+debug:neither --from or --to are given, but index doesn't exist at all, gonna rebuild
+p:stage:1:indexing from scratch
+p:p:10
+p:p:20
+p:p:25
+p:p:30
+p:p:35
+p:p:40
+p:p:45
+p:p:50
+p:p:50
+p:p:55
+p:p:60
+p:p:65
+p:p:70
+p:p:80
+p:p:85
+p:p:90
+p:p:95
+p:stage:3:querying logs
+debug:Getting logs from the very beginning in prev /tmp/nerdlog_query_test_output/all_existing_logs/01_from_is_unset_to_is_unset/logfile.1 until the end of latest /tmp/nerdlog_query_test_output/all_existing_logs/01_from_is_unset_to_is_unset/logfile
+p:stage:4:done

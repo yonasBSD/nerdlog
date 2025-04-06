@@ -27,7 +27,8 @@ p:p:80
 p:p:85
 p:p:90
 p:p:95
-debug:from 132 (8680) to 148 (9734)
+debug:the from is found: 132 (8680)
+debug:the to is found: 148 (9734)
 p:stage:3:querying logs
 debug:Getting logs from offset 8680, only 1054 bytes, all in the prev /tmp/nerdlog_query_test_output/year_infer_edge_of_two_years/01_logs_in_the_past_cur_apr/logfile.1
 p:stage:4:done

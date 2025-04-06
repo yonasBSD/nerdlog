@@ -214,8 +214,6 @@ func runTestCase(t *testing.T, nerdlogQueryShFname, testCasesDir, testName strin
 	// output is a bad idea. Gotta do some post-processing, like sorting these "s:"
 	// lines, before comparing them.
 
-	// TODO: gotta also do some benchmarks. Very useful for refactorings.
-
 	return nil
 }
 

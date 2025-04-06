@@ -328,7 +328,11 @@ function printAllNew(outfile, lastTimestamp, lastTimestr, curTimestamp, curTimes
 #
 # Now we can use those vars $my_linenr and $my_bytenr
 function get_linenr_and_bytenr_from_cache() { # {{{
-  awk -F"\t" '$1 == "idx" && $2 == "'$1'" { print $3 " " $4; exit }' $cachefile
+  awk -F"\t" '
+    $1 == "idx" && $2 == "'$1'" { print "found " $3 " " $4; exit }
+    $1 == "idx" && $2 >  "'$1'" { print "before"; exit }
+    END                         { print "after"; exit }
+  ' $cachefile
 } # }}}
 
 function get_prevlog_lines_from_cache() { # {{{
@@ -347,6 +351,7 @@ function get_prevlog_bytenr() { # {{{
   du -sb $logfile_prev | awk '{ print $1 }'
 } # }}}
 
+is_outside_of_range=0
 if [[ "$from" != "" || "$to" != "" ]]; then
   # Check timestamp in the first line of /tmp/nerdlog_query_cache, and if
   # $logfile_prev's modification time is newer, then delete whole cache
@@ -367,16 +372,16 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   # First try to find it in cache without refreshing the cache
 
   if [[ "$from" != "" ]]; then
-    read -r from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from)
-    if [[ "$from_bytenr" == "" ]]; then
+    read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from)
+    if [[ "$from_result" != "found" ]]; then
       echo "debug:the from isn't found, gonna refresh the cache" 1>&2
       refresh_and_retry=1
     fi
   fi
 
   if [[ "$to" != "" ]]; then
-    read -r to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to)
-    if [[ "$to_bytenr" == "" ]]; then
+    read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to)
+    if [[ "$to_result" != "found" ]]; then
       echo "debug:the to isn't found, gonna refresh the cache" 1>&2
       refresh_and_retry=1
     fi
@@ -386,16 +391,42 @@ if [[ "$from" != "" || "$to" != "" ]]; then
     refresh_cache
 
     if [[ "$from" != "" ]]; then
-      read -r from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from)
-      if [[ "$from_bytenr" == "" ]]; then
+      read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from)
+
+      if [[ "$from_result" == "before" ]]; then
         echo "debug:the from isn't found, will use the beginning" 1>&2
+      elif [[ "$from_result" == "found" ]]; then
+        echo "debug:the from is found: $from_linenr ($from_bytenr)" 1>&2
+        if [[ "$from_bytenr" == "" || "$from_linenr" == "" ]]; then
+          echo "error: from_result is found but from_bytenr and/or from_linenr is empty" 1>&2
+          exit 1
+        fi
+      elif [[ "$from_result" == "after" ]]; then
+        echo "debug:the from is after the latest log we have, will return nothing" 1>&2
+        is_outside_of_range=1
+      else
+        echo "error: invalid from_result: $from_result" 1>&2
+        exit 1
       fi
     fi
 
     if [[ "$to" != "" ]]; then
-      read -r to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to)
-      if [[ "$to_bytenr" == "" ]]; then
+      read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to)
+
+      if [[ "$to_result" == "after" ]]; then
         echo "debug:the to isn't found, will use the end" 1>&2
+      elif [[ "$to_result" == "found" ]]; then
+        echo "debug:the to is found: $to_linenr ($to_bytenr)" 1>&2
+        if [[ "$to_bytenr" == "" || "$to_linenr" == "" ]]; then
+          echo "error: to_result is found but to_bytenr and/or to_linenr is empty" 1>&2
+          exit 1
+        fi
+      elif [[ "$to_result" == "before" ]]; then
+        echo "debug:the to is before the first log we have, will return nothing" 1>&2
+        is_outside_of_range=1
+      else
+        echo "error: invalid to_result: $to_result" 1>&2
+        exit 1
       fi
     fi
 
@@ -407,8 +438,10 @@ else
   fi
 fi
 
-
-echo "debug:from $from_linenr ($from_bytenr) to $to_linenr ($to_bytenr)" 1>&2
+if [[ $is_outside_of_range == 1 ]]; then
+  echo "p:stage:$STAGE_DONE:done" 1>&2
+  exit 0
+fi
 
 echo "p:stage:$STAGE_QUERYING:querying logs" 1>&2
 

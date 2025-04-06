@@ -28,7 +28,7 @@ p:p:85
 p:p:90
 p:p:95
 debug:the from isn't found, will use the beginning
-debug:from  () to 12 (741)
+debug:the to is found: 12 (741)
 p:stage:3:querying logs
 debug:Getting logs from the very beginning to offset 740, all in the prev /tmp/nerdlog_query_test_output/from_the_beginning_of_prev_file/03_basic_more_less_than_max/logfile.1.
 p:stage:4:done

@@ -27,7 +27,8 @@ p:p:80
 p:p:85
 p:p:90
 p:p:95
-debug:from 1022 (67792) to 1033 (68556)
+debug:the from is found: 1022 (67792)
+debug:the to is found: 1033 (68556)
 p:stage:3:querying logs
 debug:Getting logs from offset 48636, only 764 bytes, all in the latest /tmp/nerdlog_query_test_output/in_the_middle_latest_file/03_basic_more_less_than_max/logfile
 p:stage:4:done
