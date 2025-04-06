@@ -13,23 +13,24 @@
   - Config file with a list of predefined stuff
 - Reimplement message parsing (see details below)
 - Implement some fake logs generation, just to use in examples
-- If requesting docs e.g. too far in the future, or in the past (so that
-  the requested period doesn't overlap with the available logs), then nerdlog
-  currently returns ALL logs. Instead it should figure that the periods don't
-  overlap, and return none.
+- Index should be per-log-stream, so that if we open multiple log files from the
+  same host (like e.g. syslog and auth.log), they don't conflict
 - Write docs
 - Fix client name (make it include the log filename)
 - Fix tmp file naming (make it non-random, so that index is reused between
   invocations)
 - Fix an issue with reconnect tight loop
-- Fix error handling when we can't connect to a host
 - Fix an issue with things like "[system]" in the log messages being interpreted
   by tview
+- Fix the issue with histogram navigation: when the period is 100h, it jumps from
+  beginning to end.
+- In histogram navigation, try to support Ctrl+Left and Ctrl+Right
 - Ideally, during node agent initialization, we should check the tools and their
   versions available on the host (such as awk), and error out if they're too old
   or otherwise incompatible.
-- Add some kind of index format version, so when we change the format in future
-  versions, we can automatically rebuild the index without issues
+- Ideally, if ssh-agent doesn't have the key, try to add it and request
+  passphrase interactively (e.g. ssh itself is able to figure which key to open
+  and to add to ssh agent)
 
 ### TODO testing
 
@@ -66,6 +67,35 @@ plus some extras which actually can't be specified inline, like the port number
 Config file will also make it possible to implement the globs (without the
 config, we have nothing to filter from)
 
+---
+
+For each host that we're specifying in the hosts input, such as "myhost1, myhost2"
+etc, nerdlog needs to figure more details:
+
+- The actual hostname to connect to
+- Username
+- Port
+- Log file
+
+All of these can be specified right in the hosts input, like this:
+
+```
+myuser@myhost:1234:/path/to/logfile
+```
+
+And, provided that `myhost` is the actual hostname to connect to, then nerdlog
+has everything it needs for this particular host.
+
+If however one or more parts was omitted, then, for each missing part, it will
+try to find it in the following places, using the provided host (`myhost` in
+this case) as a key:
+
+- Nerdlog's own config, located in ~/.config/nerdlog/hosts
+- SSH config ~/.ssh/config (obviously, log file can't be specified there; but
+  everything else can)
+- Defaults: just like in the ssh itself, the default user is the current user,
+  and default port is 22. And the default config is `/var/log/syslog`.
+
 ### Reimplement message parsing
 
 It should be customizable, one way or the other.
@@ -94,6 +124,9 @@ Need to check what https://lnav.org/ uses, maybe get some ideas from there.
   a jumphost, and the jumphost address itself
 - Implement state persistence (in a directory with the name based on profile id
   above)
+
+- Add some kind of index format version, so when we change the format in future
+  versions, we can automatically rebuild the index without issues
 
 ## TODO next
 
