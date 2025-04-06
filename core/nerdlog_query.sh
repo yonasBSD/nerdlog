@@ -153,7 +153,7 @@ function refresh_cache { # {{{
 
   # Add new entries to cache, if needed
 
-  # NOTE: syslogFieldsToTimestamp parses the traditional systemd timestamp
+  # NOTE: syslogFieldsToIndexTimestr parses the traditional systemd timestamp
   # format, like this: "Apr  5 11:07:46". But in the recent versions of
   # rsyslog, it's not the default; that traditional timestamp format can be
   # enabled by adding this line:
@@ -182,17 +182,17 @@ function inferYear(logMonth, curYear, curMonth) {
     return curYear
 }
 
-function syslogFieldsToTimestamp(monthStr, day, hhmmss) {
+function syslogFieldsToIndexTimestr(monthStr, day, hhmmss) {
   month = monthByName[monthStr]
   year = yearByMonthName[monthStr]
   hour = substr(hhmmss, 1, 2)
   min = substr(hhmmss, 4, 2)
 
-  return mktime(year " " month " " day " " hour " " min " " "0")
-}
+  if (length(day) == 1) {
+    day = "0" day
+  }
 
-function formatNerdlogTime(timestamp) {
-  return strftime("%Y-%m-%d-%H:%M", timestamp)
+  return year "-" month "-" day "-" hour ":" min
 }
 
 function printIndexLine(outfile, timestr, linenr, bytenr) {
@@ -210,8 +210,14 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
     lastHHMM = substr(lastTimestr, 8, 5);
     last3 = lastHHMM ":00"'
 
-  scriptSetCurTimestr='bytenr_cur = bytenr_next-length($0)-1; curTimestamp = syslogFieldsToTimestamp($1, $2, $3); curTimestr = formatNerdlogTime(curTimestamp)'
-  scriptSetLastTimestrEtc='lastTimestr = curTimestr; lastHHMM = curHHMM'
+  scriptSetCurTimestr='
+    bytenr_cur = bytenr_next-length($0)-1;
+    curTimestr = syslogFieldsToIndexTimestr($1, $2, $3);
+  '
+  scriptSetLastTimestrEtc='
+    lastTimestr = curTimestr;
+    lastHHMM = curHHMM;
+  '
 
   script1='BEGIN { bytenr_next=1; lastPercent=0 }
 {
