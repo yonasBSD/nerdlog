@@ -2,8 +2,8 @@ awk: cmd. line:1: fatal: cannot open file `/tmp/nerdlog_query_test_output/latest
 debug:logfile has changed: stored '', actual '2025-03-10 09:59:58.000000000 +0000', deleting it
 awk: cmd. line:1: fatal: cannot open file `/tmp/nerdlog_query_test_output/latest_logs_same_file/02_basic_more_full_amount/nerdlog_query_index' for reading: No such file or directory
 debug:broken cache file (no prevlog lines), deleting it
-awk: fatal: cannot open file `/tmp/nerdlog_query_test_output/latest_logs_same_file/02_basic_more_full_amount/nerdlog_query_index' for reading: No such file or directory
-debug:the from isn't found, gonna refresh the cache
+awk: cmd. line:2: fatal: cannot open file `/tmp/nerdlog_query_test_output/latest_logs_same_file/02_basic_more_full_amount/nerdlog_query_index' for reading: No such file or directory
+debug:the from 2025-03-12-10:00 isn't found, gonna refresh the cache
 p:stage:1:indexing from scratch
 p:p:5
 p:p:10
@@ -25,7 +25,7 @@ p:p:80
 p:p:85
 p:p:90
 p:p:95
-debug:the from is found: 1033 (68556)
+debug:the from 2025-03-12-10:00 is found: 1033 (68556)
 p:stage:3:querying logs
 debug:Getting logs from offset 49400 until the end of latest /tmp/nerdlog_query_test_output/latest_logs_same_file/02_basic_more_full_amount/logfile.
 p:stage:4:done

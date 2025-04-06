@@ -2,10 +2,10 @@ awk: cmd. line:1: fatal: cannot open file `/tmp/nerdlog_query_test_output/edge_o
 debug:logfile has changed: stored '', actual '2025-03-10 09:59:58.000000000 +0000', deleting it
 awk: cmd. line:1: fatal: cannot open file `/tmp/nerdlog_query_test_output/edge_of_two_fles/01_basic/nerdlog_query_index' for reading: No such file or directory
 debug:broken cache file (no prevlog lines), deleting it
-awk: fatal: cannot open file `/tmp/nerdlog_query_test_output/edge_of_two_fles/01_basic/nerdlog_query_index' for reading: No such file or directory
-debug:the from isn't found, gonna refresh the cache
-awk: fatal: cannot open file `/tmp/nerdlog_query_test_output/edge_of_two_fles/01_basic/nerdlog_query_index' for reading: No such file or directory
-debug:the to isn't found, gonna refresh the cache
+awk: cmd. line:2: fatal: cannot open file `/tmp/nerdlog_query_test_output/edge_of_two_fles/01_basic/nerdlog_query_index' for reading: No such file or directory
+debug:the from 2025-03-10-09:30 isn't found, gonna refresh the cache
+awk: cmd. line:2: fatal: cannot open file `/tmp/nerdlog_query_test_output/edge_of_two_fles/01_basic/nerdlog_query_index' for reading: No such file or directory
+debug:the to 2025-03-10-10:30 isn't found, gonna refresh the cache
 p:stage:1:indexing from scratch
 p:p:5
 p:p:10
@@ -27,8 +27,8 @@ p:p:80
 p:p:85
 p:p:90
 p:p:95
-debug:the from is found: 280 (18618)
-debug:the to is found: 295 (19615)
+debug:the from 2025-03-10-09:30 is found: 280 (18618)
+debug:the to 2025-03-10-10:30 is found: 295 (19615)
 p:stage:3:querying logs
 debug:Getting logs from offset 18618 in prev /tmp/nerdlog_query_test_output/edge_of_two_fles/01_basic/logfile.1 to offset 458 in latest /tmp/nerdlog_query_test_output/edge_of_two_fles/01_basic/logfile
 p:stage:4:done

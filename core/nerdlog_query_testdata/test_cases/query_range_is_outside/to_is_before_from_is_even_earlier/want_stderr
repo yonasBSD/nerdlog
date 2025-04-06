@@ -2,10 +2,10 @@ awk: cmd. line:1: fatal: cannot open file `/tmp/nerdlog_query_test_output/query_
 debug:logfile has changed: stored '', actual '2025-03-10 09:59:58.000000000 +0000', deleting it
 awk: cmd. line:1: fatal: cannot open file `/tmp/nerdlog_query_test_output/query_range_is_outside/to_is_before_from_is_even_earlier/nerdlog_query_index' for reading: No such file or directory
 debug:broken cache file (no prevlog lines), deleting it
-awk: fatal: cannot open file `/tmp/nerdlog_query_test_output/query_range_is_outside/to_is_before_from_is_even_earlier/nerdlog_query_index' for reading: No such file or directory
-debug:the from isn't found, gonna refresh the cache
-awk: fatal: cannot open file `/tmp/nerdlog_query_test_output/query_range_is_outside/to_is_before_from_is_even_earlier/nerdlog_query_index' for reading: No such file or directory
-debug:the to isn't found, gonna refresh the cache
+awk: cmd. line:2: fatal: cannot open file `/tmp/nerdlog_query_test_output/query_range_is_outside/to_is_before_from_is_even_earlier/nerdlog_query_index' for reading: No such file or directory
+debug:the from 2025-03-09-14:00 isn't found, gonna refresh the cache
+awk: cmd. line:2: fatal: cannot open file `/tmp/nerdlog_query_test_output/query_range_is_outside/to_is_before_from_is_even_earlier/nerdlog_query_index' for reading: No such file or directory
+debug:the to 2025-03-09-15:00 isn't found, gonna refresh the cache
 p:stage:1:indexing from scratch
 p:p:5
 p:p:10
@@ -27,6 +27,6 @@ p:p:80
 p:p:85
 p:p:90
 p:p:95
-debug:the from isn't found, will use the beginning
-debug:the to is before the first log we have, will return nothing
+debug:the from 2025-03-09-14:00 isn't found, will use the beginning
+debug:the to 2025-03-09-15:00 is before the first log we have, will return nothing
 p:stage:4:done
