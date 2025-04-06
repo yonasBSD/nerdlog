@@ -75,6 +75,11 @@ type HostAgent struct {
 	connectResCh chan hostConnectRes
 	enqueueCmdCh chan hostCmd
 
+	// timezone is a string received from the host
+	timezone string
+	// location is loaded based on the timezone. If failed, it'll be UTC.
+	location *time.Location
+
 	state     HostAgentState
 	busyStage BusyStage
 
@@ -171,6 +176,9 @@ type HostAgentParams struct {
 func NewHostAgent(params HostAgentParams) *HostAgent {
 	ha := &HostAgent{
 		params: params,
+
+		timezone: "UTC",
+		location: time.UTC,
 
 		state:        HostAgentStateDisconnected,
 		enqueueCmdCh: make(chan hostCmd, 32),
@@ -336,6 +344,22 @@ func (ha *HostAgent) run() {
 
 				switch {
 				case ha.curCmdCtx.cmd.bootstrap != nil:
+					tzPrefix := "host_timezone:"
+					if strings.HasPrefix(line, tzPrefix) {
+						tz := strings.TrimPrefix(line, tzPrefix)
+						log.Printf("Got host timezone: %s\n", tz)
+
+						location, err := time.LoadLocation(tz)
+						if err != nil {
+							log.Printf("Error: failed to load location %s, will use UTC\n", tz)
+							// TODO: send an update and then the receiver should show a message
+							// to the user
+						} else {
+							ha.timezone = tz
+							ha.location = location
+						}
+					}
+
 					if line == "bootstrap ok" {
 						ha.curCmdCtx.bootstrapCtx.receivedSuccess = true
 					} else if line == "bootstrap failed" {
@@ -359,13 +383,14 @@ func (ha *HostAgent) run() {
 							continue
 						}
 
-						t, err := time.Parse(queryLogsMstatsTimeLayout, parts[0])
+						t, err := time.ParseInLocation(queryLogsMstatsTimeLayout, parts[0], ha.location)
 						if err != nil {
 							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing mstats"))
 							continue
 						}
 
 						t = InferYear(t)
+						t = t.UTC()
 
 						n, err := strconv.Atoi(parts[1])
 						if err != nil {
@@ -430,7 +455,7 @@ func (ha *HostAgent) run() {
 
 						origLine := msg
 
-						parseRes, err := parseLine(msg, respCtx.lastTime)
+						parseRes, err := parseLine(ha.location, msg, respCtx.lastTime)
 						if err != nil {
 							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing log msg: no time in %q", line))
 							continue
@@ -967,6 +992,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		cmdCtx.bootstrapCtx = &hostCmdCtxBootstrap{}
 
 		ha.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > /tmp/nerdlog_query_" + ha.params.ClientID + ".sh\n" + nerdlogQuerySh + "EOF\n"))
+		ha.conn.stdinBuf.Write([]byte(`echo "host_timezone:$(timedatectl show --property=Timezone --value)"` + "\n"))
 		ha.conn.stdinBuf.Write([]byte("if [[ $? == 0 ]]; then echo 'bootstrap ok'; else echo 'bootstrap failed'; fi\n"))
 
 	case cmdCtx.cmd.ping != nil:
@@ -998,11 +1024,11 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		)
 
 		if !cmdCtx.cmd.queryLogs.from.IsZero() {
-			parts = append(parts, "--from", cmdCtx.cmd.queryLogs.from.UTC().Format(queryLogsArgsTimeLayout))
+			parts = append(parts, "--from", cmdCtx.cmd.queryLogs.from.In(ha.location).Format(queryLogsArgsTimeLayout))
 		}
 
 		if !cmdCtx.cmd.queryLogs.to.IsZero() {
-			parts = append(parts, "--to", cmdCtx.cmd.queryLogs.to.UTC().Format(queryLogsArgsTimeLayout))
+			parts = append(parts, "--to", cmdCtx.cmd.queryLogs.to.In(ha.location).Format(queryLogsArgsTimeLayout))
 		}
 
 		if cmdCtx.cmd.queryLogs.linesUntil > 0 {
@@ -1163,7 +1189,7 @@ type parseLineResult struct {
 	ctxMap map[string]string
 }
 
-func parseLine(msg string, lastTime time.Time) (*parseLineResult, error) {
+func parseLine(loc *time.Location, msg string, lastTime time.Time) (*parseLineResult, error) {
 	sdmsg, err := parseSystemdMsg(msg)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -1172,7 +1198,7 @@ func parseLine(msg string, lastTime time.Time) (*parseLineResult, error) {
 	msg = sdmsg.msg
 
 	if len(msg) > 0 && msg[0] == '{' {
-		res, err := parseLineStructured(lastTime, sdmsg)
+		res, err := parseLineStructured(loc, lastTime, sdmsg)
 		if err == nil {
 			return res, nil
 		}
@@ -1181,7 +1207,7 @@ func parseLine(msg string, lastTime time.Time) (*parseLineResult, error) {
 		// to parse it, so fallback to the regular parsing
 	}
 
-	res, err := parseLineUnstructured(lastTime, sdmsg)
+	res, err := parseLineUnstructured(loc, lastTime, sdmsg)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -1190,7 +1216,7 @@ func parseLine(msg string, lastTime time.Time) (*parseLineResult, error) {
 }
 
 func parseLineUnstructured(
-	lastTime time.Time, sdmsg *parseSystemdMsgResult,
+	loc *time.Location, lastTime time.Time, sdmsg *parseSystemdMsgResult,
 ) (*parseLineResult, error) {
 	tsStr := sdmsg.tsStr
 	msg := sdmsg.msg
@@ -1211,12 +1237,13 @@ func parseLineUnstructured(
 	// Now, tsStr contains the timestamp to parse, and msg contains
 	// everything after that timestamp.
 
-	t, err := time.Parse(syslogTimeLayout, tsStr)
+	t, err := time.ParseInLocation(syslogTimeLayout, tsStr, loc)
 	if err != nil {
 		return nil, errors.Annotatef(err, "parsing log msg")
 	}
 
 	t = InferYear(t)
+	t = t.UTC()
 
 	decreasedTimestamp := false
 
@@ -1282,7 +1309,7 @@ func parseLineUnstructured(
 }
 
 func parseLineStructured(
-	lastTime time.Time, sdmsg *parseSystemdMsgResult,
+	loc *time.Location, lastTime time.Time, sdmsg *parseSystemdMsgResult,
 ) (*parseLineResult, error) {
 	tsStr := sdmsg.tsStr
 	msg := sdmsg.msg
@@ -1316,12 +1343,13 @@ func parseLineStructured(
 	// Now, tsStr contains the timestamp to parse, and msg contains
 	// everything after that timestamp.
 
-	t, err := time.Parse(syslogTimeLayout, tsStr)
+	t, err := time.ParseInLocation(syslogTimeLayout, tsStr, loc)
 	if err != nil {
 		return nil, errors.Annotatef(err, "parsing log msg")
 	}
 
 	t = InferYear(t)
+	t = t.UTC()
 
 	decreasedTimestamp := false
 

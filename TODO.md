@@ -16,13 +16,6 @@
   currently returns ALL logs. Instead it should figure that the periods don't
   overlap, and return none.
 - Write docs
-- Fix the issue with UTC time: histogram only works fine with UTC time, but when
-  we check e.g. local logs (which are in UTC+3), and we're looking at e.g. just
-  last hour, then the histogram looks empty.
-- Overall, non-UTC times aren't handled correctly. Too bad that old awk doesn't
-  even support the utc-flag in mktime. Perhaps I should just refuse to work with
-  such old awks (albeit it will mean not supporting my own
-  server.dmitryfrank.com)
 - Fix client name (make it include the log filename)
 - Fix tmp file naming (make it non-random, so that index is reused between
   invocations)
@@ -30,6 +23,9 @@
 - Fix error handling when we can't connect to a host
 - Fix an issue with things like "[system]" in the log messages being interpreted
   by tview
+- Ideally, during node agent initialization, we should check the tools and their
+  versions available on the host (such as awk), and error out if they're too old
+  or otherwise incompatible.
 
 ### TODO testing
 
