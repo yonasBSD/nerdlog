@@ -97,6 +97,12 @@ this case) as a key:
 - Defaults: just like in the ssh itself, the default user is the current user,
   and default port is 22. And the default config is `/var/log/syslog`.
 
+NOTE that in the nerdlog config, would be useful to specify MULTIPLE default
+log files, BUT it kinda adds ambiguity: having e.g. 2 log files for myhost, if
+we specify just "myhost", it's logical that we'll make 2 conns to that host, with
+different files. BUT what if we specify "myhost, myhost:22:/some/other/log"?
+Would the bare "myhost" still expand to the two log files? Hmm I guess so, why not..
+
 ### Reimplement message parsing
 
 It should be customizable, one way or the other.
