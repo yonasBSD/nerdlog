@@ -1,0 +1,33 @@
+awk: cmd. line:1: fatal: cannot open file `/tmp/nerdlog_query_test_output/year_infer_edge_of_two_years/01_logs_in_the_past_cur_apr/nerdlog_query_index' for reading: No such file or directory
+debug:logfile has changed: stored '', actual '2025-01-01 09:59:58.000000000 +0000', deleting it
+awk: cmd. line:1: fatal: cannot open file `/tmp/nerdlog_query_test_output/year_infer_edge_of_two_years/01_logs_in_the_past_cur_apr/nerdlog_query_index' for reading: No such file or directory
+debug:broken cache file (no prevlog lines), deleting it
+awk: fatal: cannot open file `/tmp/nerdlog_query_test_output/year_infer_edge_of_two_years/01_logs_in_the_past_cur_apr/nerdlog_query_index' for reading: No such file or directory
+debug:the from isn't found, gonna refresh the cache
+awk: fatal: cannot open file `/tmp/nerdlog_query_test_output/year_infer_edge_of_two_years/01_logs_in_the_past_cur_apr/nerdlog_query_index' for reading: No such file or directory
+debug:the to isn't found, gonna refresh the cache
+p:stage:1:indexing from scratch
+p:p:5
+p:p:10
+p:p:15
+p:p:20
+p:p:25
+p:p:25
+p:p:30
+p:p:35
+p:p:40
+p:p:45
+p:p:50
+p:p:55
+p:p:60
+p:p:65
+p:p:70
+p:p:75
+p:p:80
+p:p:85
+p:p:90
+p:p:95
+debug:from 132 (8680) to 148 (9734)
+p:stage:3:querying logs
+debug:Getting logs from offset 8680, only 1054 bytes, all in the prev /tmp/nerdlog_query_test_output/year_infer_edge_of_two_years/01_logs_in_the_past_cur_apr/logfile.1
+p:stage:4:done

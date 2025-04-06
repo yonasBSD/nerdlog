@@ -176,7 +176,7 @@ function inferYear(logMonth, curYear, curMonth) {
 
   if (delta <= -11)       # log month is Jan, current is Dec -> next year
     return curYear + 1
-  else if (delta >= 11)   # log month is Dec, current is Jan -> previous year
+  else if (delta >= 8)    # log month is Sep-Dec, current is Jan -> previous year
     return curYear - 1
   else
     return curYear

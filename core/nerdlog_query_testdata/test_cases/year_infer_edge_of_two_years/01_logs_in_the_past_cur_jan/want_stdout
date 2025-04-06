@@ -1,6 +1,6 @@
 debug:hey4 1054
-logfile:/tmp/nerdlog_query_test_output/year_infer_edge_of_two_years/01_basic/logfile.1:0
-logfile:/tmp/nerdlog_query_test_output/year_infer_edge_of_two_years/01_basic/logfile:287
+logfile:/tmp/nerdlog_query_test_output/year_infer_edge_of_two_years/01_logs_in_the_past_cur_jan/logfile.1:0
+logfile:/tmp/nerdlog_query_test_output/year_infer_edge_of_two_years/01_logs_in_the_past_cur_jan/logfile:287
 s:Dec31-23:54,1
 s:Dec31-23:45,1
 s:Jan1-00:29,1
