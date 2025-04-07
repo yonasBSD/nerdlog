@@ -55,6 +55,12 @@ type Histogram struct {
 	// xFormat formats values for X axis
 	xFormat func(v int) string
 
+	// formatCursor formats values for cursor
+	formatCursor func(from int, to *int, width int) string
+
+	// TODO explain
+	snapDataBinsInChartDot func(dataBinsInChartBar int) int
+
 	// selected is a handler which is called when the user has finished selecting
 	// a range. The from is inclusive, the to is not.
 	selected func(from, to int)
@@ -87,7 +93,7 @@ func (h *Histogram) SetRange(from, to int) *Histogram {
 	h.to = to
 
 	// Reset cursor and selection too
-	h.cursor = h.to - h.binSize*h.getDataBinsInChartDot()
+	h.cursor = h.to - h.binSize*h.getDataBinsInChartBar()
 	h.cursor = h.alignCursor(h.cursor, false)
 	h.selectionStart = 0
 
@@ -95,7 +101,7 @@ func (h *Histogram) SetRange(from, to int) *Histogram {
 }
 
 func (h *Histogram) alignCursor(cursor int, isCeiling bool) int {
-	divisor := h.getDataBinsInChartDot() * h.binSize
+	divisor := h.getDataBinsInChartBar() * h.binSize
 	cursor -= h.from
 	remainder := cursor % divisor
 	cursor -= remainder
@@ -121,6 +127,18 @@ func (h *Histogram) SetData(data map[int]int) *Histogram {
 
 func (h *Histogram) SetXFormatter(xFormat func(v int) string) *Histogram {
 	h.xFormat = xFormat
+
+	return h
+}
+
+func (h *Histogram) SetCursorFormatter(formatCursor func(from int, to *int, width int) string) *Histogram {
+	h.formatCursor = formatCursor
+
+	return h
+}
+
+func (h *Histogram) SetDataBinsSnapper(snapDataBinsInChartDot func(dataBinsInChartBar int) int) *Histogram {
+	h.snapDataBinsInChartDot = snapDataBinsInChartDot
 
 	return h
 }
@@ -174,9 +192,6 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 	tview.Print(screen, maxLabel, x+maxLabelOffset, y, width-maxLabelOffset, tview.AlignLeft, tcell.ColorWhite)
 
 	h.curMarks = h.getXMarks(h.from, h.to, width-fldMarginLeft)
-	for i := range h.curMarks {
-		h.curMarks[i] = h.alignCursor(h.curMarks[i], false)
-	}
 
 	sb := strings.Builder{}
 	numRunes := 0
@@ -202,7 +217,7 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 		numRunes += 2
 		//sb.WriteString("^ ")
 		sb.WriteString(markStr)
-		numRunes += len(markStr)
+		numRunes += len(clearTviewFormatting(markStr))
 	}
 
 	tview.Print(screen, sb.String(), x+fldMarginLeft, y+height-1, width-fldMarginLeft, tview.AlignLeft, tcell.ColorWhite)
@@ -216,10 +231,10 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 
 		var selMark string
 		if !h.IsSelectionActive() {
-			selMark = fmt.Sprintf(" [%s]", h.xFormat(h.cursor))
+			selMark = fmt.Sprintf(" [%s]", h.formatCursor(h.cursor, nil, h.binSize))
 		} else {
 			selStart, selEnd := h.GetSelection()
-			selMark = fmt.Sprintf(" [%s - %s]", h.xFormat(selStart), h.xFormat(selEnd))
+			selMark = fmt.Sprintf(" [%s]", h.formatCursor(selStart, &selEnd, h.binSize))
 		}
 
 		leftOffset := fldMarginLeft + fldData.selScaleOffset/2
@@ -237,66 +252,70 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 	}
 }
 
-func (h *Histogram) getDataBinsInChartDot() int {
+func (h *Histogram) getDataBinsInChartBar() int {
 	if h.fldData == nil {
 		return 1
 	}
 
-	return h.fldData.dataBinsInChartDot
+	return h.fldData.dataBinsInChartBar
 }
 
-func (h *Histogram) getChartDotsInDataBin() int {
+func (h *Histogram) getChartBarWidth() int {
 	if h.fldData == nil {
 		return 1
 	}
 
-	return h.fldData.chartDotsInDataBin
+	return h.fldData.chartBarWidth
 }
 
 func (h *Histogram) InputHandler() func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
 	return h.WrapInputHandler(func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
-		maxCursor := h.alignCursor(h.to-h.binSize*h.getDataBinsInChartDot(), true)
+		maxCursor := h.alignCursor(h.to-h.binSize*h.getDataBinsInChartBar(), true)
 
 		moveLeft := func() {
-			h.cursor -= h.binSize * h.getDataBinsInChartDot()
+			h.cursor -= h.binSize * h.getDataBinsInChartBar()
 			if h.cursor < h.from {
 				h.cursor = h.from
 			}
 		}
 
 		moveRight := func() {
-			h.cursor += h.binSize * h.getDataBinsInChartDot()
+			h.cursor += h.binSize * h.getDataBinsInChartBar()
 			if h.cursor > maxCursor {
 				h.cursor = maxCursor
 			}
 		}
 
 		moveLeftLong := func() {
-			moveLeft()
-
-			for h.cursor > h.from {
-				for _, mark := range h.curMarks {
-					if h.cursor == mark {
-						return
-					}
+			target := h.from
+			for _, mark := range h.curMarks {
+				if mark >= h.cursor {
+					break
 				}
 
-				moveLeft()
+				target = mark
 			}
+
+			h.cursor = h.alignCursor(target, false)
 		}
 
 		moveRightLong := func() {
+			// Since the cursor can "encloses" the mark, we need to move it right once,
+			// so that if the cursor was on the mark, it won't be on that mark anymore.
 			moveRight()
 
-			for h.cursor < maxCursor {
-				for _, mark := range h.curMarks {
-					if h.cursor == mark {
-						return
-					}
+			for _, mark := range h.curMarks {
+				if mark > maxCursor {
+					break
 				}
 
-				moveRight()
+				if mark >= h.cursor {
+					h.cursor = h.alignCursor(mark, false)
+					return
+				}
 			}
+
+			h.cursor = maxCursor
 		}
 
 		moveBeginning := func() {
@@ -404,7 +423,7 @@ func (h *Histogram) GetSelection() (selStart, selEnd int) {
 		selStart, selEnd = selEnd, selStart
 	}
 
-	selEnd += h.binSize * h.getDataBinsInChartDot()
+	selEnd += h.binSize * h.getDataBinsInChartBar()
 
 	return selStart, selEnd
 }
@@ -421,8 +440,8 @@ func (h *Histogram) IsSelectionActive() bool {
 type fieldData struct {
 	dots [][]bool
 
-	dataBinsInChartDot int
-	chartDotsInDataBin int
+	dataBinsInChartBar int
+	chartBarWidth      int
 
 	// dotYScale is how many messages in one dot
 	dotYScale int
@@ -456,17 +475,16 @@ type fieldData struct {
 func (h *Histogram) genFieldData(width, height int) *fieldData {
 	foc := h.HasFocus()
 
-	rangeLen := (h.to - h.from + 1) / h.binSize
-
-	if rangeLen == 0 {
+	scale := getOptimalScale(h.from, h.to, h.binSize, width, h.snapDataBinsInChartDot)
+	if scale == nil {
 		return nil
 	}
 
-	dataBinsInChartDot := (rangeLen + width - 1) / width
-	chartDotsInDataBin := width / rangeLen
-	if chartDotsInDataBin == 0 {
-		chartDotsInDataBin = 1
-	}
+	h.from = scale.from
+	h.to = scale.to
+	numDataBins := scale.numDataBins
+	dataBinsInChartBar := scale.dataBinsInChartBar
+	chartBarWidth := scale.chartBarWidth
 
 	valAt := func(idx, n int) int {
 		var val int
@@ -489,7 +507,7 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 	selStart, selEnd := h.GetSelection()
 	if selStart == 0 || selEnd == 0 {
 		selStart = h.cursor
-		selEnd = h.cursor + dataBinsInChartDot*h.binSize
+		selEnd = h.cursor + dataBinsInChartBar*h.binSize
 	}
 
 	isSelectedAt := func(idx, n int) bool {
@@ -503,12 +521,12 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 		return false
 	}
 
-	//effectiveWidthDots := rangeLen
+	//effectiveWidthDots := numDataBins
 
 	// Find the max bin value per bar on the chart
 	max := 0
-	for xData := 0; xData < rangeLen; xData = xData + dataBinsInChartDot {
-		val := valAt(xData, dataBinsInChartDot)
+	for xData := 0; xData < numDataBins; xData = xData + dataBinsInChartBar {
+		val := valAt(xData, dataBinsInChartBar)
 
 		if max < val {
 			max = val
@@ -536,10 +554,10 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 	selectedValsSum := 0
 
 	// Iterate over data and set dots to true
-	for xData, xChart := 0, 0; xData < rangeLen; xData, xChart = xData+dataBinsInChartDot, xChart+chartDotsInDataBin {
-		val := valAt(xData, dataBinsInChartDot)
-		sel := isSelectedAt(xData, dataBinsInChartDot)
-		crs := isCursorAt(xData, dataBinsInChartDot)
+	for xData, xChart := 0, 0; xData < numDataBins; xData, xChart = xData+dataBinsInChartBar, xChart+chartBarWidth {
+		val := valAt(xData, dataBinsInChartBar)
+		sel := isSelectedAt(xData, dataBinsInChartBar)
+		crs := isCursorAt(xData, dataBinsInChartBar)
 
 		if crs {
 			cursorVal = val
@@ -566,13 +584,13 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 
 			// If the dots are on, set them to true.
 			if on {
-				for i := 0; i < chartDotsInDataBin; i++ {
+				for i := 0; i < chartBarWidth; i++ {
 					dots[height-y-1][xChart+i] = true
 				}
 			}
 		}
 
-		for i := 0; i < chartDotsInDataBin; i++ {
+		for i := 0; i < chartBarWidth; i++ {
 			if sel {
 				// When selection starts, remember its offset
 				// (and also make sure it's even)
@@ -604,7 +622,7 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 		selScaleDots[i] = selScaleDots[i][selOffsetStart:]
 	}
 
-	effectiveWidthDots := rangeLen / dataBinsInChartDot * chartDotsInDataBin
+	effectiveWidthDots := numDataBins / dataBinsInChartBar * chartBarWidth
 	effectiveWidthRunes := effectiveWidthDots / 2
 	if (effectiveWidthDots & 0x01) > 0 {
 		effectiveWidthRunes++
@@ -612,8 +630,8 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 
 	return &fieldData{
 		dots:               dots,
-		dataBinsInChartDot: dataBinsInChartDot,
-		chartDotsInDataBin: chartDotsInDataBin,
+		dataBinsInChartBar: dataBinsInChartBar,
+		chartBarWidth:      chartBarWidth,
 
 		max:       max,
 		dotYScale: dotYScale,
@@ -652,6 +670,97 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 	//}
 }
 
+// histogramScale represents key parameters about drawing a histogram.
+// See getOptimalScale.
+type histogramScale struct {
+	// From is the updated starting point, might be smaller than the original one
+	// due to snapping. The client code must use this updated one.
+	from int
+	// To is the updated ending point, might be bigger than the original one due
+	// to snapping. The client code must use this updated one.
+	to int
+	// numDataBins is the number of data bins that we need to include in the
+	// histogram in total.
+	numDataBins int
+	// dataBinsInChartBar specifies how many data bins a single bar in the
+	// histogram represents.
+	dataBinsInChartBar int
+	// chartBarWidth specifies how wide is a single chart bar, measured in chart
+	// dots (where a single character on the screen has 2 dots).
+	chartBarWidth int
+}
+
+// getOptimalScale tries to calculate optimal scale to draw a histogram.
+// The from and to represent the total histogram range, and binSize specifies
+// the max resolution for the histogram. For example, if the histogram
+// is used as a timeline, and the from and to are seconds (as in Unix timestamp),
+// and the max resolution the histogram must have is 1 minute, then binSize should
+// be set to 60. This way, the histogram bar will always include at least 1
+// minute (60 seconds) worth of data.
+//
+// The width is the total width of the histogram on screen, in pixels or chart
+// dots or however you like to call them.
+//
+// Then, snapDataBinsInChartDot is a callback which takes some arbitrary number of
+// data bins in the chart bar, and returns potentially larger number. E.g. again
+// in case of timeline histogram, it would make sense to snap values such as 18 mins
+// to 20 mins, to make the histogram easier to use.
+//
+// The calculated values are such that the histogram is as big on the screen as
+// possible, and as as detailed as possible, given the constraints.
+func getOptimalScale(
+	from, to, binSize, width int,
+	snapDataBinsInChartDot func(dataBinsInChartBar int) int,
+) *histogramScale {
+	if width <= 0 {
+		return nil
+	}
+
+	numDataBins := (to - from) / binSize
+
+	if numDataBins == 0 {
+		return nil
+	}
+
+	dataBinsInChartBar := (numDataBins + width - 1) / width
+	dataBinsInChartBar = snapDataBinsInChartDot(dataBinsInChartBar)
+
+	divisor := dataBinsInChartBar * binSize
+
+	fromRemainder := from % divisor
+	if fromRemainder > 0 {
+		from -= fromRemainder
+	}
+
+	toRemainder := to % divisor
+	if toRemainder > 0 {
+		to += (divisor - toRemainder)
+	}
+
+	// If we had to expand the range, recalculate numDataBins and
+	// dataBinsInChartBar again.
+	if fromRemainder > 0 || toRemainder > 0 {
+		numDataBins = (to - from) / binSize
+		dataBinsInChartBar = (numDataBins + width - 1) / width
+		dataBinsInChartBar = snapDataBinsInChartDot(dataBinsInChartBar)
+	}
+
+	numBars := numDataBins / dataBinsInChartBar
+	if numBars == 0 {
+		return nil
+	}
+
+	chartBarWidth := width / numBars
+
+	return &histogramScale{
+		from:               from,
+		to:                 to,
+		numDataBins:        numDataBins,
+		dataBinsInChartBar: dataBinsInChartBar,
+		chartBarWidth:      chartBarWidth,
+	}
+}
+
 func (h *Histogram) fldDataToLines(dots [][]bool) []string {
 	ret := make([]string, 0, len(dots)/2)
 
@@ -687,5 +796,53 @@ func (h *Histogram) fldDataToLines(dots [][]bool) []string {
 }
 
 func (h *Histogram) valToCoord(v int) int {
-	return (v - h.from) / h.getDataBinsInChartDot() * h.getChartDotsInDataBin() / h.binSize
+	return (v - h.from) / h.getDataBinsInChartBar() * h.getChartBarWidth() / h.binSize
+}
+
+func clearTviewFormatting(input string) string {
+	var output strings.Builder
+	inTag := false
+	escaped := false
+	bracketDepth := 0
+
+	for i := 0; i < len(input); i++ {
+		c := input[i]
+
+		if inTag {
+			if c == ']' {
+				if escaped {
+					// Close escaped tag like [red[] -> output [red]
+					output.WriteString("[" + input[bracketDepth:i-1] + "]")
+					inTag = false
+					escaped = false
+				} else {
+					// Close of a formatting directive
+					inTag = false
+				}
+			} else if c == '[' && i+1 < len(input) && input[i+1] == ']' {
+				// Detected a pattern like [red[] or ["tagname"[] etc.
+				escaped = true
+			}
+			continue
+		}
+
+		if c == '[' {
+			// Look ahead to check for [[] (just a literal open bracket)
+			if i+1 < len(input) && input[i+1] == '[' {
+				output.WriteByte('[')
+				i++ // skip next '['
+				continue
+			}
+
+			// Start of a potential formatting tag
+			inTag = true
+			bracketDepth = i + 1
+			continue
+		}
+
+		// Normal character
+		output.WriteByte(c)
+	}
+
+	return output.String()
 }

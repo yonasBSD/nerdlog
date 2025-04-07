@@ -428,34 +428,29 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.histogram.SetBinSize(histogramBinSize) // 1 minute
 	mv.histogram.SetXFormatter(func(v int) string {
 		t := time.Unix(int64(v), 0).UTC()
+		if t.Hour() == 0 && t.Minute() == 0 {
+			return t.Format("[yellow]Jan02[-]")
+		}
 		return t.Format("15:04")
 	})
-	mv.histogram.SetXMarker(func(from, to int, numChars int) []int {
-		// TODO proper impl
+	mv.histogram.SetCursorFormatter(func(from int, to *int, width int) string {
+		fromTime := time.Unix(int64(from), 0).UTC()
 
-		diff := to - from
-
-		var step int
-		if diff <= 10*histogramBinSize {
-			step = histogramBinSize
-		} else {
-			step = diff / 6
-			if step == 0 {
-				return nil
-			}
-
-			// Snap to 1m grid: make sure our marks will be on minute boundaries
-			tmp := (step + histogramBinSize/2) / histogramBinSize
-			step = tmp * histogramBinSize
+		if to == nil {
+			return fromTime.Format("Jan02 15:04")
 		}
 
-		ret := []int{}
-		for i := from; i <= to; i += step {
-			ret = append(ret, i)
-		}
+		toTime := time.Unix(int64(*to), 0).UTC()
 
-		return ret
+		return fmt.Sprintf(
+			"%s - %s (%s)",
+			fromTime.Format("Jan02 15:04"),
+			toTime.Format("Jan02 15:04"),
+			strings.TrimSuffix(toTime.Sub(fromTime).String(), "0s"),
+		)
 	})
+	mv.histogram.SetXMarker(getXMarksForHistogram)
+	mv.histogram.SetDataBinsSnapper(snapDataBinsInChartDot)
 	mv.histogram.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyTab:

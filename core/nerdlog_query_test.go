@@ -783,7 +783,6 @@ func BenchmarkNerdlogQueryHugeLogOneHourCompleteIndex(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		start := time.Now()
 		if err := runNerdlogQueryForBenchmark(cmdArgs); err != nil {
 			b.Fatalf("runNerdlogQueryForBenchmark failed: %s", err)
 		}

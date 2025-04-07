@@ -4,7 +4,6 @@
   it can be "2025-04-05T11:07:46.161001+03:00" if `/etc/rsyslog.conf`
   doesn't contain `$ActionFileDefaultTemplate RSYSLOG_TraditionalFileFormat`
 - Handle corner cases like only having a single log file, or the old one is empty
-- Ideally support more than 2 log files
 - Reimplement host selection (see details below)
   - Aliases to be used as "source"
   - Parsing of things like {foo,bar}: so that
@@ -15,14 +14,7 @@
   should fetch the app part of every syslog message.
 - Implement some fake logs generation, just to use in examples
 - Write docs
-- Fix client name (make it include the log filename)
-- Fix tmp file naming (make it non-random, so that index is reused between
-  invocations)
 - Fix an issue with reconnect tight loop
-- Fix an issue with things like "[system]" in the log messages being interpreted
-  by tview
-- Fix the issue with histogram navigation: when the period is 100h, it jumps from
-  beginning to end.
 - In histogram navigation, try to support Ctrl+Left and Ctrl+Right
 - Ideally, during node agent initialization, we should check the tools and their
   versions available on the host (such as awk), and error out if they're too old
@@ -30,7 +22,35 @@
 - Ideally, if ssh-agent doesn't have the key, try to add it and request
   passphrase interactively (e.g. ssh itself is able to figure which key to open
   and to add to ssh agent)
-- In histogram, when selecting, show not only time but also date of the cursor.
+- Add support for days in relative timestamps, e.g. "4d"
+- With relative timestamps, snap these to the grid. So the snapping logic
+  should be unified for these rel. timestamps, xMarks, and bin sizes.
+- Ctrl+left and Ctrl+right on the histogram
+- When histogram is created or new data is fed, the cursor for some reason is not
+  at the very end
+- Allow setting Nerdlog UI timezone
+- Allow setting formatting layout for time in the logs
+- In search bar and command line, Ctrl+P should only use commands starting from
+  the current input
+- A way to cancel connection to hosts. E.g. try to type a wrong host name.
+
+- During indexing, make sure that the line we're about to print is "larger"
+  lexicographically than the previous line. If not, print an error and exit 1;
+  this way we'll hopefully be able to detect broken log files
+- When nerdlog_query.sh returns non-zero code, report an error to the user and
+  print the last line from stderr
+- Add some easy way to inspect the latest response (stdout+stderr). Perhaps simply
+  store them in some files under ~/.cache/nerdlog/agent_responses
+
+- Multi-format: there's no need to support specific format in the bash script:
+  just pass some arguments about how to get the hh:mm, as well as all the components
+  of the time separately, and that's it
+
+- Before recording demo:
+- Implement support for full timestamp format in syslog files, to have timestamps
+  with millis in the demo
+- Implement some spikes in the random log generation, to make it more interesting
+  to look at, so we can demo "drilling down" on some log spike, filtering it etc
 
 ### TODO testing
 
@@ -131,6 +151,7 @@ Would the bare "myhost" still expand to the two log files? Hmm I guess so, why n
   (iirc slows down the query significantly)
 - Maybe implement favorites. Just like a button in the top-right corner of the
   Edit dialog, which would show a menu with the favorite queries.
+- Ideally support more than 2 log files
 
 ## TODO
 
