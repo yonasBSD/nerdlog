@@ -171,6 +171,9 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 	tview.Print(screen, maxLabel, x+maxLabelOffset, y, width-maxLabelOffset, tview.AlignLeft, tcell.ColorWhite)
 
 	h.curMarks = h.getXMarks(h.from, h.to, width-fldMarginLeft)
+	for i := range h.curMarks {
+		h.curMarks[i] = h.alignCursor(h.curMarks[i])
+	}
 
 	sb := strings.Builder{}
 	numRunes := 0
