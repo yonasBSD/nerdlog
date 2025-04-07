@@ -11,7 +11,8 @@
     "myserver.com:/var/log/{kern,auth}.log" becomes
     "myserver.com:/var/log/kern.log, myserver.com:/var/log/auth.log"
   - Config file with a list of predefined stuff
-- Reimplement message parsing (see details below)
+- Reimplement message parsing using Lua. Default implementation for syslog
+  should fetch the app part of every syslog message.
 - Implement some fake logs generation, just to use in examples
 - Index should be per-log-stream, so that if we open multiple log files from the
   same host (like e.g. syslog and auth.log), they don't conflict
@@ -103,18 +104,6 @@ we specify just "myhost", it's logical that we'll make 2 conns to that host, wit
 different files. BUT what if we specify "myhost, myhost:22:/some/other/log"?
 Would the bare "myhost" still expand to the two log files? Hmm I guess so, why not..
 
-### Reimplement message parsing
-
-It should be customizable, one way or the other.
-
-The simplest is to just factor out some Go abstraction, so that we could have
-multiple implementations, and in the config file we'll be able to select which
-one to use.
-
-But maybe we can actually make it scriptable somehow.
-
-Need to check what https://lnav.org/ uses, maybe get some ideas from there.
-
 ## TODO first
 
 - :set numlines=100
@@ -141,8 +130,9 @@ Need to check what https://lnav.org/ uses, maybe get some ideas from there.
   Edit form fields), with state being stored somewhere under profile dir
 - Proper shutdown, with connections being terminated
 - Make configurable whether we use case-insensitive pattern matching
-  (iirc slows down the query significantly): both the global value, with
-  the ability to override it per host in nerdlog config
+  (iirc slows down the query significantly)
+- Maybe implement favorites. Just like a button in the top-right corner of the
+  Edit dialog, which would show a menu with the favorite queries.
 
 ## TODO
 
