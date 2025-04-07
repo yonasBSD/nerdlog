@@ -222,12 +222,6 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
   script1='BEGIN { bytenr_next=1; lastPercent=0 }
 {
   bytenr_next += length($0)+1
-
-  if (last3 == $3) {
-    next;
-  }
-
-  last3 = $3;
   curHHMM = substr($3, 1, 5);
 }'
 
