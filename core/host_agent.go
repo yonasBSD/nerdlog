@@ -991,7 +991,7 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 	case cmdCtx.cmd.bootstrap != nil:
 		cmdCtx.bootstrapCtx = &hostCmdCtxBootstrap{}
 
-		ha.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > /tmp/nerdlog_query_" + ha.params.ClientID + ".sh\n" + nerdlogQuerySh + "EOF\n"))
+		ha.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > " + ha.getHostNerdlogQueryPath() + "\n" + nerdlogQuerySh + "EOF\n"))
 		ha.conn.stdinBuf.Write([]byte(`echo "host_timezone:$(timedatectl show --property=Timezone --value)"` + "\n"))
 		ha.conn.stdinBuf.Write([]byte("if [[ $? == 0 ]]; then echo 'bootstrap ok'; else echo 'bootstrap failed'; fi\n"))
 
@@ -1016,8 +1016,8 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 
 		parts = append(
 			parts,
-			"bash", "/tmp/nerdlog_query_"+ha.params.ClientID+".sh",
-			"--cache-file", "/tmp/nerdlog_query_index_"+ha.params.ClientID,
+			"bash", ha.getHostNerdlogQueryPath(),
+			"--cache-file", ha.getHostIndexFilePath(),
 			"--max-num-lines", strconv.Itoa(cmdCtx.cmd.queryLogs.maxNumLines),
 			"--logfile-last", ha.params.Config.LogFileLast,
 			"--logfile-prev", ha.params.Config.LogFilePrev,
@@ -1059,6 +1059,33 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 	ha.conn.stdinBuf.Write([]byte(fmt.Sprintf("echo 'command_done:%d'\n", cmdCtx.idx)))
 
 	ha.changeState(HostAgentStateConnectedBusy)
+}
+
+// getHostNerdlogQueryPath returns the host-side path to the nerdlog_query.sh
+// for the particular log stream.
+func (ha *HostAgent) getHostNerdlogQueryPath() string {
+	return fmt.Sprintf(
+		"/tmp/nerdlog_query_%s_%s.sh",
+		ha.params.ClientID,
+		filepathToId(ha.params.Config.LogFileLast),
+	)
+}
+
+// getHostIndexFilePath returns the host-side path to the index file for
+// the particular log stream.
+func (ha *HostAgent) getHostIndexFilePath() string {
+	return fmt.Sprintf(
+		"/tmp/nerdlog_query_index_%s_%s",
+		ha.params.ClientID,
+		filepathToId(ha.params.Config.LogFileLast),
+	)
+}
+
+// filepathToId takes a path and returns a string suitable to be used as
+// part of a filename (with all slashes removed).
+func filepathToId(p string) string {
+	replacer := strings.NewReplacer("/", "_", "\\", "_")
+	return replacer.Replace(p)
 }
 
 func (ha *HostAgent) checkIfDisconnected() {

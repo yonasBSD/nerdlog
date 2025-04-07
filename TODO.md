@@ -14,8 +14,6 @@
 - Reimplement message parsing using Lua. Default implementation for syslog
   should fetch the app part of every syslog message.
 - Implement some fake logs generation, just to use in examples
-- Index should be per-log-stream, so that if we open multiple log files from the
-  same host (like e.g. syslog and auth.log), they don't conflict
 - Write docs
 - Fix client name (make it include the log filename)
 - Fix tmp file naming (make it non-random, so that index is reused between
