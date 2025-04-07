@@ -88,9 +88,20 @@ func (h *Histogram) SetRange(from, to int) *Histogram {
 
 	// Reset cursor and selection too
 	h.cursor = h.to - h.binSize*h.getDataBinsInChartDot()
+	h.cursor = h.alignCursor(h.cursor)
 	h.selectionStart = 0
 
 	return h
+}
+
+func (h *Histogram) alignCursor(cursor int) int {
+	divisor := h.getDataBinsInChartDot() * h.binSize
+	cursor -= h.from
+	remainder := cursor % divisor
+	cursor -= remainder
+	cursor += h.from
+
+	return cursor
 }
 
 func (h *Histogram) SetBinSize(binSize int) *Histogram {
@@ -136,6 +147,7 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 	}
 
 	h.fldData = fldData
+	h.cursor = h.alignCursor(h.cursor)
 
 	fldMarginLeft = (width - fldData.effectiveWidthRunes) / 2
 
@@ -237,7 +249,7 @@ func (h *Histogram) getChartDotsInDataBin() int {
 
 func (h *Histogram) InputHandler() func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
 	return h.WrapInputHandler(func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
-		maxCursor := h.to - h.binSize*h.getDataBinsInChartDot()
+		maxCursor := h.alignCursor(h.to - h.binSize*h.getDataBinsInChartDot())
 
 		moveLeft := func() {
 			h.cursor -= h.binSize * h.getDataBinsInChartDot()
