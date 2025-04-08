@@ -183,14 +183,11 @@ function inferYear(logMonth, curYear, curMonth) {
 }
 
 function syslogFieldsToIndexTimestr(monthStr, day, hhmmss) {
-  month = monthByName[monthStr]
-  year = yearByMonthName[monthStr]
-  hour = substr(hhmmss, 1, 2)
-  min = substr(hhmmss, 4, 2)
-
-  if (length(day) == 1) {
-    day = "0" day
-  }
+  month = monthByName[monthStr];
+  year = yearByMonthName[monthStr];
+  hour = substr(hhmmss, 1, 2);
+  min = substr(hhmmss, 4, 2);
+  day = (length(day) == 1) ? "0" day : day;
 
   return year "-" month "-" day "-" hour ":" min
 }
