@@ -1,12 +1,20 @@
 package main
 
 import (
+	"fmt"
+	"strconv"
 	"sync"
 	"time"
+
+	"github.com/juju/errors"
 )
 
 type Options struct {
 	Timezone *time.Location
+
+	// MaxNumLines is how many log lines the nerdlog_query.sh will return at
+	// most. Initially it's set to 250.
+	MaxNumLines int
 }
 
 type OptionsShared struct {
@@ -27,6 +35,12 @@ func (o *OptionsShared) GetTimezone() *time.Location {
 	return o.options.Timezone
 }
 
+func (o *OptionsShared) GetMaxNumLines() int {
+	o.mtx.Lock()
+	defer o.mtx.Unlock()
+	return o.options.MaxNumLines
+}
+
 func (o *OptionsShared) GetAll() Options {
 	o.mtx.Lock()
 	defer o.mtx.Unlock()
@@ -40,6 +54,9 @@ func (o *OptionsShared) Call(f func(o *Options)) {
 }
 
 type OptionMeta struct {
+	// If AliasOf is non-empty, all the other fields are ignored.
+	AliasOf string
+
 	Get  func(o *Options) string
 	Set  func(o *Options, value string) error
 	Help string
@@ -53,7 +70,7 @@ var AllOptions = map[string]*OptionMeta{
 		Set: func(o *Options, value string) error {
 			loc, err := time.LoadLocation(value)
 			if err != nil {
-				return err
+				return errors.Trace(err)
 			}
 
 			o.Timezone = loc
@@ -61,4 +78,48 @@ var AllOptions = map[string]*OptionMeta{
 		},
 		Help: "Timezone to use in the UI.",
 	}, // }}}
+	"maxnumlines": { // {{{
+		Get: func(o *Options) string {
+			return fmt.Sprint(o.MaxNumLines)
+		},
+		Set: func(o *Options, value string) error {
+			maxNumLines, err := strconv.Atoi(value)
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			if maxNumLines < 2 {
+				return errors.Errorf("numlines must be at least 2")
+			}
+
+			o.MaxNumLines = maxNumLines
+			return nil
+		},
+		Help: "How many log lines to fetch from each logstream in one query",
+	},
+	"numlines": {
+		AliasOf: "maxnumlines",
+	}, // }}}
+}
+
+func OptionMetaByName(name string) *OptionMeta {
+	meta, ok := AllOptions[name]
+	if !ok {
+		return nil
+	}
+
+	if meta.AliasOf != "" {
+		var ok bool
+		meta, ok = AllOptions[meta.AliasOf]
+		if !ok {
+			// This one would mean a programmer error, so we panic here.
+			panic(fmt.Sprintf("option %s is defined as an alias of non-existing option %s", name, meta.AliasOf))
+		}
+	}
+
+	if meta.AliasOf != "" {
+		panic(fmt.Sprintf("option %s is defined as an alias of another alias %s", name, meta.AliasOf))
+	}
+
+	return meta
 }

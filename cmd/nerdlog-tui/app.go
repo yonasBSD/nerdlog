@@ -22,10 +22,6 @@ type nerdlogApp struct {
 	hm       *core.HostsManager
 	mainView *MainView
 
-	// maxNumLines is how many log lines the nerdlog_query.sh will return at
-	// most. Initially it's set to 250.
-	maxNumLines int
-
 	// cmdLineHistory is the command line history
 	cmdLineHistory *clhistory.CLHistory
 
@@ -79,12 +75,11 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 		params: params,
 
 		options: NewOptionsShared(Options{
-			Timezone: time.Local,
+			Timezone:    time.Local,
+			MaxNumLines: 250,
 		}),
 
 		tviewApp: tview.NewApplication(),
-
-		maxNumLines: 250,
 
 		cmdLineHistory: cmdLineHistory,
 		queryBLHistory: blhistory.New(),
@@ -97,7 +92,7 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 		App:     app.tviewApp,
 		Options: app.options,
 		OnLogQuery: func(params core.QueryLogsParams) {
-			params.MaxNumLines = app.maxNumLines
+			params.MaxNumLines = app.options.GetMaxNumLines()
 
 			// Get the current QueryFull and marshal it to a shell command.
 			qf := app.mainView.getQueryFull()

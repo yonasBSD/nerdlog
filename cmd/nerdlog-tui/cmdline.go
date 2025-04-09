@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/juju/errors"
@@ -82,7 +81,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 			optName := setParts[0]
 			optValue := setParts[1]
 
-			if opt, ok := AllOptions[optName]; ok {
+			if opt := OptionMetaByName(optName); opt != nil {
 				var setErr error
 				app.options.Call(func(o *Options) {
 					setErr = opt.Set(o, optValue)
@@ -92,56 +91,32 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 					app.printError(setErr.Error())
 					return
 				}
-			} else {
-				// TODO: convert to be a part of options
-				switch setParts[0] {
-				case "numlines", "maxnumlines":
-					val, err := strconv.Atoi(setParts[1])
-					if err != nil {
-						app.printError("Can't parse " + setParts[1])
-						return
-					}
 
-					if val < 2 {
-						app.printError("numlines must be at least 2")
-						return
-					}
-
-					app.maxNumLines = val
-
-				default:
-					app.printError("Unknown variable " + setParts[0])
-					return
-				}
+				return
 			}
 
+			app.printError("Unknown variable " + optName)
 			return
 		}
 
 		if parts[1][len(parts[1])-1] == '?' {
 			optName := parts[1][:len(parts[1])-1]
 
-			if opt, ok := AllOptions[optName]; ok {
+			if opt := OptionMetaByName(optName); opt != nil {
 				var optValue string
 				app.options.Call(func(o *Options) {
 					optValue = opt.Get(o)
 				})
 
 				app.printMsg(fmt.Sprintf("%s is %s", optName, optValue))
-			} else {
-				switch optName {
-				case "numlines", "maxnumlines":
-					app.printMsg("numlines is " + strconv.Itoa(app.maxNumLines))
-
-				default:
-					app.printError("Unknown variable " + optName)
-					return
-				}
+				return
 			}
+
+			app.printError("Unknown variable " + optName)
 			return
 		}
 
-		app.printError("Invalid set command" + string(parts[1][len(parts)-1]))
+		app.printError("Invalid set command")
 
 	case "xc", "xclip":
 		qf := app.mainView.getQueryFull()
