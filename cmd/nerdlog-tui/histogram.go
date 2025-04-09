@@ -231,15 +231,31 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 
 		var selMark string
 		if !h.IsSelectionActive() {
-			selMark = fmt.Sprintf(" [%s]", h.formatCursor(h.cursor, nil, h.binSize))
+			selMark = fmt.Sprintf("[%s]", h.formatCursor(h.cursor, nil, h.binSize))
 		} else {
 			selStart, selEnd := h.GetSelection()
-			selMark = fmt.Sprintf(" [%s]", h.formatCursor(selStart, &selEnd, h.binSize))
+			selMark = fmt.Sprintf("[%s]", h.formatCursor(selStart, &selEnd, h.binSize))
 		}
 
 		leftOffset := fldMarginLeft + fldData.selScaleOffset/2
 
-		tview.Print(screen, line+selMark, x+leftOffset, y+height-1, width-leftOffset, tview.AlignLeft, tcell.ColorGreen)
+		tview.Print(screen, line, x+leftOffset, y+height-1, width-leftOffset, tview.AlignLeft, tcell.ColorGreen)
+
+		// Print the selection range description
+		selMarkOffset := leftOffset + lineLen + 1
+		freeSpaceRight := width - (selMarkOffset + len(selMark))
+		if freeSpaceRight < 0 {
+			// The selMark text doesn't fit, so we move it to the left so it's on the
+			// right edge.
+			selMarkOffset += freeSpaceRight
+		} else {
+			// The selMark text fits, but we intentionally have a spacing of 1 char
+			// before it, and to avoid having some other stuff from underneath
+			// showing up in that spacing, we fill it out with a " ".
+			selMarkOffset--
+			selMark = " " + selMark
+		}
+		tview.Print(screen, selMark, x+selMarkOffset, y+height-1, width-selMarkOffset, tview.AlignLeft, tcell.ColorGreen)
 
 		// Also print the bar value (or sum of all selected values, if selection is active)
 		var valToPrint string
@@ -248,7 +264,15 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 		} else {
 			valToPrint = fmt.Sprintf("(total %d)", fldData.selectedValsSum)
 		}
-		tview.Print(screen, valToPrint, x+leftOffset+lineLen+1, y, width-leftOffset-lineLen-1, tview.AlignLeft, tcell.ColorGreen)
+
+		totalMarkOffset := x + leftOffset + lineLen + 1
+		freeSpaceRight = width - (totalMarkOffset + len(valToPrint))
+		if freeSpaceRight < 0 {
+			// The valToPrint text doesn't fit, so we move it to the left so it's on
+			// the right edge.
+			totalMarkOffset += freeSpaceRight
+		}
+		tview.Print(screen, valToPrint, totalMarkOffset, y, width-totalMarkOffset, tview.AlignLeft, tcell.ColorGreen)
 	}
 }
 
@@ -547,8 +571,9 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 		selScaleDots[y] = make([]bool, width)
 	}
 
-	selOffsetStart := -1
-	selOffsetEnd := -1
+	selOffsetStart := -1 // The coord of selection start
+	selOffsetEnd := -1   // The coord of selection end
+	offsetLast := -1     // The last effective chart coord
 
 	cursorVal := 0
 	selectedValsSum := 0
@@ -591,6 +616,11 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 		}
 
 		for i := 0; i < chartBarWidth; i++ {
+			offsetLast = (xChart + i)
+			if (offsetLast & 0x01) != 0 {
+				offsetLast += 1
+			}
+
 			if sel {
 				// When selection starts, remember its offset
 				// (and also make sure it's even)
@@ -602,10 +632,7 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 				}
 				selScaleDots[0][xChart+i] = true
 			} else if selOffsetStart != -1 && selOffsetEnd == -1 {
-				selOffsetEnd = (xChart + i)
-				if (selOffsetEnd & 0x01) != 0 {
-					selOffsetEnd += 1
-				}
+				selOffsetEnd = offsetLast
 			}
 
 			if crs {
@@ -615,6 +642,9 @@ func (h *Histogram) genFieldData(width, height int) *fieldData {
 	}
 
 	// Cut the empty data from selScaleDots
+	if selOffsetEnd == -1 {
+		selOffsetEnd = offsetLast
+	}
 	for i := range selScaleDots {
 		if selOffsetEnd != -1 {
 			selScaleDots[i] = selScaleDots[i][:selOffsetEnd]
