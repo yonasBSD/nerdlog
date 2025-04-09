@@ -36,7 +36,7 @@ const histogramBinSize = 60 // 1 minute
 type MainViewParams struct {
 	App *tview.Application
 
-	Options Options
+	Options *OptionsShared
 
 	// OnLogQuery is called by MainView whenever the user submits a query to get
 	// logs.
@@ -429,32 +429,34 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.histogram = NewHistogram()
 	mv.histogram.SetBinSize(histogramBinSize) // 1 minute
 	mv.histogram.SetXFormatter(func(v int) string {
-		t := time.Unix(int64(v), 0).In(mv.params.Options.Timezone)
+		tz := mv.params.Options.GetTimezone()
+
+		t := time.Unix(int64(v), 0).In(tz)
 		if t.Hour() == 0 && t.Minute() == 0 {
-			return t.In(mv.params.Options.Timezone).Format("[yellow]Jan02[-]")
+			return t.In(tz).Format("[yellow]Jan02[-]")
 		}
-		return t.In(mv.params.Options.Timezone).Format("15:04")
+		return t.In(tz).Format("15:04")
 	})
 	mv.histogram.SetCursorFormatter(func(from int, to *int, width int) string {
-		fromTime := time.Unix(int64(from), 0).In(mv.params.Options.Timezone)
+		tz := mv.params.Options.GetTimezone()
+		fromTime := time.Unix(int64(from), 0).In(tz)
 
 		if to == nil {
-			return fromTime.In(mv.params.Options.Timezone).Format("Jan02 15:04")
+			return fromTime.In(tz).Format("Jan02 15:04")
 		}
 
-		toTime := time.Unix(int64(*to), 0).In(mv.params.Options.Timezone)
+		toTime := time.Unix(int64(*to), 0).In(tz)
 
 		return fmt.Sprintf(
 			"%s - %s (%s)",
-			fromTime.In(mv.params.Options.Timezone).Format("Jan02 15:04"),
-			toTime.In(mv.params.Options.Timezone).Format("Jan02 15:04"),
+			fromTime.In(tz).Format("Jan02 15:04"),
+			toTime.In(tz).Format("Jan02 15:04"),
 			strings.TrimSuffix(toTime.Sub(fromTime).String(), "0s"),
 		)
 	})
 	mv.histogram.SetXMarker(func(from, to int, numChars int) []int {
-		// TODO: accessing Timezone like that will become racey
-		// once we start updating it in runtime.
-		return getXMarksForHistogram(mv.params.Options.Timezone, from, to, numChars)
+		tz := mv.params.Options.GetTimezone()
+		return getXMarksForHistogram(tz, from, to, numChars)
 	})
 	mv.histogram.SetDataBinsSnapper(snapDataBinsInChartDot)
 	mv.histogram.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -487,12 +489,14 @@ func NewMainView(params *MainViewParams) *MainView {
 		return event
 	})
 	mv.histogram.SetSelectedFunc(func(from, to int) {
+		tz := mv.params.Options.GetTimezone()
+
 		fromTime := TimeOrDur{
-			Time: time.Unix(int64(from), 0).In(mv.params.Options.Timezone),
+			Time: time.Unix(int64(from), 0).In(tz),
 		}
 
 		toTime := TimeOrDur{
-			Time: time.Unix(int64(to), 0).In(mv.params.Options.Timezone),
+			Time: time.Unix(int64(to), 0).In(tz),
 		}
 
 		mv.setTimeRange(fromTime, toTime)
@@ -800,7 +804,9 @@ func (mv *MainView) queryInputApplyStyle() {
 }
 
 func (mv *MainView) applyQueryEditData(data QueryFull, dqp doQueryParams) error {
-	ftr, err := ParseFromToRange(mv.params.Options.Timezone, data.Time)
+	tz := mv.params.Options.GetTimezone()
+
+	ftr, err := ParseFromToRange(tz, data.Time)
 	if err != nil {
 		return errors.Annotatef(err, "time")
 	}
@@ -1014,7 +1020,24 @@ func (mv *MainView) updateTableHeader(msgs []core.LogMsg) (colNames []string) {
 
 	colNames = make([]string, 0, len(fields))
 	for i, fld := range fields {
-		cell := newTableCellHeader(fld.DisplayName)
+		displayName := fld.DisplayName
+
+		// Special case for the time column. Pretty dirty, but will do for now.
+		if fld.Name == "time" {
+			tz := mv.params.Options.GetTimezone()
+			zone, offset := time.Now().In(tz).Zone()
+			if zone != "UTC" {
+				sign := "+"
+				if offset < 0 {
+					sign = "-"
+					offset = -offset
+				}
+				zone = fmt.Sprintf("UTC%s%02d", sign, offset/3600)
+			}
+			displayName = fmt.Sprintf("time (%s)", zone)
+		}
+
+		cell := newTableCellHeader(displayName)
 		if _, ok := existingTags[fld.Name]; !ok {
 			cell.SetTextColor(tcell.ColorRed)
 		}
@@ -1035,6 +1058,29 @@ func (mv *MainView) updateTableHeader(msgs []core.LogMsg) (colNames []string) {
 func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 	mv.curLogResp = resp
 
+	oldNumRows := mv.logsTable.GetRowCount()
+	selectedRow, _ := mv.logsTable.GetSelection()
+	offsetRow, offsetCol := mv.logsTable.GetOffset()
+
+	mv.formatLogs()
+
+	if !resp.LoadedEarlier {
+		// Replaced all logs
+		mv.logsTable.Select(len(resp.Logs)+1, 0)
+		mv.logsTable.ScrollToEnd()
+		mv.bumpTimeRange(true)
+	} else {
+		// Loaded more (earlier) logs
+		numNewRows := mv.logsTable.GetRowCount() - oldNumRows
+		mv.logsTable.SetOffset(offsetRow+numNewRows, offsetCol)
+		mv.logsTable.Select(selectedRow+numNewRows, 0)
+	}
+
+	mv.printMsg(fmt.Sprintf("Query took: %s", resp.QueryDur.Round(1*time.Millisecond)), nlMsgLevelInfo)
+}
+
+func (mv *MainView) formatLogs() {
+	resp := mv.curLogResp
 	histogramData := make(map[int]int, len(resp.MinuteStats))
 	for k, v := range resp.MinuteStats {
 		histogramData[int(k)] = v.NumMsgs
@@ -1043,9 +1089,6 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 	mv.histogram.SetData(histogramData)
 
 	// TODO: perhaps optimize it, instead of clearing and repopulating whole table
-	oldNumRows := mv.logsTable.GetRowCount()
-	selectedRow, _ := mv.logsTable.GetSelection()
-	offsetRow, offsetCol := mv.logsTable.GetOffset()
 	mv.logsTable.Clear()
 
 	// Update existingTagNames
@@ -1066,6 +1109,8 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 		rowIdxLoadOlder, 0,
 		newTableCellButton("< MOAR ! >"),
 	)
+
+	tz := mv.params.Options.GetTimezone()
 
 	// Add all available logs
 	for i, rowIdx := 0, 2; i < len(resp.Logs); i, rowIdx = i+1, rowIdx+1 {
@@ -1098,7 +1143,7 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 			msgColor = tcell.ColorPink
 		}
 
-		timeStr := msg.Time.In(mv.params.Options.Timezone).Format(logsTableTimeLayout)
+		timeStr := msg.Time.In(tz).Format(logsTableTimeLayout)
 		if msg.DecreasedTimestamp {
 			timeStr = ""
 		}
@@ -1119,25 +1164,9 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 		}
 
 		mv.logsTable.GetCell(rowIdx, 0).SetReference(msg)
-
-		//msg.
-	}
-
-	if !resp.LoadedEarlier {
-		// Replaced all logs
-		mv.logsTable.Select(len(resp.Logs)+1, 0)
-		mv.logsTable.ScrollToEnd()
-		mv.bumpTimeRange(true)
-	} else {
-		// Loaded more (earlier) logs
-		numNewRows := mv.logsTable.GetRowCount() - oldNumRows
-		mv.logsTable.SetOffset(offsetRow+numNewRows, offsetCol)
-		mv.logsTable.Select(selectedRow+numNewRows, 0)
 	}
 
 	mv.bumpStatusLineRight()
-
-	mv.printMsg(fmt.Sprintf("Query took: %s", resp.QueryDur.Round(1*time.Millisecond)), nlMsgLevelInfo)
 }
 
 func (mv *MainView) bumpStatusLineLeft() {
@@ -1288,22 +1317,27 @@ func (mv *MainView) setTimeRange(from, to TimeOrDur) {
 	mv.from = from
 	mv.to = to
 
+	mv.formatTimeRange()
+}
+
+func (mv *MainView) formatTimeRange() {
+	tz := mv.params.Options.GetTimezone()
+
 	mv.bumpTimeRange(false)
 
 	rangeDur := mv.actualTo.Sub(mv.actualFrom)
 
 	var timeStr string
 	if !mv.to.IsZero() {
-		timeStr = fmt.Sprintf("%s to %s (%s)", mv.from.In(mv.params.Options.Timezone).Format(inputTimeLayout), mv.to.In(mv.params.Options.Timezone).Format(inputTimeLayout), formatDuration(rangeDur))
+		timeStr = fmt.Sprintf("%s to %s (%s)", mv.from.In(tz).Format(inputTimeLayout), mv.to.In(tz).Format(inputTimeLayout), formatDuration(rangeDur))
 	} else if mv.from.IsAbsolute() {
-		timeStr = fmt.Sprintf("%s to now (%s)", mv.from.In(mv.params.Options.Timezone).Format(inputTimeLayout), formatDuration(rangeDur))
+		timeStr = fmt.Sprintf("%s to now (%s)", mv.from.In(tz).Format(inputTimeLayout), formatDuration(rangeDur))
 	} else {
 		timeStr = fmt.Sprintf("last %s", TimeOrDur{Dur: -mv.from.Dur})
 	}
 
 	mv.timeLabel.SetText(timeStr)
 	mv.topFlex.ResizeItem(mv.timeLabel, len(timeStr), 0)
-
 }
 
 // bumpTimeRange only does something useful if the time is relative to current time.

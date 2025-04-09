@@ -25,7 +25,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 		})
 
 	case "time":
-		ftr, err := ParseFromToRange(app.mainView.params.Options.Timezone, strings.Join(parts[1:], " "))
+		ftr, err := ParseFromToRange(app.options.GetTimezone(), strings.Join(parts[1:], " "))
 		if err != nil {
 			app.printError(err.Error())
 			return
@@ -77,39 +77,66 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 
 		// TODO: implement in a generic way
 
-		setParts := strings.Split(parts[1], "=")
+		setParts := strings.SplitN(parts[1], "=", 2)
 		if len(setParts) == 2 {
-			switch setParts[0] {
-			case "numlines", "maxnumlines":
-				val, err := strconv.Atoi(setParts[1])
-				if err != nil {
-					app.printError("Can't parse " + setParts[1])
+			optName := setParts[0]
+			optValue := setParts[1]
+
+			if opt, ok := AllOptions[optName]; ok {
+				var setErr error
+				app.options.Call(func(o *Options) {
+					setErr = opt.Set(o, optValue)
+				})
+
+				if setErr != nil {
+					app.printError(setErr.Error())
 					return
 				}
+			} else {
+				// TODO: convert to be a part of options
+				switch setParts[0] {
+				case "numlines", "maxnumlines":
+					val, err := strconv.Atoi(setParts[1])
+					if err != nil {
+						app.printError("Can't parse " + setParts[1])
+						return
+					}
 
-				if val < 2 {
-					app.printError("numlines must be at least 2")
+					if val < 2 {
+						app.printError("numlines must be at least 2")
+						return
+					}
+
+					app.maxNumLines = val
+
+				default:
+					app.printError("Unknown variable " + setParts[0])
 					return
 				}
-
-				app.maxNumLines = val
-
-			default:
-				app.printError("Unknown variable " + setParts[0])
-				return
 			}
+
 			return
 		}
 
 		if parts[1][len(parts[1])-1] == '?' {
-			vn := parts[1][:len(parts[1])-1]
-			switch vn {
-			case "numlines", "maxnumlines":
-				app.printMsg("numlines is " + strconv.Itoa(app.maxNumLines))
+			optName := parts[1][:len(parts[1])-1]
 
-			default:
-				app.printError("Unknown variable " + vn)
-				return
+			if opt, ok := AllOptions[optName]; ok {
+				var optValue string
+				app.options.Call(func(o *Options) {
+					optValue = opt.Get(o)
+				})
+
+				app.printMsg(fmt.Sprintf("%s is %s", optName, optValue))
+			} else {
+				switch optName {
+				case "numlines", "maxnumlines":
+					app.printMsg("numlines is " + strconv.Itoa(app.maxNumLines))
+
+				default:
+					app.printError("Unknown variable " + optName)
+					return
+				}
 			}
 			return
 		}

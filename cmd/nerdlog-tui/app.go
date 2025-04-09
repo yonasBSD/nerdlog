@@ -15,6 +15,8 @@ import (
 type nerdlogApp struct {
 	params nerdlogAppParams
 
+	options *OptionsShared
+
 	tviewApp *tview.Application
 
 	hm       *core.HostsManager
@@ -76,6 +78,10 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 	app := &nerdlogApp{
 		params: params,
 
+		options: NewOptionsShared(Options{
+			Timezone: time.Local,
+		}),
+
 		tviewApp: tview.NewApplication(),
 
 		maxNumLines: 250,
@@ -88,11 +94,8 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 	cmdCh := make(chan cmdWithOpts, 8)
 
 	app.mainView = NewMainView(&MainViewParams{
-		App: app.tviewApp,
-		// TODO: make these options customizable
-		Options: Options{
-			Timezone: time.UTC,
-		},
+		App:     app.tviewApp,
+		Options: app.options,
 		OnLogQuery: func(params core.QueryLogsParams) {
 			params.MaxNumLines = app.maxNumLines
 
@@ -234,6 +237,8 @@ func (app *nerdlogApp) handleCmdLine(cmdCh <-chan cmdWithOpts) {
 				app.cmdLineHistory.Add(cwo.cmd)
 			}
 			app.handleCmd(cwo.cmd)
+			app.mainView.formatTimeRange()
+			app.mainView.formatLogs()
 		})
 	}
 }
