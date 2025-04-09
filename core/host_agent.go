@@ -281,7 +281,8 @@ func (ha *HostAgent) sendCmdResp(resp interface{}, err error) {
 }
 
 func (ha *HostAgent) run() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(1 * time.Second)
+	var connectAfter time.Time
 	var lastUpdTime time.Time
 
 	for {
@@ -294,9 +295,8 @@ func (ha *HostAgent) run() {
 					},
 				})
 
-				// TODO: backoff
 				ha.changeState(HostAgentStateDisconnected)
-				ha.changeState(HostAgentStateConnecting)
+				connectAfter = time.Now().Add(2 * time.Second)
 				continue
 			}
 
@@ -618,6 +618,9 @@ func (ha *HostAgent) run() {
 				ha.startCmd(hostCmd{
 					ping: &hostCmdPing{},
 				})
+			} else if !connectAfter.IsZero() {
+				connectAfter = time.Time{}
+				ha.changeState(HostAgentStateConnecting)
 			}
 
 		case <-ha.torndownCh:
