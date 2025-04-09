@@ -15,6 +15,15 @@ func (t TimeOrDur) IsZero() bool {
 	return t.Time.IsZero() && t.Dur == 0
 }
 
+func (t TimeOrDur) In(loc *time.Location) TimeOrDur {
+	if t.Time.IsZero() {
+		return t
+	}
+
+	t.Time = t.Time.In(loc)
+	return t
+}
+
 func (t TimeOrDur) IsAbsolute() bool {
 	return !t.Time.IsZero()
 }
@@ -57,7 +66,7 @@ func (t TimeOrDur) Format(layout string) string {
 // ParseTimeOrDur tries to parse a string as either time or duration.
 // If parsing as a duration succeeds, then layout is ignored; otherwise it's
 // used to parse it as time.
-func ParseTimeOrDur(layout, s string) (TimeOrDur, error) {
+func ParseTimeOrDur(timezone *time.Location, layout, s string) (TimeOrDur, error) {
 	// Try to parse as a duration first
 	dur, err := time.ParseDuration(s)
 	if err == nil {
@@ -67,7 +76,7 @@ func ParseTimeOrDur(layout, s string) (TimeOrDur, error) {
 	}
 
 	// Now try to parse as a time
-	t, err := time.Parse(layout, s)
+	t, err := time.ParseInLocation(layout, s, timezone)
 	if err != nil {
 		return TimeOrDur{}, errors.Trace(err)
 	}

@@ -12,7 +12,7 @@ import (
 // The returned marks are on the most round places: e.g. if there are multiple
 // days, then at least some marks must be on the day boundary; the marks are
 // usually divisible by 5, 10, 30, or 60 mins, etc.
-func getXMarksForTimeRange(from, to time.Time, maxNumMarks int) []time.Time {
+func getXMarksForTimeRange(timezone *time.Location, from, to time.Time, maxNumMarks int) []time.Time {
 	if !from.Before(to) || maxNumMarks <= 0 {
 		return nil
 	}
@@ -24,7 +24,7 @@ func getXMarksForTimeRange(from, to time.Time, maxNumMarks int) []time.Time {
 	}
 
 	// Align the first mark to the step boundary.
-	start := from.Truncate(step)
+	start := truncateAlignedToMidnight(from, step, timezone)
 	if start.Before(from) {
 		start = start.Add(step)
 	}
@@ -37,6 +37,33 @@ func getXMarksForTimeRange(from, to time.Time, maxNumMarks int) []time.Time {
 		}
 	}
 	return marks
+}
+
+// Like time.Truncate, but instead of aligning with zero time, aligns with the
+// closest midnight earlier than the given t in the given location.
+func truncateAlignedToMidnight(t time.Time, d time.Duration, loc *time.Location) time.Time {
+	t = t.In(loc)
+
+	// If the location is UTC (or otherwise with zero offset), just use
+	// standard Truncate.
+	_, offset := t.Zone()
+	if offset == 0 {
+		return t.Truncate(d)
+	}
+
+	// Looks like the offset is non-zero, so align with the midnight in that timezone.
+	midnight := time.Date(
+		t.Year(),
+		t.Month(),
+		t.Day(),
+		0, 0, 0, 0,
+		loc,
+	)
+
+	sinceMidnight := t.Sub(midnight)
+	truncatedSinceMidnight := sinceMidnight.Truncate(d)
+
+	return midnight.Add(truncatedSinceMidnight)
 }
 
 var snaps = []time.Duration{
@@ -70,14 +97,14 @@ func chooseStep(duration time.Duration, maxNumMarks int) time.Duration {
 	return snaps[len(snaps)-1]
 }
 
-func getXMarksForHistogram(from, to int, numChars int) []int {
+func getXMarksForHistogram(timezone *time.Location, from, to int, numChars int) []int {
 	const minCharsDistanceBetweenMarks = 15
 	numMarks := numChars / minCharsDistanceBetweenMarks
 
-	fromTime := time.Unix(int64(from), 0).UTC()
-	toTime := time.Unix(int64(to), 0).UTC()
+	fromTime := time.Unix(int64(from), 0).In(timezone)
+	toTime := time.Unix(int64(to), 0).In(timezone)
 
-	marksTime := getXMarksForTimeRange(fromTime, toTime, numMarks)
+	marksTime := getXMarksForTimeRange(timezone, fromTime, toTime, numMarks)
 	ret := make([]int, 0, len(marksTime))
 	for _, v := range marksTime {
 		ret = append(ret, int(v.Unix()))

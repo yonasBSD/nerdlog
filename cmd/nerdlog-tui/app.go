@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/dimonomid/nerdlog/blhistory"
 	"github.com/dimonomid/nerdlog/clhistory"
@@ -88,6 +89,10 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 
 	app.mainView = NewMainView(&MainViewParams{
 		App: app.tviewApp,
+		// TODO: make these options customizable
+		Options: Options{
+			Timezone: time.UTC,
+		},
 		OnLogQuery: func(params core.QueryLogsParams) {
 			params.MaxNumLines = app.maxNumLines
 

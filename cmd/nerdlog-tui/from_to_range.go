@@ -2,6 +2,7 @@ package main
 
 import (
 	"strings"
+	"time"
 
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/juju/errors"
@@ -12,7 +13,7 @@ type FromToRange struct {
 	To   TimeOrDur
 }
 
-func ParseFromToRange(s string) (FromToRange, error) {
+func ParseFromToRange(timezone *time.Location, s string) (FromToRange, error) {
 	flds := strings.Split(s, " to ")
 	if len(flds) == 0 {
 		return FromToRange{}, errors.New("time can't be empty. try -5h")
@@ -23,7 +24,7 @@ func ParseFromToRange(s string) (FromToRange, error) {
 
 	fromStr := flds[0]
 
-	from, err = parseAndInferTimeOrDur(inputTimeLayout, fromStr)
+	from, err = parseAndInferTimeOrDur(timezone, inputTimeLayout, fromStr)
 	if err != nil {
 		return FromToRange{}, errors.Annotatef(err, "invalid 'from' duration")
 	}
@@ -39,7 +40,7 @@ func ParseFromToRange(s string) (FromToRange, error) {
 		}
 
 		var err error
-		to, err = parseAndInferTimeOrDur(inputTimeLayout, toStr)
+		to, err = parseAndInferTimeOrDur(timezone, inputTimeLayout, toStr)
 		if err != nil {
 			return FromToRange{}, errors.Annotatef(err, "invalid 'to' duration")
 		}
@@ -70,8 +71,8 @@ func (ftr *FromToRange) String() string {
 	return fromStr + " to " + ftr.To.Format(format)
 }
 
-func parseAndInferTimeOrDur(layout, s string) (TimeOrDur, error) {
-	t, err := ParseTimeOrDur(layout, s)
+func parseAndInferTimeOrDur(timezone *time.Location, layout, s string) (TimeOrDur, error) {
+	t, err := ParseTimeOrDur(timezone, layout, s)
 	if err != nil {
 		return TimeOrDur{}, err
 	}

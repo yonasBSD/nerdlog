@@ -25,7 +25,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 		})
 
 	case "time":
-		ftr, err := ParseFromToRange(strings.Join(parts[1:], " "))
+		ftr, err := ParseFromToRange(app.mainView.params.Options.Timezone, strings.Join(parts[1:], " "))
 		if err != nil {
 			app.printError(err.Error())
 			return

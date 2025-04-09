@@ -36,6 +36,8 @@ const histogramBinSize = 60 // 1 minute
 type MainViewParams struct {
 	App *tview.Application
 
+	Options Options
+
 	// OnLogQuery is called by MainView whenever the user submits a query to get
 	// logs.
 	OnLogQuery OnLogQueryCallback
@@ -427,29 +429,33 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.histogram = NewHistogram()
 	mv.histogram.SetBinSize(histogramBinSize) // 1 minute
 	mv.histogram.SetXFormatter(func(v int) string {
-		t := time.Unix(int64(v), 0).UTC()
+		t := time.Unix(int64(v), 0).In(mv.params.Options.Timezone)
 		if t.Hour() == 0 && t.Minute() == 0 {
-			return t.Format("[yellow]Jan02[-]")
+			return t.In(mv.params.Options.Timezone).Format("[yellow]Jan02[-]")
 		}
-		return t.Format("15:04")
+		return t.In(mv.params.Options.Timezone).Format("15:04")
 	})
 	mv.histogram.SetCursorFormatter(func(from int, to *int, width int) string {
-		fromTime := time.Unix(int64(from), 0).UTC()
+		fromTime := time.Unix(int64(from), 0).In(mv.params.Options.Timezone)
 
 		if to == nil {
-			return fromTime.Format("Jan02 15:04")
+			return fromTime.In(mv.params.Options.Timezone).Format("Jan02 15:04")
 		}
 
-		toTime := time.Unix(int64(*to), 0).UTC()
+		toTime := time.Unix(int64(*to), 0).In(mv.params.Options.Timezone)
 
 		return fmt.Sprintf(
 			"%s - %s (%s)",
-			fromTime.Format("Jan02 15:04"),
-			toTime.Format("Jan02 15:04"),
+			fromTime.In(mv.params.Options.Timezone).Format("Jan02 15:04"),
+			toTime.In(mv.params.Options.Timezone).Format("Jan02 15:04"),
 			strings.TrimSuffix(toTime.Sub(fromTime).String(), "0s"),
 		)
 	})
-	mv.histogram.SetXMarker(getXMarksForHistogram)
+	mv.histogram.SetXMarker(func(from, to int, numChars int) []int {
+		// TODO: accessing Timezone like that will become racey
+		// once we start updating it in runtime.
+		return getXMarksForHistogram(mv.params.Options.Timezone, from, to, numChars)
+	})
 	mv.histogram.SetDataBinsSnapper(snapDataBinsInChartDot)
 	mv.histogram.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
@@ -482,11 +488,11 @@ func NewMainView(params *MainViewParams) *MainView {
 	})
 	mv.histogram.SetSelectedFunc(func(from, to int) {
 		fromTime := TimeOrDur{
-			Time: time.Unix(int64(from), 0).UTC(),
+			Time: time.Unix(int64(from), 0).In(mv.params.Options.Timezone),
 		}
 
 		toTime := TimeOrDur{
-			Time: time.Unix(int64(to), 0).UTC(),
+			Time: time.Unix(int64(to), 0).In(mv.params.Options.Timezone),
 		}
 
 		mv.setTimeRange(fromTime, toTime)
@@ -794,7 +800,7 @@ func (mv *MainView) queryInputApplyStyle() {
 }
 
 func (mv *MainView) applyQueryEditData(data QueryFull, dqp doQueryParams) error {
-	ftr, err := ParseFromToRange(data.Time)
+	ftr, err := ParseFromToRange(mv.params.Options.Timezone, data.Time)
 	if err != nil {
 		return errors.Annotatef(err, "time")
 	}
@@ -1092,7 +1098,7 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 			msgColor = tcell.ColorPink
 		}
 
-		timeStr := msg.Time.Format(logsTableTimeLayout)
+		timeStr := msg.Time.In(mv.params.Options.Timezone).Format(logsTableTimeLayout)
 		if msg.DecreasedTimestamp {
 			timeStr = ""
 		}
@@ -1288,9 +1294,9 @@ func (mv *MainView) setTimeRange(from, to TimeOrDur) {
 
 	var timeStr string
 	if !mv.to.IsZero() {
-		timeStr = fmt.Sprintf("%s to %s (%s)", mv.from.Format(inputTimeLayout), mv.to.Format(inputTimeLayout), formatDuration(rangeDur))
+		timeStr = fmt.Sprintf("%s to %s (%s)", mv.from.In(mv.params.Options.Timezone).Format(inputTimeLayout), mv.to.In(mv.params.Options.Timezone).Format(inputTimeLayout), formatDuration(rangeDur))
 	} else if mv.from.IsAbsolute() {
-		timeStr = fmt.Sprintf("%s to now (%s)", mv.from.Format(inputTimeLayout), formatDuration(rangeDur))
+		timeStr = fmt.Sprintf("%s to now (%s)", mv.from.In(mv.params.Options.Timezone).Format(inputTimeLayout), formatDuration(rangeDur))
 	} else {
 		timeStr = fmt.Sprintf("last %s", TimeOrDur{Dur: -mv.from.Dur})
 	}
