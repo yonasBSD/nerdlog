@@ -924,13 +924,15 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 			mv.overlayMsgViewIsMinimized = false
 			mv.overlayMsgView = mv.showMessagebox(
 				"overlay_msg", "", "", &MessageboxParams{
-					Buttons: []string{"OK"},
+					Buttons: []string{"Hide", "Cancel"},
 					OnButtonPressed: func(label string, idx int) {
 						switch label {
-						case "OK":
+						case "Hide":
 							mv.hideOverlayMsgBox()
 							mv.overlayMsgViewIsMinimized = true
 							mv.printOverlayMsgInCmdline(overlayMsg)
+						case "Cancel":
+							// TODO
 						}
 					},
 					NoFocus: false,
@@ -1507,6 +1509,8 @@ func (mv *MainView) showMessagebox(
 	}
 
 	msgv = NewMessageView(mv, &MessageViewParams{
+		App: mv.params.App,
+
 		MessageID:       msgID,
 		Title:           title,
 		Message:         message,
