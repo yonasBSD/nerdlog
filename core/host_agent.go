@@ -80,6 +80,8 @@ type HostAgent struct {
 	// location is loaded based on the timezone. If failed, it'll be UTC.
 	location *time.Location
 
+	numConnAttempts int
+
 	state     HostAgentState
 	busyStage BusyStage
 
@@ -163,6 +165,8 @@ type HostAgentUpdateState struct {
 type HostAgentParams struct {
 	Config ConfigLogSubject
 
+	Logger *log.Logger
+
 	// ClientID is just an arbitrary string (should be filename-friendly though)
 	// which will be appended to the nerdlog_query.sh and its cache filenames.
 	//
@@ -174,6 +178,10 @@ type HostAgentParams struct {
 }
 
 func NewHostAgent(params HostAgentParams) *HostAgent {
+	params.Logger = params.Logger.WithNamespaceAppended(
+		fmt.Sprintf("LSClient_%s", params.Config.Name),
+	)
+
 	ha := &HostAgent{
 		params: params,
 
@@ -245,8 +253,9 @@ func (ha *HostAgent) changeState(newState HostAgentState) {
 
 	switch ha.state {
 	case HostAgentStateConnecting:
+		ha.numConnAttempts++
 		ha.connectResCh = make(chan hostConnectRes, 1)
-		go connectToLogSubj(ha.params.Config, ha.connectResCh)
+		go connectToLogSubj(ha.params.Logger, ha.params.Config, ha.connectResCh)
 
 	case HostAgentStateConnectedIdle:
 		if len(ha.cmdQueue) > 0 {
@@ -269,6 +278,10 @@ func (ha *HostAgent) sendBusyStageUpdate() {
 }
 
 func (ha *HostAgent) sendCmdResp(resp interface{}, err error) {
+	if ha.curCmdCtx == nil {
+		return
+	}
+
 	if ha.curCmdCtx.cmd.respCh == nil {
 		return
 	}
@@ -291,14 +304,21 @@ func (ha *HostAgent) run() {
 			if res.err != nil {
 				ha.sendUpdate(&HostAgentUpdate{
 					ConnDetails: &ConnDetails{
-						Err: res.err.Error(),
+						Err: fmt.Sprintf("attempt %d: %s", ha.numConnAttempts, res.err.Error()),
 					},
 				})
 
 				ha.changeState(HostAgentStateDisconnected)
+				if ha.tearingDown {
+					close(ha.torndownCh)
+					continue
+				}
+
 				connectAfter = time.Now().Add(2 * time.Second)
 				continue
 			}
+
+			ha.numConnAttempts = 0
 
 			lastUpdTime = time.Now()
 
@@ -330,7 +350,7 @@ func (ha *HostAgent) run() {
 				continue
 			}
 
-			//log.Printf("hey line(%s): %s", ha.params.Config.Name, line)
+			//ha.params.Logger.Verbose1f("hey line(%s): %s", ha.params.Config.Name, line)
 
 			lastUpdTime = time.Now()
 
@@ -347,11 +367,11 @@ func (ha *HostAgent) run() {
 					tzPrefix := "host_timezone:"
 					if strings.HasPrefix(line, tzPrefix) {
 						tz := strings.TrimPrefix(line, tzPrefix)
-						log.Printf("Got host timezone: %s\n", tz)
+						ha.params.Logger.Verbose1f("Got host timezone: %s\n", tz)
 
 						location, err := time.LoadLocation(tz)
 						if err != nil {
-							log.Printf("Error: failed to load location %s, will use UTC\n", tz)
+							ha.params.Logger.Errorf("Error: failed to load location %s, will use UTC\n", tz)
 							// TODO: send an update and then the receiver should show a message
 							// to the user
 						} else {
@@ -556,7 +576,7 @@ func (ha *HostAgent) run() {
 				continue
 			}
 
-			//log.Printf("hey stderr line(%s): %s", ha.params.Config.Name, line)
+			ha.params.Logger.Verbose2f("hey stderr line(%s): %s", ha.params.Config.Name, line)
 
 			lastUpdTime = time.Now()
 
@@ -627,6 +647,7 @@ func (ha *HostAgent) run() {
 			ha.sendUpdate(&HostAgentUpdate{
 				TornDown: true,
 			})
+			ha.params.Logger.Infof("Teardown completed")
 			return
 		}
 	}
@@ -643,12 +664,13 @@ type hostConnectRes struct {
 }
 
 func connectToLogSubj(
+	logger *log.Logger,
 	config ConfigLogSubject,
 	resCh chan<- hostConnectRes,
 ) (res hostConnectRes) {
 	defer func() {
 		if res.err != nil {
-			log.Printf("Connection failed: %s", res.err)
+			logger.Errorf("Connection failed: %s", res.err)
 		}
 
 		resCh <- res
@@ -656,15 +678,15 @@ func connectToLogSubj(
 
 	var sshClient *ssh.Client
 
-	conf := getClientConfig(config.Host.User)
+	conf := getClientConfig(logger, config.Host.User)
 	//fmt.Println("hey2", conn, conf)
 
 	if config.Jumphost != nil {
-		log.Printf("Connecting via jumphost")
+		logger.Infof("Connecting via jumphost")
 		// Use jumphost
-		jumphost, err := getJumphostClient(config.Jumphost)
+		jumphost, err := getJumphostClient(logger, config.Jumphost)
 		if err != nil {
-			log.Printf("Jumphost connection failed: %s", err)
+			logger.Errorf("Jumphost connection failed: %s", err)
 			res.err = errors.Annotatef(err, "getting jumphost client")
 			return res
 		}
@@ -683,7 +705,7 @@ func connectToLogSubj(
 
 		sshClient = ssh.NewClient(authConn, chans, reqs)
 	} else {
-		log.Printf("Connecting to %s (%+v)", config.Host.Addr, conf)
+		logger.Infof("Connecting to %s (%+v)", config.Host.Addr, conf)
 		var err error
 		sshClient, err = ssh.Dial("tcp", config.Host.Addr, conf)
 		if err != nil {
@@ -693,7 +715,7 @@ func connectToLogSubj(
 	}
 	//defer client.Close()
 
-	log.Printf("Connected to %s", config.Host.Addr)
+	logger.Infof("Connected to %s", config.Host.Addr)
 
 	sshSession, err := sshClient.NewSession()
 	if err != nil {
@@ -751,8 +773,8 @@ func connectToLogSubj(
 	return res
 }
 
-func getClientConfig(username string) *ssh.ClientConfig {
-	auth, err := getSSHAgentAuth()
+func getClientConfig(logger *log.Logger, username string) *ssh.ClientConfig {
+	auth, err := getSSHAgentAuth(logger)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -773,14 +795,14 @@ var (
 	jumphostsSharedMtx sync.Mutex
 )
 
-func getJumphostClient(jhConfig *ConfigHost) (*ssh.Client, error) {
+func getJumphostClient(logger *log.Logger, jhConfig *ConfigHost) (*ssh.Client, error) {
 	jumphostsSharedMtx.Lock()
 	defer jumphostsSharedMtx.Unlock()
 
 	key := jhConfig.Key()
 	jh := jumphostsShared[key]
 	if jh == nil {
-		//log.Printf("Connecting to jumphost... %+v", jhConfig)
+		logger.Infof("Connecting to jumphost... %+v", jhConfig)
 
 		parts := strings.Split(jhConfig.Addr, ":")
 		if len(parts) != 2 {
@@ -796,7 +818,7 @@ func getJumphostClient(jhConfig *ConfigHost) (*ssh.Client, error) {
 			return nil, errors.New("Address not found")
 		}
 
-		conf := getClientConfig(jhConfig.User)
+		conf := getClientConfig(logger, jhConfig.User)
 
 		jh, err = ssh.Dial("tcp", jhConfig.Addr, conf)
 		if err != nil {
@@ -805,7 +827,7 @@ func getJumphostClient(jhConfig *ConfigHost) (*ssh.Client, error) {
 
 		jumphostsShared[key] = jh
 
-		//log.Printf("Jumphost ok")
+		logger.Infof("Jumphost ok")
 	}
 
 	return jh, nil
@@ -816,15 +838,15 @@ var (
 	sshAuthMethodSharedMtx sync.Mutex
 )
 
-func getSSHAgentAuth() (ssh.AuthMethod, error) {
+func getSSHAgentAuth(logger *log.Logger) (ssh.AuthMethod, error) {
 	sshAuthMethodSharedMtx.Lock()
 	defer sshAuthMethodSharedMtx.Unlock()
 
 	if sshAuthMethodShared == nil {
-		log.Printf("Initializing sshAuthMethodShared...")
+		logger.Infof("Initializing sshAuthMethodShared...")
 		sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
 		if err != nil {
-			log.Printf("Failed to initialize sshAuthMethodShared: %s", err.Error())
+			logger.Infof("Failed to initialize sshAuthMethodShared: %s", err.Error())
 			return nil, errors.Trace(err)
 		}
 
@@ -1047,11 +1069,12 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		}
 
 		cmd := strings.Join(parts, " ") + "\n"
-		log.Printf("hey command(%s): %s", ha.params.Config.Name, cmd)
+		ha.params.Logger.Verbose2f("hey command(%s): %s", ha.params.Config.Name, cmd)
 
 		ha.conn.stdinBuf.Write([]byte(cmd))
 
 	case cmdCtx.cmd.teardown:
+		ha.params.Logger.Infof("Received teardown message")
 		ha.tearingDown = true
 		ha.changeState(HostAgentStateDisconnecting)
 

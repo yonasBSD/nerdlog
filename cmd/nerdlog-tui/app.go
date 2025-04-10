@@ -8,6 +8,7 @@ import (
 	"github.com/dimonomid/nerdlog/blhistory"
 	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/dimonomid/nerdlog/core"
+	"github.com/dimonomid/nerdlog/log"
 	"github.com/juju/errors"
 	"github.com/rivo/tview"
 )
@@ -52,6 +53,8 @@ type cmdWithOpts struct {
 }
 
 func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
+	logger := log.NewLogger(log.Verbose1) // TODO: make it so that the level comes from the config
+
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return nil, errors.Annotatef(err, "getting home dir")
@@ -128,10 +131,12 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 
 		CmdHistory:   app.cmdLineHistory,
 		QueryHistory: app.queryCLHistory,
+
+		Logger: logger,
 	})
 
 	// NOTE: initHostsManager has to be called _after_ app.mainView is initialized.
-	app.initHostsManager("")
+	app.initHostsManager("", logger)
 
 	if !params.connectRightAway {
 		app.mainView.params.App.SetFocus(app.mainView.logsTable)
@@ -152,7 +157,7 @@ func (app *nerdlogApp) runTViewApp() error {
 }
 
 // NOTE: initHostsManager has to be called _after_ app.mainView is initialized.
-func (app *nerdlogApp) initHostsManager(initialHosts string) {
+func (app *nerdlogApp) initHostsManager(initialHosts string, logger *log.Logger) {
 	updatesCh := make(chan core.HostsManagerUpdate, 128)
 	go func() {
 		// We don't want to necessarily update UI on _every_ state update, since
@@ -215,6 +220,8 @@ func (app *nerdlogApp) initHostsManager(initialHosts string) {
 	envUser := os.Getenv("USER")
 
 	app.hm = core.NewHostsManager(core.HostsManagerParams{
+		Logger: logger,
+
 		PredefinedConfigHosts: makeConfigHosts(),
 		InitialHosts:          initialHosts,
 

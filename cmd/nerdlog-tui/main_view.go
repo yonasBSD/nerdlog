@@ -49,6 +49,8 @@ type MainViewParams struct {
 
 	CmdHistory   *clhistory.CLHistory
 	QueryHistory *clhistory.CLHistory
+
+	Logger *log.Logger
 }
 
 type MainView struct {
@@ -188,6 +190,8 @@ var (
 )
 
 func NewMainView(params *MainViewParams) *MainView {
+	params.Logger = params.Logger.WithNamespaceAppended("MainView")
+
 	mv := &MainView{
 		params: *params,
 	}
@@ -833,7 +837,7 @@ func (mv *MainView) applyQueryEditData(data QueryFull, dqp doQueryParams) error 
 	// there, we'll do the query.
 	mv.doQueryParamsOnceConnected = &dqp
 
-	log.Printf("Applying hosts: %s", data.HostsFilter)
+	mv.params.Logger.Infof("Applying hosts: %s", data.HostsFilter)
 	err = mv.params.OnHostsFilterChange(data.HostsFilter)
 	if err != nil {
 		return errors.Annotate(err, "hosts")
@@ -855,7 +859,7 @@ func (mv *MainView) GetUIPrimitive() tview.Primitive {
 }
 
 func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
-	log.Printf("Applying HM state: %+v", hmState)
+	mv.params.Logger.Verbose1f("Applying HM state: %+v", hmState)
 
 	mv.curHMState = hmState
 	var overlayMsg string

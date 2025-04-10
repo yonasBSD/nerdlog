@@ -42,6 +42,8 @@ type HostsManagerParams struct {
 	// TODO: use it
 	PredefinedConfigHosts []ConfigHost
 
+	Logger *log.Logger
+
 	InitialHosts string
 
 	// ClientID is just an arbitrary string (should be filename-friendly though)
@@ -55,6 +57,8 @@ type HostsManagerParams struct {
 }
 
 func NewHostsManager(params HostsManagerParams) *HostsManager {
+	params.Logger = params.Logger.WithNamespaceAppended("LSMan")
+
 	hm := &HostsManager{
 		params: params,
 
@@ -159,6 +163,7 @@ func (hm *HostsManager) updateHAs() {
 		// We need to create a new host agent
 		ha := NewHostAgent(HostAgentParams{
 			Config:    *hc,
+			Logger:    hm.params.Logger,
 			ClientID:  hm.params.ClientID, //fmt.Sprintf("%s-%d", hm.params.ClientID, rand.Int()),
 			UpdatesCh: hm.hostUpdatesCh,
 		})
@@ -199,7 +204,7 @@ func (hm *HostsManager) run() {
 				hm.updateHostsByState()
 				hm.sendStateUpdate()
 			} else if upd.ConnDetails != nil {
-				log.Printf("ConnDetails for %s: %+v", upd.Name, *upd.ConnDetails)
+				hm.params.Logger.Verbose1f("ConnDetails for %s: %+v", upd.Name, *upd.ConnDetails)
 				hm.haConnDetails[upd.Name] = *upd.ConnDetails
 				hm.sendStateUpdate()
 			} else if upd.BusyStage != nil {
@@ -290,7 +295,7 @@ func (hm *HostsManager) run() {
 
 			case req.updHostsFilter != nil:
 				r := req.updHostsFilter
-				log.Printf("Hosts manager: update hosts filter: %s", r.filter)
+				hm.params.Logger.Infof("Hosts manager: update hosts filter: %s", r.filter)
 				if hm.numNotConnected > 0 {
 					r.resCh <- errors.Errorf("not connected to all hosts yet")
 					continue

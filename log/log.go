@@ -10,14 +10,24 @@ import (
 	"time"
 )
 
+type LogLevel int
+
+const (
+	Verbose2 LogLevel = iota
+	Verbose1
+	Info
+	Warning
+	Error
+)
+
 var logFile *os.File
 var logFileMtx sync.Mutex
 
-// Printf prints a formatted message to the log file ~/.nerdlog.log
-func Printf(format string, a ...interface{}) {
+// printf prints a formatted message to the log file ~/.nerdlog.log
+func printf(format string, a ...interface{}) {
 	w := writer()
 
-	fmt.Fprintf(w, "%s: ", time.Now().Format(time.RFC3339Nano))
+	fmt.Fprintf(w, "%s: ", time.Now().Format("2006-01-02T15:04:05.999"))
 
 	if !strings.HasSuffix(format, "\n") {
 		format += "\n"
@@ -45,4 +55,75 @@ func writer() io.Writer {
 	}
 
 	return logFile
+}
+
+type Logger struct {
+	minLevel LogLevel
+
+	namespace string
+	context   map[string]string
+}
+
+func NewLogger(minLevel LogLevel) *Logger {
+	return &Logger{
+		minLevel: minLevel,
+	}
+}
+
+func (l *Logger) thisOrDefault() *Logger {
+	if l != nil {
+		return l
+	}
+
+	return &Logger{
+		minLevel: Info,
+	}
+}
+
+func (l *Logger) WithNamespaceAppended(n string) *Logger {
+	l = l.thisOrDefault()
+
+	ns := l.namespace
+	if ns != "" {
+		ns += "/"
+	}
+	ns += n
+
+	newLogger := *l
+	newLogger.namespace = ns
+	return &newLogger
+}
+
+func (l *Logger) Verbose2f(format string, a ...interface{}) {
+	l.Printf(Verbose2, format, a...)
+}
+
+func (l *Logger) Verbose1f(format string, a ...interface{}) {
+	l.Printf(Verbose1, format, a...)
+}
+
+func (l *Logger) Infof(format string, a ...interface{}) {
+	l.Printf(Info, format, a...)
+}
+
+func (l *Logger) Warnf(format string, a ...interface{}) {
+	l.Printf(Warning, format, a...)
+}
+
+func (l *Logger) Errorf(format string, a ...interface{}) {
+	l.Printf(Error, format, a...)
+}
+
+func (l *Logger) Printf(level LogLevel, format string, a ...interface{}) {
+	l = l.thisOrDefault()
+
+	if level < l.minLevel {
+		return
+	}
+
+	if l.namespace != "" {
+		printf("[%s] %s", l.namespace, fmt.Sprintf(format, a...))
+	} else {
+		printf("%s", l.namespace, fmt.Sprintf(format, a...))
+	}
 }
