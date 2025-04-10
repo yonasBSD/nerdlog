@@ -68,9 +68,10 @@ type MainView struct {
 	queryEditView *QueryEditView
 
 	// overlayMsgView is nil if there's no overlay msg.
-	overlayMsgView *MessageView
-	overlayText    string
-	overlaySpinner rune
+	overlayMsgView            *MessageView
+	overlayText               string
+	overlaySpinner            rune
+	overlayMsgViewIsMinimized bool
 
 	// focusedBeforeCmd is a primitive which was focused before cmdInput was
 	// focused. Once the user is done editing command, focusedBeforeCmd
@@ -791,7 +792,14 @@ func (mv *MainView) tick() (needDraw bool) {
 }
 
 func (mv *MainView) bumpOverlay() {
-	mv.overlayMsgView.textView.SetText(string(mv.overlaySpinner) + " " + mv.overlayText)
+	// If overlay message isn't minimized by the user, update it;
+	// otherwise, print a message in the command line.
+	text := string(mv.overlaySpinner) + " " + mv.overlayText
+	if !mv.overlayMsgViewIsMinimized {
+		mv.overlayMsgView.textView.SetText(text)
+	} else {
+		mv.printOverlayMsgInCmdline(text)
+	}
 }
 
 func (mv *MainView) queryInputApplyStyle() {
@@ -847,6 +855,8 @@ func (mv *MainView) GetUIPrimitive() tview.Primitive {
 }
 
 func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
+	log.Printf("Applying HM state: %+v", hmState)
+
 	mv.curHMState = hmState
 	var overlayMsg string
 
@@ -911,10 +921,19 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 	if overlayMsg != "" {
 		// Need to show or update overlay message.
 		if mv.overlayMsgView == nil {
+			mv.overlayMsgViewIsMinimized = false
 			mv.overlayMsgView = mv.showMessagebox(
 				"overlay_msg", "", "", &MessageboxParams{
-					Buttons: []string{},
-					NoFocus: true,
+					Buttons: []string{"OK"},
+					OnButtonPressed: func(label string, idx int) {
+						switch label {
+						case "OK":
+							mv.hideOverlayMsgBox()
+							mv.overlayMsgViewIsMinimized = true
+							mv.printOverlayMsgInCmdline(overlayMsg)
+						}
+					},
+					NoFocus: false,
 					Width:   70,
 					Height:  8,
 
@@ -927,11 +946,14 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 
 		mv.overlayText = overlayMsg
 		mv.bumpOverlay()
-	} else if mv.overlayMsgView != nil {
-		// Need to hide overlay message.
 
-		// TODO: using pageNameMessage here directly is too hacky
-		mv.hideModal(pageNameMessage+"overlay_msg", false)
+	} else if mv.overlayMsgView != nil {
+		if !mv.overlayMsgViewIsMinimized {
+			// Need to hide overlay message.
+			mv.hideOverlayMsgBox()
+		}
+
+		mv.overlayMsgViewIsMinimized = false
 		mv.overlayMsgView = nil
 		mv.overlayText = ""
 	}
@@ -942,6 +964,15 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 		mv.doQuery(*mv.doQueryParamsOnceConnected)
 		mv.doQueryParamsOnceConnected = nil
 	}
+}
+
+func (mv *MainView) printOverlayMsgInCmdline(overlayMsg string) {
+	mv.printMsg(clearTviewFormatting(strings.Replace(overlayMsg, "\n", "", -1)), nlMsgLevelInfo)
+}
+
+func (mv *MainView) hideOverlayMsgBox() {
+	// TODO: using pageNameMessage here directly is too hacky
+	mv.hideModal(pageNameMessage+"overlay_msg", true)
 }
 
 func getStatuslineNumStr(icon string, num int, color string) string {
