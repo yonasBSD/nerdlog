@@ -91,14 +91,22 @@ type HostAgent struct {
 	curCmdCtx  *hostCmdCtx
 	nextCmdIdx int
 
-	// teardownRequestCh is sent to when Close is called.
-	teardownRequestCh chan struct{}
-	tearingDown       bool
+	// disconnectReqCh is sent to when Close is called.
+	disconnectReqCh chan disconnectReq
+	tearingDown     bool
 	// disconnectedBeforeTeardownCh is closed once tearingDown is true and we're
 	// fully disconnected.
 	disconnectedBeforeTeardownCh chan struct{}
 
 	//debugFile *os.File
+}
+
+// disconnectReq represents a request to abort whatever connection we have,
+// and either teardown or reconnect again.
+type disconnectReq struct {
+	// If teardown is true, it means the HostAgent should completely stop. Otherwise,
+	// after disconnecting, it will reconnect.
+	teardown bool
 }
 
 type connCtx struct {
@@ -194,7 +202,7 @@ func NewHostAgent(params HostAgentParams) *HostAgent {
 		state:        HostAgentStateDisconnected,
 		enqueueCmdCh: make(chan hostCmd, 32),
 
-		teardownRequestCh:            make(chan struct{}, 1),
+		disconnectReqCh:              make(chan disconnectReq, 1),
 		disconnectedBeforeTeardownCh: make(chan struct{}),
 	}
 
@@ -650,14 +658,19 @@ func (ha *HostAgent) run() {
 				ha.changeState(HostAgentStateConnecting)
 			}
 
-		case <-ha.teardownRequestCh:
-			ha.params.Logger.Infof("Received teardown message")
-			ha.tearingDown = true
+		case req := <-ha.disconnectReqCh:
+			ha.params.Logger.Infof("Received message (teardown:%v)", req.teardown)
+
+			if req.teardown {
+				ha.tearingDown = true
+			}
 
 			// If we're already disconnected, consider ourselves torn-down already.
 			// Otherwise, initiate disconnection.
 			if ha.state == HostAgentStateDisconnected {
-				close(ha.disconnectedBeforeTeardownCh)
+				if req.teardown {
+					close(ha.disconnectedBeforeTeardownCh)
+				}
 			} else {
 				ha.changeState(HostAgentStateDisconnecting)
 			}
@@ -1014,7 +1027,18 @@ func (ha *HostAgent) EnqueueCmd(cmd hostCmd) {
 
 func (ha *HostAgent) Close() {
 	select {
-	case ha.teardownRequestCh <- struct{}{}:
+	case ha.disconnectReqCh <- disconnectReq{
+		teardown: true,
+	}:
+	default:
+	}
+}
+
+func (ha *HostAgent) Reconnect() {
+	select {
+	case ha.disconnectReqCh <- disconnectReq{
+		teardown: false,
+	}:
 	default:
 	}
 }

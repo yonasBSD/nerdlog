@@ -176,6 +176,12 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 	case "q", "quit":
 		app.tviewApp.Stop()
 
+	case "reconnect":
+		// TODO: make it a mainView own function, and we'll also use it whenever
+		// we trigger reconnection from the UI.
+		app.mainView.doQueryParamsOnceConnected = &doQueryParams{}
+		app.hm.Reconnect()
+
 	default:
 		app.printError(fmt.Sprintf("unknown command %q", parts[0]))
 	}

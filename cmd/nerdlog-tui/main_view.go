@@ -859,7 +859,7 @@ func (mv *MainView) GetUIPrimitive() tview.Primitive {
 }
 
 func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
-	mv.params.Logger.Verbose2f("Applying HM state: %+v", hmState)
+	mv.params.Logger.Verbose1f("Applying HM state: %+v", hmState)
 
 	mv.curHMState = hmState
 	var overlayMsg string

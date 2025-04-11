@@ -329,6 +329,16 @@ func (hm *HostsManager) run() {
 						ping: &hostCmdPing{},
 					})
 				}
+
+			case req.reconnect:
+				hm.params.Logger.Infof("Reconnect command")
+				if hm.curQueryLogsCtx != nil {
+					hm.params.Logger.Infof("Forgetting the in-progress query")
+					hm.curQueryLogsCtx = nil
+				}
+				for _, ha := range hm.has {
+					ha.Reconnect()
+				}
 			}
 
 		case resp := <-hm.respCh:
@@ -383,6 +393,7 @@ type hostsManagerReq struct {
 	queryLogs      *QueryLogsParams
 	updHostsFilter *hostsManagerReqUpdHostsFilter
 	ping           bool
+	reconnect      bool
 }
 
 type hostsManagerReqUpdHostsFilter struct {
@@ -413,6 +424,12 @@ func (hm *HostsManager) SetHostsFilter(filter string) error {
 func (hm *HostsManager) Ping() {
 	hm.reqCh <- hostsManagerReq{
 		ping: true,
+	}
+}
+
+func (hm *HostsManager) Reconnect() {
+	hm.reqCh <- hostsManagerReq{
+		reconnect: true,
 	}
 }
 
