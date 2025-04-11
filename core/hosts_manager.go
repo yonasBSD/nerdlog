@@ -148,6 +148,7 @@ func (hm *HostsManager) updateHAs() {
 		}
 
 		// We used to use this host, but now it's filtered out, so close it
+		hm.params.Logger.Verbose1f("Closing LSClient %s", key)
 		oldHA.Close()
 		delete(hm.has, key)
 		delete(hm.haStates, key)
@@ -296,10 +297,6 @@ func (hm *HostsManager) run() {
 			case req.updHostsFilter != nil:
 				r := req.updHostsFilter
 				hm.params.Logger.Infof("Hosts manager: update hosts filter: %s", r.filter)
-				if hm.numNotConnected > 0 {
-					r.resCh <- errors.Errorf("not connected to all hosts yet")
-					continue
-				}
 
 				if hm.curQueryLogsCtx != nil {
 					r.resCh <- errors.Errorf("busy with another query")

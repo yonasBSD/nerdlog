@@ -12,7 +12,6 @@ type hostCmd struct {
 	bootstrap *hostCmdBootstrap
 	ping      *hostCmdPing
 	queryLogs *hostCmdQueryLogs
-	teardown  bool
 }
 
 type hostCmdCtx struct {

@@ -91,9 +91,12 @@ type HostAgent struct {
 	curCmdCtx  *hostCmdCtx
 	nextCmdIdx int
 
-	// torndownCh is closed once teardown is completed
-	tearingDown bool
-	torndownCh  chan struct{}
+	// teardownRequestCh is sent to when Close is called.
+	teardownRequestCh chan struct{}
+	tearingDown       bool
+	// disconnectedBeforeTeardownCh is closed once tearingDown is true and we're
+	// fully disconnected.
+	disconnectedBeforeTeardownCh chan struct{}
 
 	//debugFile *os.File
 }
@@ -191,7 +194,8 @@ func NewHostAgent(params HostAgentParams) *HostAgent {
 		state:        HostAgentStateDisconnected,
 		enqueueCmdCh: make(chan hostCmd, 32),
 
-		torndownCh: make(chan struct{}),
+		teardownRequestCh:            make(chan struct{}, 1),
+		disconnectedBeforeTeardownCh: make(chan struct{}),
 	}
 
 	//debugFile, _ := os.Create("/tmp/host_agent_debug.log")
@@ -310,7 +314,7 @@ func (ha *HostAgent) run() {
 
 				ha.changeState(HostAgentStateDisconnected)
 				if ha.tearingDown {
-					close(ha.torndownCh)
+					close(ha.disconnectedBeforeTeardownCh)
 					continue
 				}
 
@@ -331,11 +335,14 @@ func (ha *HostAgent) run() {
 			})
 
 		case cmd := <-ha.enqueueCmdCh:
+			// Otherwise, require a connection.
 			if !isStateConnected(ha.state) {
 				ha.sendCmdResp(nil, errors.Errorf("not connected"))
 				continue
 			}
 
+			// And then, depending on whether we're busy or idle, either act
+			// right away, or enqueue for later.
 			if ha.state == HostAgentStateConnectedIdle {
 				ha.startCmd(cmd)
 			} else {
@@ -643,7 +650,19 @@ func (ha *HostAgent) run() {
 				ha.changeState(HostAgentStateConnecting)
 			}
 
-		case <-ha.torndownCh:
+		case <-ha.teardownRequestCh:
+			ha.params.Logger.Infof("Received teardown message")
+			ha.tearingDown = true
+
+			// If we're already disconnected, consider ourselves torn-down already.
+			// Otherwise, initiate disconnection.
+			if ha.state == HostAgentStateDisconnected {
+				close(ha.disconnectedBeforeTeardownCh)
+			} else {
+				ha.changeState(HostAgentStateDisconnecting)
+			}
+
+		case <-ha.disconnectedBeforeTeardownCh:
 			ha.sendUpdate(&HostAgentUpdate{
 				TornDown: true,
 			})
@@ -994,9 +1013,10 @@ func (ha *HostAgent) EnqueueCmd(cmd hostCmd) {
 }
 
 func (ha *HostAgent) Close() {
-	ha.EnqueueCmd(hostCmd{
-		teardown: true,
-	})
+	select {
+	case ha.teardownRequestCh <- struct{}{}:
+	default:
+	}
 }
 
 func (ha *HostAgent) addCmdToQueue(cmd hostCmd) {
@@ -1073,11 +1093,6 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 
 		ha.conn.stdinBuf.Write([]byte(cmd))
 
-	case cmdCtx.cmd.teardown:
-		ha.params.Logger.Infof("Received teardown message")
-		ha.tearingDown = true
-		ha.changeState(HostAgentStateDisconnecting)
-
 	default:
 		panic(fmt.Sprintf("invalid command %+v", cmdCtx.cmd))
 	}
@@ -1120,7 +1135,7 @@ func (ha *HostAgent) checkIfDisconnected() {
 		ha.changeState(HostAgentStateDisconnected)
 
 		if ha.tearingDown {
-			close(ha.torndownCh)
+			close(ha.disconnectedBeforeTeardownCh)
 		} else {
 			ha.changeState(HostAgentStateConnecting)
 		}
