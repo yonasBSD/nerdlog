@@ -186,8 +186,17 @@ func (hm *HostsManager) run() {
 		case upd := <-hm.hostUpdatesCh:
 			if upd.State != nil {
 				if _, ok := hm.haStates[upd.Name]; !ok {
+					hm.params.Logger.Warnf(
+						"Got state update from unknown %s: %s -> %s",
+						upd.Name, upd.State.OldState, upd.State.NewState,
+					)
 					continue
 				}
+
+				hm.params.Logger.Verbose1f(
+					"Got state update from %s: %s -> %s",
+					upd.Name, upd.State.OldState, upd.State.NewState,
+				)
 
 				hm.haStates[upd.Name] = upd.State.NewState
 
@@ -327,6 +336,7 @@ func (hm *HostsManager) run() {
 			switch {
 			case hm.curQueryLogsCtx != nil:
 				if resp.err != nil {
+					hm.params.Logger.Errorf("Got an error response from %v: %s", resp.hostname, resp.err)
 					hm.curQueryLogsCtx.errs[resp.hostname] = resp.err
 				}
 
@@ -336,12 +346,23 @@ func (hm *HostsManager) run() {
 
 					// If we collected responses from all nodes, handle them.
 					if len(hm.curQueryLogsCtx.resps) == len(hm.has) {
+						hm.params.Logger.Verbose1f(
+							"Got logs from %v, this was the last one, query is completed",
+							resp.hostname,
+						)
+
 						hm.mergeLogRespsAndSend()
 
 						hm.curQueryLogsCtx = nil
 
 						// sendStateUpdate must be done after setting curQueryLogsCtx.
 						hm.sendStateUpdate()
+					} else {
+						hm.params.Logger.Verbose1f(
+							"Got logs from %v, %d more to go",
+							resp.hostname,
+							len(hm.has)-len(hm.curQueryLogsCtx.resps),
+						)
 					}
 
 				default:
@@ -349,8 +370,7 @@ func (hm *HostsManager) run() {
 				}
 
 			default:
-				// TODO: proper update
-				fmt.Println("dropping update")
+				hm.params.Logger.Errorf("Dropping update from %s on the floor", resp.hostname)
 			}
 
 		}
@@ -371,6 +391,7 @@ type hostsManagerReqUpdHostsFilter struct {
 }
 
 func (hm *HostsManager) QueryLogs(params QueryLogsParams) {
+	hm.params.Logger.Verbose1f("QueryLogs: %+v", params)
 	hm.reqCh <- hostsManagerReq{
 		queryLogs: &params,
 	}

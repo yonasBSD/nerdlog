@@ -335,7 +335,7 @@ func (ha *HostAgent) run() {
 			})
 
 		case cmd := <-ha.enqueueCmdCh:
-			// Otherwise, require a connection.
+			// Require a connection.
 			if !isStateConnected(ha.state) {
 				ha.sendCmdResp(nil, errors.Errorf("not connected"))
 				continue
