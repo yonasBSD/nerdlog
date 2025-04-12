@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"math/rand"
 	"sort"
 	"strings"
 	"time"
@@ -25,6 +26,8 @@ type HostsManager struct {
 	// haBusyStages only contains items for hosts which are in the
 	// HostAgentStateConnectedBusy state.
 	haBusyStages map[string]BusyStage
+	// haPendingTeardown contains info about HoastAgent-s that are being torn down.
+	haPendingTeardown map[string]int
 
 	hostsByState    map[HostAgentState]map[string]struct{}
 	numNotConnected int
@@ -32,6 +35,14 @@ type HostsManager struct {
 	hostUpdatesCh chan *HostAgentUpdate
 	reqCh         chan hostsManagerReq
 	respCh        chan hostCmdRes
+
+	// teardownReqCh is written to once when Close is called.
+	teardownReqCh chan struct{}
+	// tearingDown is true if the teardown is in progress (after Close is called).
+	tearingDown bool
+	// torndownCh is closed once the teardown is fully completed.
+	// Wait waits for it.
+	torndownCh chan struct{}
 
 	curQueryLogsCtx *manQueryLogsCtx
 
@@ -62,14 +73,18 @@ func NewHostsManager(params HostsManagerParams) *HostsManager {
 	hm := &HostsManager{
 		params: params,
 
-		has:           map[string]*HostAgent{},
-		haStates:      map[string]HostAgentState{},
-		haConnDetails: map[string]ConnDetails{},
-		haBusyStages:  map[string]BusyStage{},
+		has:               map[string]*HostAgent{},
+		haStates:          map[string]HostAgentState{},
+		haConnDetails:     map[string]ConnDetails{},
+		haBusyStages:      map[string]BusyStage{},
+		haPendingTeardown: map[string]int{},
 
 		hostUpdatesCh: make(chan *HostAgentUpdate, 1024),
 		reqCh:         make(chan hostsManagerReq, 8),
 		respCh:        make(chan hostCmdRes),
+
+		teardownReqCh: make(chan struct{}, 1),
+		torndownCh:    make(chan struct{}, 1),
 	}
 
 	if err := hm.setHostsFilter(params.InitialHosts); err != nil {
@@ -149,9 +164,12 @@ func (hm *HostsManager) updateHAs() {
 
 		// We used to use this host, but now it's filtered out, so close it
 		hm.params.Logger.Verbose1f("Closing LSClient %s", key)
-		oldHA.Close()
 		delete(hm.has, key)
 		delete(hm.haStates, key)
+
+		keyNew := fmt.Sprintf("OLD_%s_%s", randomString(4), key)
+		hm.haPendingTeardown[keyNew] += 1
+		oldHA.Close(keyNew)
 	}
 
 	// Create new host agents
@@ -185,30 +203,34 @@ func (hm *HostsManager) run() {
 		select {
 		case upd := <-hm.hostUpdatesCh:
 			if upd.State != nil {
-				if _, ok := hm.haStates[upd.Name]; !ok {
+				if _, ok := hm.haStates[upd.Name]; ok {
+					hm.params.Logger.Verbose1f(
+						"Got state update from %s: %s -> %s",
+						upd.Name, upd.State.OldState, upd.State.NewState,
+					)
+
+					hm.haStates[upd.Name] = upd.State.NewState
+
+					// Maintain hm.haConnDetails
+					if upd.State.NewState == HostAgentStateConnectedIdle ||
+						upd.State.NewState == HostAgentStateConnectedBusy {
+						delete(hm.haConnDetails, upd.Name)
+					}
+
+					// Maintain hm.haBusyStages
+					if upd.State.NewState != HostAgentStateConnectedBusy {
+						delete(hm.haBusyStages, upd.Name)
+					}
+				} else if _, ok := hm.haPendingTeardown[upd.Name]; ok {
+					hm.params.Logger.Verbose1f(
+						"Got state update from tearing-down %s: %s -> %s",
+						upd.Name, upd.State.OldState, upd.State.NewState,
+					)
+				} else {
 					hm.params.Logger.Warnf(
 						"Got state update from unknown %s: %s -> %s",
 						upd.Name, upd.State.OldState, upd.State.NewState,
 					)
-					continue
-				}
-
-				hm.params.Logger.Verbose1f(
-					"Got state update from %s: %s -> %s",
-					upd.Name, upd.State.OldState, upd.State.NewState,
-				)
-
-				hm.haStates[upd.Name] = upd.State.NewState
-
-				// Maintain hm.haConnDetails
-				if upd.State.NewState == HostAgentStateConnectedIdle ||
-					upd.State.NewState == HostAgentStateConnectedBusy {
-					delete(hm.haConnDetails, upd.Name)
-				}
-
-				// Maintain hm.haBusyStages
-				if upd.State.NewState != HostAgentStateConnectedBusy {
-					delete(hm.haBusyStages, upd.Name)
 				}
 
 				hm.updateHostsByState()
@@ -221,6 +243,36 @@ func (hm *HostsManager) run() {
 				hm.haBusyStages[upd.Name] = *upd.BusyStage
 				hm.sendStateUpdate()
 			} else if upd.TornDown {
+				// One of our HostAgent-s has just shut down, account for it properly.
+				hm.haPendingTeardown[upd.Name] -= 1
+
+				// Sanity check.
+				if hm.haPendingTeardown[upd.Name] < 0 {
+					panic(fmt.Sprintf("got TornDown update and haPendingTeardown[%s] becomes %d", upd.Name, hm.haPendingTeardown[upd.Name]))
+				}
+
+				// Check how many HostAgent-s are still in the process of teardown
+				numPending := 0
+				for _, v := range hm.haPendingTeardown {
+					numPending += v
+				}
+
+				if numPending != 0 {
+					hm.params.Logger.Verbose1f(
+						"HostAgent %s teardown is completed, %d more are still pending",
+						upd.Name, numPending,
+					)
+				} else {
+					hm.params.Logger.Verbose1f("HostAgent %s teardown is completed, no more pending teardowns", upd.Name)
+
+					// If the whole HostsManager was shutting down, we're done now.
+					if hm.tearingDown {
+						hm.params.Logger.Infof("HostsManager teardown is completed")
+						close(hm.torndownCh)
+						return
+					}
+				}
+
 				// do we need this event at all?
 			}
 
@@ -383,8 +435,27 @@ func (hm *HostsManager) run() {
 				hm.params.Logger.Errorf("Dropping update from %s on the floor", resp.hostname)
 			}
 
+		case <-hm.teardownReqCh:
+			hm.params.Logger.Infof("HostsManager teardown is started")
+			hm.tearingDown = true
+			hm.setHostsFilter("")
+			hm.updateHAs()
 		}
 	}
+}
+
+// Close initiates the shutdown. It doesn't wait for the shutdown to complete;
+// use Wait for it.
+func (hm *HostsManager) Close() {
+	select {
+	case hm.teardownReqCh <- struct{}{}:
+	default:
+	}
+}
+
+// Wait waits for the HostsManager to tear down. Typically used after calling Close().
+func (hm *HostsManager) Wait() {
+	<-hm.torndownCh
 }
 
 type hostsManagerReq struct {
@@ -483,6 +554,9 @@ type HostsManagerState struct {
 
 	ConnDetailsByHost map[string]ConnDetails
 	BusyStageByHost   map[string]BusyStage
+
+	// TearingDown contains host names whic are in the process of teardown.
+	TearingDown []string
 }
 
 func (hm *HostsManager) updateHostsByState() {
@@ -522,6 +596,14 @@ func (hm *HostsManager) sendStateUpdate() {
 		busyStagesCopy[k] = v
 	}
 
+	tearingDown := make([]string, 0, len(hm.haPendingTeardown))
+	for k, num := range hm.haPendingTeardown {
+		for i := 0; i < num; i++ {
+			tearingDown = append(tearingDown, k)
+		}
+	}
+	sort.Strings(tearingDown)
+
 	upd := HostsManagerUpdate{
 		State: &HostsManagerState{
 			NumHosts:          len(hm.has),
@@ -532,6 +614,7 @@ func (hm *HostsManager) sendStateUpdate() {
 			Busy:              hm.curQueryLogsCtx != nil,
 			ConnDetailsByHost: connDetailsCopy,
 			BusyStageByHost:   busyStagesCopy,
+			TearingDown:       tearingDown,
 		},
 	}
 
@@ -633,4 +716,15 @@ func (hm *HostsManager) mergeLogRespsAndSend() {
 	ret.Logs = ret.Logs[coveredSinceIdx:]
 
 	hm.sendLogRespUpdate(ret)
+}
+
+func randomString(length int) string {
+	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+	rand.Seed(time.Now().UnixNano()) // Seed once per call
+	prefix := make([]byte, length)
+	for i := range prefix {
+		prefix[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(prefix)
 }

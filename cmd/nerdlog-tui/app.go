@@ -18,6 +18,8 @@ type nerdlogApp struct {
 
 	options *OptionsShared
 
+	// tviewApp is the TUI application. NOTE: once TUI exits, tviewApp is reset
+	// to nil.
 	tviewApp *tview.Application
 
 	hm       *core.HostsManager
@@ -153,7 +155,12 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 }
 
 func (app *nerdlogApp) runTViewApp() error {
-	return app.tviewApp.SetRoot(app.mainView.GetUIPrimitive(), true).Run()
+	err := app.tviewApp.SetRoot(app.mainView.GetUIPrimitive(), true).Run()
+
+	// Now that TUI app has finished, remember that by resetting it to nil.
+	app.tviewApp = nil
+
+	return err
 }
 
 // NOTE: initHostsManager has to be called _after_ app.mainView is initialized.
@@ -186,7 +193,11 @@ func (app *nerdlogApp) initHostsManager(initialHosts string, logger *log.Logger)
 
 			default:
 				// If anything has changed, update the UI.
-				if lastState != nil || len(logResps) > 0 {
+				//
+				// The tviewApp might be nil here if the TUI app has finished, but we're
+				// still receiving updates during the teardown; so if that's the case,
+				// just don't update the TUI.
+				if app.tviewApp != nil && (lastState != nil || len(logResps) > 0) {
 					app.tviewApp.QueueUpdateDraw(func() {
 						if lastState != nil {
 							app.mainView.applyHMState(lastState)
@@ -256,4 +267,12 @@ func (app *nerdlogApp) printError(msg string) {
 // printMsg prints a FYI kind of message. Also see notes for printError.
 func (app *nerdlogApp) printMsg(msg string) {
 	app.mainView.printMsg(msg, nlMsgLevelInfo)
+}
+
+func (app *nerdlogApp) Close() {
+	app.hm.Close()
+}
+
+func (app *nerdlogApp) Wait() {
+	app.hm.Wait()
 }

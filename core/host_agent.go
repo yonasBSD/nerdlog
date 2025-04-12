@@ -107,6 +107,11 @@ type disconnectReq struct {
 	// If teardown is true, it means the HostAgent should completely stop. Otherwise,
 	// after disconnecting, it will reconnect.
 	teardown bool
+
+	// If changeName is non-empty, the HostAgent's Name will be updated;
+	// it's useful for teardowns, to distinguish from potentially-existing
+	// another HostAgent with the same (old) name.
+	changeName string
 }
 
 type connCtx struct {
@@ -659,10 +664,14 @@ func (ha *HostAgent) run() {
 			}
 
 		case req := <-ha.disconnectReqCh:
-			ha.params.Logger.Infof("Received message (teardown:%v)", req.teardown)
+			ha.params.Logger.Infof("Received disconnect message (teardown:%v)", req.teardown)
 
 			if req.teardown {
 				ha.tearingDown = true
+			}
+
+			if req.changeName != "" {
+				ha.params.Config.Name = req.changeName
 			}
 
 			// If we're already disconnected, consider ourselves torn-down already.
@@ -676,10 +685,10 @@ func (ha *HostAgent) run() {
 			}
 
 		case <-ha.disconnectedBeforeTeardownCh:
+			ha.params.Logger.Infof("Teardown completed")
 			ha.sendUpdate(&HostAgentUpdate{
 				TornDown: true,
 			})
-			ha.params.Logger.Infof("Teardown completed")
 			return
 		}
 	}
@@ -1025,10 +1034,17 @@ func (ha *HostAgent) EnqueueCmd(cmd hostCmd) {
 	ha.enqueueCmdCh <- cmd
 }
 
-func (ha *HostAgent) Close() {
+// Close initiates the shutdown. It doesn't wait for the shutdown to complete;
+// client code needs to wait for the corresponding event (with TornDown: true).
+//
+// If changeName is non-empty, the HostAgent's Name will be updated; it's
+// useful to distinguish this HostAgent from potentially-existing another one
+// with the same (old) name.
+func (ha *HostAgent) Close(changeName string) {
 	select {
 	case ha.disconnectReqCh <- disconnectReq{
-		teardown: true,
+		teardown:   true,
+		changeName: changeName,
 	}:
 	default:
 	}

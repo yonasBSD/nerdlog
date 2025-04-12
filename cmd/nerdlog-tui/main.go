@@ -82,5 +82,8 @@ func main() {
 	fmt.Println("")
 	fmt.Println("Closing connections...")
 
+	app.Close()
+	app.Wait()
+
 	fmt.Println("Have a nice day.")
 }
