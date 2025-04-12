@@ -44,6 +44,8 @@ type MainViewParams struct {
 
 	OnHostsFilterChange OnHostsFilterChange
 
+	OnDisconnectRequest OnDisconnectRequest
+
 	// TODO: support command history
 	OnCmd OnCmdCallback
 
@@ -145,6 +147,7 @@ type CmdOpts struct {
 
 type OnLogQueryCallback func(params core.QueryLogsParams)
 type OnHostsFilterChange func(hostsFilter string) error
+type OnDisconnectRequest func()
 type OnCmdCallback func(cmd string, opts CmdOpts)
 
 var (
@@ -1119,7 +1122,7 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 func (mv *MainView) formatLogs() {
 	resp := mv.curLogResp
 	if resp == nil {
-		return
+		resp = &core.LogRespTotal{}
 	}
 
 	histogramData := make(map[int]int, len(resp.MinuteStats))
@@ -1653,4 +1656,11 @@ func (mv *MainView) openQueryEditView() {
 	mv.params.QueryHistory.Load()
 	mv.params.QueryHistory.Reset()
 	mv.queryEditView.Show(mv.getQueryFull())
+}
+
+func (mv *MainView) disconnect() {
+	mv.doQueryParamsOnceConnected = &doQueryParams{}
+	mv.curLogResp = nil
+	mv.setHostsFilter("")
+	mv.params.OnDisconnectRequest()
 }
