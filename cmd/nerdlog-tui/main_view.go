@@ -842,12 +842,6 @@ func (mv *MainView) applyQueryEditData(data QueryFull, dqp doQueryParams) error 
 	mv.setQuery(data.Query)
 	mv.setTimeRange(ftr.From, ftr.To)
 
-	// Before we call OnHostsFilterChange, set this doQueryParamsOnceConnected
-	// flag, so that once we receive a status update (which can happen any
-	// moment after OnHostsFilterChange is called), and if Connected is true
-	// there, we'll do the query.
-	mv.doQueryParamsOnceConnected = &dqp
-
 	mv.params.Logger.Infof("Applying hosts: %s", data.HostsFilter)
 	err = mv.params.OnHostsFilterChange(data.HostsFilter)
 	if err != nil {
@@ -861,6 +855,12 @@ func (mv *MainView) applyQueryEditData(data QueryFull, dqp doQueryParams) error 
 	mv.bumpStatusLineLeft()
 
 	mv.queryInputApplyStyle()
+
+	// We don't actually initiate a query here, but we set this
+	// doQueryParamsOnceConnected flag, so that next time we receive a status
+	// update (which will happen since we called OnHostsFilterChange above), if
+	// Connected is true there, we'll do the query.
+	mv.doQueryParamsOnceConnected = &dqp
 
 	return nil
 }
@@ -1691,6 +1691,63 @@ func (mv *MainView) disconnect() {
 	mv.curLogResp = nil
 	mv.setHostsFilter("")
 	mv.params.OnDisconnectRequest()
+}
+
+// handleQueryError shows the right messagebox based on the error cause.
+func (mv *MainView) handleQueryError(err error) {
+	if errors.Cause(err) == core.ErrBusyWithAnotherQuery {
+		// In this particular error ("busy with another query"), show a dialog
+		// with the additional button "Details", which can be used to open the
+		// details of the query in progress.
+
+		msgID := "busyWithAnotherQuery"
+
+		mv.showMessagebox(
+			msgID,
+			"Log query error",
+			"Busy with another query",
+			&MessageboxParams{
+				Buttons: []string{"OK", "Details"},
+				OnButtonPressed: func(label string, idx int) {
+					// Whatever button the user pressed, we hide the dialog. Keep in mind
+					// it needs to happen _before_ we call makeOverlayVisible() below.
+
+					// TODO: using pageNameMessage here directly is too hacky
+					mv.hideModal(pageNameMessage+msgID, true)
+
+					switch label {
+					case "OK":
+						// Nothing special to do, just hide the dialog (which was already done above)
+
+					case "Details":
+						if mv.overlayMsgView != nil && mv.overlayMsgViewIsMinimized {
+							mv.makeOverlayVisible()
+							mv.bumpOverlay()
+						}
+
+						// TODO: would be useful to implement force-override right from this dialog,
+						// but keep in mind it should work both when we just send a new query,
+						// and when the "full" query changes (with hosts, timeline etc).
+						// It's non-essential though, so for now I ignore it.
+
+						//case "Override":
+						//// TODO: using pageNameMessage here directly is too hacky
+						//mv.hideModal(pageNameMessage+msgID, true)
+						//mv.reconnect(true)
+					}
+				},
+				Width:  40,
+				Height: 8,
+
+				BackgroundColor: tcell.ColorDarkRed,
+			},
+		)
+	} else {
+		// In all other errors, open a regular dialog.
+		mv.showMessagebox("err", "Log query error", err.Error(), &MessageboxParams{
+			BackgroundColor: tcell.ColorDarkRed,
+		})
+	}
 }
 
 // reconnect initiates reconnection to all the log streams. If repeatQuery

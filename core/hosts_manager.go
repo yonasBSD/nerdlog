@@ -12,6 +12,8 @@ import (
 	"github.com/dimonomid/nerdlog/log"
 )
 
+var ErrBusyWithAnotherQuery = errors.Errorf("busy with another query")
+
 type HostsManager struct {
 	params HostsManagerParams
 
@@ -318,7 +320,7 @@ func (hm *HostsManager) run() {
 
 				if hm.curQueryLogsCtx != nil {
 					hm.sendLogRespUpdate(&LogRespTotal{
-						Errs: []error{errors.Errorf("busy with another query")},
+						Errs: []error{ErrBusyWithAnotherQuery},
 					})
 					continue
 				}
@@ -383,7 +385,7 @@ func (hm *HostsManager) run() {
 				hm.params.Logger.Infof("Hosts manager: update hosts filter: %s", r.filter)
 
 				if hm.curQueryLogsCtx != nil {
-					r.resCh <- errors.Errorf("busy with another query")
+					r.resCh <- ErrBusyWithAnotherQuery
 					continue
 				}
 

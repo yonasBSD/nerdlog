@@ -258,7 +258,7 @@ func NewQueryEditView(
 		switch event.Key() {
 		case tcell.KeyEnter:
 			if err := qev.applyQuery(); err != nil {
-				qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
+				qev.mainView.handleQueryError(err)
 			}
 			return nil
 		}
@@ -280,7 +280,7 @@ func NewQueryEditView(
 		switch event.Key() {
 		case tcell.KeyEnter:
 			if err := qev.applyQuery(); err != nil {
-				qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
+				qev.mainView.handleQueryError(err)
 			}
 			return nil
 		}
@@ -302,7 +302,7 @@ func NewQueryEditView(
 		switch event.Key() {
 		case tcell.KeyEnter:
 			if err := qev.applyQuery(); err != nil {
-				qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
+				qev.mainView.handleQueryError(err)
 			}
 			return nil
 		}
@@ -324,7 +324,7 @@ func NewQueryEditView(
 		switch event.Key() {
 		case tcell.KeyEnter:
 			if err := qev.applyQuery(); err != nil {
-				qev.mainView.showMessagebox("err", "Error", err.Error(), nil)
+				qev.mainView.handleQueryError(err)
 			}
 			return nil
 		}

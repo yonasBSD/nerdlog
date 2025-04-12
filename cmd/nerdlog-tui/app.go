@@ -212,7 +212,8 @@ func (app *nerdlogApp) initHostsManager(initialHosts string, logger *log.Logger)
 						for _, logResp := range logResps {
 							if len(logResp.Errs) > 0 {
 								// TODO: include other errors too, not only the first one
-								app.mainView.showMessagebox("err", "Log query error", logResp.Errs[0].Error(), nil)
+								err := logResp.Errs[0]
+								app.mainView.handleQueryError(err)
 								return
 							}
 
