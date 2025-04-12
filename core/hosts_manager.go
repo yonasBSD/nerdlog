@@ -261,9 +261,29 @@ func (hm *HostsManager) run() {
 				// and if needed, finish the teardown of the whole HostsManager.
 				numPending := hm.getNumHostAgentsTearingDown()
 				if numPending != 0 {
+					pendingSB := strings.Builder{}
+					i := 0
+					for k, v := range hm.haPendingTeardown {
+						if v == 0 {
+							continue
+						}
+
+						i++
+						if i > 3 {
+							pendingSB.WriteString("...")
+							break
+						}
+
+						if i > 0 {
+							pendingSB.WriteString(", ")
+						}
+
+						pendingSB.WriteString(k)
+					}
+
 					hm.params.Logger.Verbose1f(
-						"HostAgent %s teardown is completed, %d more are still pending",
-						upd.Name, numPending,
+						"HostAgent %s teardown is completed, %d more are still pending: %s",
+						upd.Name, numPending, pendingSB.String(),
 					)
 				} else {
 					hm.params.Logger.Verbose1f("HostAgent %s teardown is completed, no more pending teardowns", upd.Name)
