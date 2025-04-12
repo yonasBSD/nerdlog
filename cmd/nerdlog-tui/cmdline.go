@@ -177,7 +177,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 		app.tviewApp.Stop()
 
 	case "reconnect":
-		app.mainView.reconnect()
+		app.mainView.reconnect(true)
 
 	case "disconnect":
 		app.mainView.disconnect()

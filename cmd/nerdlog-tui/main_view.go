@@ -933,15 +933,17 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 			mv.overlayMsgViewIsMinimized = false
 			mv.overlayMsgView = mv.showMessagebox(
 				"overlay_msg", "", "", &MessageboxParams{
-					Buttons: []string{"Hide", "Cancel"},
+					Buttons: []string{"Hide", "Cancel & Reconnect", "Cancel & Disconnect"},
 					OnButtonPressed: func(label string, idx int) {
 						switch label {
 						case "Hide":
 							mv.hideOverlayMsgBox()
 							mv.overlayMsgViewIsMinimized = true
 							mv.printOverlayMsgInCmdline(overlayMsg)
-						case "Cancel":
-							// TODO
+						case "Cancel & Reconnect":
+							mv.reconnect(false)
+						case "Cancel & Disconnect":
+							mv.disconnect()
 						}
 					},
 					OnEsc: func() {
@@ -1674,13 +1676,21 @@ func (mv *MainView) openQueryEditView() {
 }
 
 func (mv *MainView) disconnect() {
-	mv.doQueryParamsOnceConnected = &doQueryParams{}
+	//mv.doQueryParamsOnceConnected = &doQueryParams{}
 	mv.curLogResp = nil
 	mv.setHostsFilter("")
 	mv.params.OnDisconnectRequest()
 }
 
-func (mv *MainView) reconnect() {
-	mv.doQueryParamsOnceConnected = &doQueryParams{}
+// reconnect initiates reconnection to all the log streams. If repeatQuery
+// is true, then after reconnecting, the current query will be repeated, too.
+func (mv *MainView) reconnect(repeatQuery bool) {
+	if repeatQuery {
+		mv.doQueryParamsOnceConnected = &doQueryParams{}
+	} else {
+		mv.doQueryParamsOnceConnected = nil
+	}
+
+	mv.doQueryParamsOnceConnected = nil
 	mv.params.OnReconnectRequest()
 }
