@@ -182,6 +182,10 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 		app.mainView.doQueryParamsOnceConnected = &doQueryParams{}
 		app.hm.Reconnect()
 
+	case "cancel", "stop", "abort":
+		app.mainView.doQueryParamsOnceConnected = &doQueryParams{}
+		app.hm.AbortQuery()
+
 	default:
 		app.printError(fmt.Sprintf("unknown command %q", parts[0]))
 	}

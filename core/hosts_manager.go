@@ -26,7 +26,11 @@ type HostsManager struct {
 	// haBusyStages only contains items for hosts which are in the
 	// HostAgentStateConnectedBusy state.
 	haBusyStages map[string]BusyStage
-	// haPendingTeardown contains info about HoastAgent-s that are being torn down.
+
+	// haPendingTeardown contains info about HostAgent-s that are being torn
+	// down. NOTE that when a HostAgent starts tearing down, its key changes
+	// (gets prepended with OLD_XXXX_), so re remove an item from the `has` map
+	// with one key, and add an item here with a different key.
 	haPendingTeardown map[string]int
 
 	hostsByState    map[HostAgentState]map[string]struct{}
@@ -166,6 +170,8 @@ func (hm *HostsManager) updateHAs() {
 		hm.params.Logger.Verbose1f("Closing LSClient %s", key)
 		delete(hm.has, key)
 		delete(hm.haStates, key)
+		delete(hm.haConnDetails, key)
+		delete(hm.haBusyStages, key)
 
 		keyNew := fmt.Sprintf("OLD_%s_%s", randomString(4), key)
 		hm.haPendingTeardown[keyNew] += 1
@@ -273,7 +279,7 @@ func (hm *HostsManager) run() {
 					}
 				}
 
-				// do we need this event at all?
+				hm.sendStateUpdate()
 			}
 
 		case req := <-hm.reqCh:
@@ -391,6 +397,14 @@ func (hm *HostsManager) run() {
 				for _, ha := range hm.has {
 					ha.Reconnect()
 				}
+
+			case req.abortQuery:
+				hm.params.Logger.Infof("Abort query command")
+				hm.setHostsFilter("")
+
+				hm.updateHAs()
+				hm.updateHostsByState()
+				hm.sendStateUpdate()
 			}
 
 		case resp := <-hm.respCh:
@@ -439,7 +453,10 @@ func (hm *HostsManager) run() {
 			hm.params.Logger.Infof("HostsManager teardown is started")
 			hm.tearingDown = true
 			hm.setHostsFilter("")
+
 			hm.updateHAs()
+			hm.updateHostsByState()
+			hm.sendStateUpdate()
 		}
 	}
 }
@@ -465,6 +482,7 @@ type hostsManagerReq struct {
 	updHostsFilter *hostsManagerReqUpdHostsFilter
 	ping           bool
 	reconnect      bool
+	abortQuery     bool
 }
 
 type hostsManagerReqUpdHostsFilter struct {
@@ -501,6 +519,12 @@ func (hm *HostsManager) Ping() {
 func (hm *HostsManager) Reconnect() {
 	hm.reqCh <- hostsManagerReq{
 		reconnect: true,
+	}
+}
+
+func (hm *HostsManager) AbortQuery() {
+	hm.reqCh <- hostsManagerReq{
+		abortQuery: true,
 	}
 }
 

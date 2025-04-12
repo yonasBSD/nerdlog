@@ -1118,6 +1118,10 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 
 func (mv *MainView) formatLogs() {
 	resp := mv.curLogResp
+	if resp == nil {
+		return
+	}
+
 	histogramData := make(map[int]int, len(resp.MinuteStats))
 	for k, v := range resp.MinuteStats {
 		histogramData[int(k)] = v.NumMsgs
