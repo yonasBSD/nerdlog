@@ -395,8 +395,8 @@ func (hm *HostsManager) run() {
 					ha.Reconnect()
 				}
 
-			case req.abortQuery:
-				hm.params.Logger.Infof("Abort query command")
+			case req.disconnect:
+				hm.params.Logger.Infof("Disconnect command")
 				hm.setHostsFilter("")
 
 				hm.updateHAs()
@@ -499,7 +499,7 @@ type hostsManagerReq struct {
 	updHostsFilter *hostsManagerReqUpdHostsFilter
 	ping           bool
 	reconnect      bool
-	abortQuery     bool
+	disconnect     bool
 }
 
 type hostsManagerReqUpdHostsFilter struct {
@@ -539,9 +539,9 @@ func (hm *HostsManager) Reconnect() {
 	}
 }
 
-func (hm *HostsManager) AbortQuery() {
+func (hm *HostsManager) Disconnect() {
 	hm.reqCh <- hostsManagerReq{
-		abortQuery: true,
+		disconnect: true,
 	}
 }
 
