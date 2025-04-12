@@ -45,6 +45,7 @@ type MainViewParams struct {
 	OnHostsFilterChange OnHostsFilterChange
 
 	OnDisconnectRequest OnDisconnectRequest
+	OnReconnectRequest  OnReconnectRequest
 
 	// TODO: support command history
 	OnCmd OnCmdCallback
@@ -148,6 +149,7 @@ type CmdOpts struct {
 type OnLogQueryCallback func(params core.QueryLogsParams)
 type OnHostsFilterChange func(hostsFilter string) error
 type OnDisconnectRequest func()
+type OnReconnectRequest func()
 type OnCmdCallback func(cmd string, opts CmdOpts)
 
 var (
@@ -1663,4 +1665,9 @@ func (mv *MainView) disconnect() {
 	mv.curLogResp = nil
 	mv.setHostsFilter("")
 	mv.params.OnDisconnectRequest()
+}
+
+func (mv *MainView) reconnect() {
+	mv.doQueryParamsOnceConnected = &doQueryParams{}
+	mv.params.OnReconnectRequest()
 }

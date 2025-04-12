@@ -127,6 +127,9 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 		OnDisconnectRequest: func() {
 			app.hm.Disconnect()
 		},
+		OnReconnectRequest: func() {
+			app.hm.Reconnect()
+		},
 		OnCmd: func(cmd string, opts CmdOpts) {
 			cmdCh <- cmdWithOpts{
 				cmd:  cmd,

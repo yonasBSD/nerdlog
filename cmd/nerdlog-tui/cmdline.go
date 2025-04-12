@@ -177,10 +177,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 		app.tviewApp.Stop()
 
 	case "reconnect":
-		// TODO: make it a mainView own function, and we'll also use it whenever
-		// we trigger reconnection from the UI.
-		app.mainView.doQueryParamsOnceConnected = &doQueryParams{}
-		app.hm.Reconnect()
+		app.mainView.reconnect()
 
 	case "disconnect":
 		app.mainView.disconnect()
