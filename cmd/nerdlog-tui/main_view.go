@@ -539,6 +539,12 @@ func NewMainView(params *MainViewParams) *MainView {
 			// return Ctrl+B which will go the full page up
 			return tcell.NewEventKey(tcell.KeyCtrlB, 0, tcell.ModNone)
 
+		case tcell.KeyEsc:
+			if mv.overlayMsgView != nil && mv.overlayMsgViewIsMinimized {
+				mv.makeOverlayVisible()
+				mv.bumpOverlay()
+			}
+
 		case tcell.KeyRune:
 			switch event.Rune() {
 			case ':':
@@ -929,40 +935,14 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 
 	if overlayMsg != "" {
 		// Need to show or update overlay message.
-		if mv.overlayMsgView == nil {
-			mv.overlayMsgViewIsMinimized = false
-			mv.overlayMsgView = mv.showMessagebox(
-				"overlay_msg", "", "", &MessageboxParams{
-					Buttons: []string{"Hide", "Cancel & Reconnect", "Cancel & Disconnect"},
-					OnButtonPressed: func(label string, idx int) {
-						switch label {
-						case "Hide":
-							mv.hideOverlayMsgBox()
-							mv.overlayMsgViewIsMinimized = true
-							mv.printOverlayMsgInCmdline(overlayMsg)
-						case "Cancel & Reconnect":
-							mv.reconnect(false)
-						case "Cancel & Disconnect":
-							mv.disconnect()
-						}
-					},
-					OnEsc: func() {
-						mv.hideOverlayMsgBox()
-						mv.overlayMsgViewIsMinimized = true
-						mv.printOverlayMsgInCmdline(overlayMsg)
-					},
-					NoFocus: false,
-					Width:   70,
-					Height:  8,
+		mv.overlayText = overlayMsg
 
-					BackgroundColor: tcell.ColorDarkBlue,
-				},
-			)
+		if mv.overlayMsgView == nil {
+			mv.makeOverlayVisible()
 
 			mv.overlaySpinner = '-'
 		}
 
-		mv.overlayText = overlayMsg
 		mv.bumpOverlay()
 
 	} else if mv.overlayMsgView != nil {
@@ -982,6 +962,37 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 		mv.doQuery(*mv.doQueryParamsOnceConnected)
 		mv.doQueryParamsOnceConnected = nil
 	}
+}
+
+func (mv *MainView) makeOverlayVisible() {
+	mv.overlayMsgViewIsMinimized = false
+	mv.overlayMsgView = mv.showMessagebox(
+		"overlay_msg", "", "", &MessageboxParams{
+			Buttons: []string{"Hide", "Cancel & Reconnect", "Cancel & Disconnect"},
+			OnButtonPressed: func(label string, idx int) {
+				switch label {
+				case "Hide":
+					mv.hideOverlayMsgBox()
+					mv.overlayMsgViewIsMinimized = true
+					mv.printOverlayMsgInCmdline(mv.overlayText)
+				case "Cancel & Reconnect":
+					mv.reconnect(false)
+				case "Cancel & Disconnect":
+					mv.disconnect()
+				}
+			},
+			OnEsc: func() {
+				mv.hideOverlayMsgBox()
+				mv.overlayMsgViewIsMinimized = true
+				mv.printOverlayMsgInCmdline(mv.overlayText)
+			},
+			NoFocus: false,
+			Width:   70,
+			Height:  8,
+
+			BackgroundColor: tcell.ColorDarkBlue,
+		},
+	)
 }
 
 func (mv *MainView) printOverlayMsgInCmdline(overlayMsg string) {
