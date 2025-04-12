@@ -395,6 +395,12 @@ func (hm *HostsManager) run() {
 					ha.Reconnect()
 				}
 
+				// NOTE: we don't call updateHAs, updateHostsByState and sendStateUpdate
+				// here, because it would operate on outdated info: after we've called
+				// Reconnect for every HostAgent just above, their statuses are changing
+				// already, but we don't know it yet (we'll know once we receive updates
+				// in this same event loop, and _then_ we'll update all the data etc).
+
 			case req.disconnect:
 				hm.params.Logger.Infof("Disconnect command")
 				hm.setHostsFilter("")
