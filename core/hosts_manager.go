@@ -257,12 +257,9 @@ func (hm *HostsManager) run() {
 					panic(fmt.Sprintf("got TornDown update and haPendingTeardown[%s] becomes %d", upd.Name, hm.haPendingTeardown[upd.Name]))
 				}
 
-				// Check how many HostAgent-s are still in the process of teardown
-				numPending := 0
-				for _, v := range hm.haPendingTeardown {
-					numPending += v
-				}
-
+				// Check how many HostAgent-s are still in the process of teardown,
+				// and if needed, finish the teardown of the whole HostsManager.
+				numPending := hm.getNumHostAgentsTearingDown()
 				if numPending != 0 {
 					hm.params.Logger.Verbose1f(
 						"HostAgent %s teardown is completed, %d more are still pending",
@@ -456,9 +453,29 @@ func (hm *HostsManager) run() {
 
 			hm.updateHAs()
 			hm.updateHostsByState()
+
+			// Check if we don't need to wait for anything, and can teardown right away.
+			numPending := hm.getNumHostAgentsTearingDown()
+			if numPending == 0 {
+				hm.params.Logger.Infof("HostsManager teardown is completed")
+				close(hm.torndownCh)
+				return
+			}
+
+			// We still need to wait for some HostAgent-s to teardown, so send an
+			// update for now and keep going.
 			hm.sendStateUpdate()
 		}
 	}
+}
+
+func (hm *HostsManager) getNumHostAgentsTearingDown() int {
+	numPending := 0
+	for _, v := range hm.haPendingTeardown {
+		numPending += v
+	}
+
+	return numPending
 }
 
 // Close initiates the shutdown. It doesn't wait for the shutdown to complete;
