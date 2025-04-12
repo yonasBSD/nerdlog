@@ -1702,6 +1702,5 @@ func (mv *MainView) reconnect(repeatQuery bool) {
 		mv.doQueryParamsOnceConnected = nil
 	}
 
-	mv.doQueryParamsOnceConnected = nil
 	mv.params.OnReconnectRequest()
 }
