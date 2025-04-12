@@ -13,6 +13,7 @@ type MessageViewParams struct {
 	Message         string
 	Buttons         []string
 	OnButtonPressed func(label string, idx int)
+	OnEsc           func()
 
 	// Width and Height are 40 and 10 by default
 	Width, Height int
@@ -79,6 +80,14 @@ func NewMessageView(
 		msgv.focusers = append(msgv.focusers, btn)
 		tabHandler := msgv.getGenericTabHandler(btn)
 		btn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			// Handle Esc key
+			switch event.Key() {
+			case tcell.KeyEsc:
+				if params.OnEsc != nil {
+					params.OnEsc()
+				}
+			}
+
 			event = tabHandler(event)
 			if event == nil {
 				return nil

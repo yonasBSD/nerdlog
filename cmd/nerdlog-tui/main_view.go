@@ -944,6 +944,11 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 							// TODO
 						}
 					},
+					OnEsc: func() {
+						mv.hideOverlayMsgBox()
+						mv.overlayMsgViewIsMinimized = true
+						mv.printOverlayMsgInCmdline(overlayMsg)
+					},
 					NoFocus: false,
 					Width:   70,
 					Height:  8,
@@ -1494,6 +1499,7 @@ func formatDuration(dur time.Duration) string {
 type MessageboxParams struct {
 	Buttons         []string
 	OnButtonPressed func(label string, idx int)
+	OnEsc           func()
 
 	Width, Height int
 
@@ -1521,6 +1527,12 @@ func (mv *MainView) showMessagebox(
 		}
 	}
 
+	if params.OnEsc == nil {
+		params.OnEsc = func() {
+			msgv.Hide()
+		}
+	}
+
 	msgv = NewMessageView(mv, &MessageViewParams{
 		App: mv.params.App,
 
@@ -1529,6 +1541,7 @@ func (mv *MainView) showMessagebox(
 		Message:         message,
 		Buttons:         params.Buttons,
 		OnButtonPressed: params.OnButtonPressed,
+		OnEsc:           params.OnEsc,
 
 		Width:  params.Width,
 		Height: params.Height,
