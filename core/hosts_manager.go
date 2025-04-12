@@ -646,7 +646,9 @@ func (hm *HostsManager) sendStateUpdate() {
 }
 
 func (hm *HostsManager) sendLogRespUpdate(resp *LogRespTotal) {
-	resp.QueryDur = time.Since(hm.curQueryLogsCtx.startTime)
+	if hm.curQueryLogsCtx != nil {
+		resp.QueryDur = time.Since(hm.curQueryLogsCtx.startTime)
+	}
 
 	hm.params.UpdatesCh <- HostsManagerUpdate{
 		LogResp: resp,
