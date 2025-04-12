@@ -403,6 +403,10 @@ func (hm *HostsManager) run() {
 
 			case req.disconnect:
 				hm.params.Logger.Infof("Disconnect command")
+				if hm.curQueryLogsCtx != nil {
+					hm.params.Logger.Infof("Forgetting the in-progress query")
+					hm.curQueryLogsCtx = nil
+				}
 				hm.setHostsFilter("")
 
 				hm.updateHAs()
