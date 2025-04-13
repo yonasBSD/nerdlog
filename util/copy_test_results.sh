@@ -3,8 +3,8 @@
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 # Define the paths for both directory trees
-tests_output_root_dir="/tmp/nerdlog_query_test_output"
-tests_input_root_dir="${SCRIPT_DIR}/../core/nerdlog_query_testdata/test_cases"
+tests_output_root_dir="/tmp/nerdlog_agent_test_output"
+tests_input_root_dir="${SCRIPT_DIR}/../core/nerdlog_agent_testdata/test_cases"
 
 # Convert tests_output_root_dir to absolute path for consistency
 tests_output_root_dir=$(realpath "$tests_output_root_dir")
@@ -26,16 +26,16 @@ copy_logs() {
   fi
 
   # Check if the current directory has the expected files
-  if [ -f "$current_dir/nerdlog_query_stderr" ]; then
+  if [ -f "$current_dir/nerdlog_agent_stderr" ]; then
     # Instead of copying, echo the command
     echo -n .
-    cp "$current_dir/nerdlog_query_stderr" "$second_dir/want_stderr" || exit 1
+    cp "$current_dir/nerdlog_agent_stderr" "$second_dir/want_stderr" || exit 1
   fi
 
-  if [ -f "$current_dir/nerdlog_query_stdout" ]; then
+  if [ -f "$current_dir/nerdlog_agent_stdout" ]; then
     # Instead of copying, echo the command
     echo -n .
-    cp "$current_dir/nerdlog_query_stdout" "$second_dir/want_stdout" || exit 1
+    cp "$current_dir/nerdlog_agent_stdout" "$second_dir/want_stdout" || exit 1
   fi
 
   # Recurse into subdirectories

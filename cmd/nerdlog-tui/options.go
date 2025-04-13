@@ -12,7 +12,7 @@ import (
 type Options struct {
 	Timezone *time.Location
 
-	// MaxNumLines is how many log lines the nerdlog_query.sh will return at
+	// MaxNumLines is how many log lines the nerdlog_agent.sh will return at
 	// most. Initially it's set to 250.
 	MaxNumLines int
 }

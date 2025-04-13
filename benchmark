@@ -1,11 +1,11 @@
-go test ./core -bench=BenchmarkNerdlogQuery -benchtime=3s -run=^$
+go test ./core -bench=BenchmarkNerdlogAgent -benchtime=3s -run=^$
 goos: linux
 goarch: amd64
 pkg: github.com/dimonomid/nerdlog/core
 cpu: 11th Gen Intel(R) Core(TM) i7-1165G7 @ 2.80GHz
-BenchmarkNerdlogQuerySmallLogNoIndex-3                                74          54123443 ns/op
-BenchmarkNerdlogQuerySmallLogCompleteIndex-3                         151          22797961 ns/op
-BenchmarkNerdlogQueryLargeLogSmallPortionNoIndex-3                     2        1750335450 ns/op
-BenchmarkNerdlogQueryLargeLogSmallPortionCompleteIndex-3              20         178455823 ns/op
-BenchmarkNerdlogQueryLargeLogTinyPortionCompleteIndex-3               49          80060471 ns/op
+BenchmarkNerdlogAgentSmallLogNoIndex-3                                74          54123443 ns/op
+BenchmarkNerdlogAgentSmallLogCompleteIndex-3                         151          22797961 ns/op
+BenchmarkNerdlogAgentLargeLogSmallPortionNoIndex-3                     2        1750335450 ns/op
+BenchmarkNerdlogAgentLargeLogSmallPortionCompleteIndex-3              20         178455823 ns/op
+BenchmarkNerdlogAgentLargeLogTinyPortionCompleteIndex-3               49          80060471 ns/op
 PASS

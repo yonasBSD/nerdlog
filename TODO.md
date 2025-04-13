@@ -50,7 +50,7 @@
 - During indexing, make sure that the line we're about to print is "larger"
   lexicographically than the previous line. If not, print an error and exit 1;
   this way we'll hopefully be able to detect broken log files
-- When nerdlog_query.sh returns non-zero code, report an error to the user and
+- When nerdlog_agent.sh returns non-zero code, report an error to the user and
   print the last line from stderr
 - Add some easy way to inspect the latest response (stdout+stderr). Perhaps simply
   store them in some files under ~/.cache/nerdlog/agent_responses

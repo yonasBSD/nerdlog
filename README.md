@@ -97,7 +97,7 @@ UI consists of a few key elements:
   - Regexps with complex conditions: `( /foo bar/ || /other stuff/ ) && !/baz/`
 - Edit button: opens a complete query edit form: it contains the same query input as in the main window, but it also has inputs for logstreams filter and time range. The form itself has enough details described right there so you won't have problems using it:
 
-  ![Query Edit Form](images/nerdlog_query_edit_form.png)
+  ![Query Edit Form](images/nerdlog_agent_edit_form.png)
 
 - Menu button: just opens a menu with a few extra items:
 

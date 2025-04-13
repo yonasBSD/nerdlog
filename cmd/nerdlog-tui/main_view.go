@@ -110,7 +110,7 @@ type MainView struct {
 	// value, then actualToForQuery will be zero value too. It's suitable for the
 	// use in queries (QueryLogsParams); and it must be used instead of actualTo,
 	// because when requesting latest logs, actualTo is actually in the future
-	// and if we pass a timestamp in the future to nerdlog_query.sh, it will
+	// and if we pass a timestamp in the future to nerdlog_agent.sh, it will
 	// uselessly try to update the cache (the timestamp -> linenumber mapping),
 	// trying to find this non-existing future timestamp there.
 	actualToForQuery time.Time

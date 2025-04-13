@@ -19,4 +19,4 @@ test:
 
 bench:
 	# The -run=^$ is needed to avoid running the regular tests as well.
-	go test ./core -bench=BenchmarkNerdlogQuery -benchtime=3s -run=^$
+	go test ./core -bench=BenchmarkNerdlogAgent -benchtime=3s -run=^$

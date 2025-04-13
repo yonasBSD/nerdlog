@@ -47,14 +47,14 @@ const (
 // we have to use different time formats.
 //
 // queryLogsArgsTimeLayout is used to format the --from and --to arguments for
-// nerdlog_query.sh, and it must have leading zeros, since that's how awk's
+// nerdlog_agent.sh, and it must have leading zeros, since that's how awk's
 // strftime formats time and thus that's how the index file has it formatted and
 // --from, --to must match exactly. (strftime has %d, which has leading zeros,
 // and %e, which has leading spaces, but there are no options to have no
 // leading characters at all)
 //
 // queryLogsMstatsTimeLayout is used to parse the "mstats" (message stats)
-// lines output by nerdlog_query.sh, and it uses no leading spaces or zeros,
+// lines output by nerdlog_agent.sh, and it uses no leading spaces or zeros,
 // because we just operate with awk's "fields" of log lines there, and in
 // syslog, those fields are separated by whitespace; so in syslog we get like
 // "Apr  9" or "Apr 10", but in mstats we'll have "Apr-9" or "Apr-10".
@@ -66,8 +66,8 @@ const queryLogsMstatsTimeLayout = "Jan2-15:04"
 
 const syslogTimeLayout = "Jan _2 15:04:05"
 
-//go:embed nerdlog_query.sh
-var nerdlogQuerySh string
+//go:embed nerdlog_agent.sh
+var nerdlogAgentSh string
 
 type LStreamClient struct {
 	params LStreamClientParams
@@ -184,7 +184,7 @@ type LStreamClientParams struct {
 	Logger *log.Logger
 
 	// ClientID is just an arbitrary string (should be filename-friendly though)
-	// which will be appended to the nerdlog_query.sh and its cache filenames.
+	// which will be appended to the nerdlog_agent.sh and its cache filenames.
 	//
 	// Needed to make sure that different clients won't get conflicts over those
 	// files when using the tool concurrently on the same nodes.
@@ -603,7 +603,7 @@ func (lsc *LStreamClient) run() {
 			// NOTE: the "p:" lines (process-related) are here in stderr, because
 			// stdout is gzipped and thus we don't have any partial results (we get
 			// them all at once), but for the process info, we actually want it right
-			// when it's printed by the nerdlog_query.sh.
+			// when it's printed by the nerdlog_agent.sh.
 			switch lsc.state {
 			case LStreamClientStateConnectedBusy:
 				switch {
@@ -1076,7 +1076,7 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 	case cmdCtx.cmd.bootstrap != nil:
 		cmdCtx.bootstrapCtx = &lstreamCmdCtxBootstrap{}
 
-		lsc.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > " + lsc.getLStreamNerdlogAgentPath() + "\n" + nerdlogQuerySh + "EOF\n"))
+		lsc.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > " + lsc.getLStreamNerdlogAgentPath() + "\n" + nerdlogAgentSh + "EOF\n"))
 		lsc.conn.stdinBuf.Write([]byte(`echo "host_timezone:$(timedatectl show --property=Timezone --value)"` + "\n"))
 		lsc.conn.stdinBuf.Write([]byte("if [[ $? == 0 ]]; then echo 'bootstrap ok'; else echo 'bootstrap failed'; fi\n"))
 
@@ -1142,11 +1142,11 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 	lsc.changeState(LStreamClientStateConnectedBusy)
 }
 
-// getLStreamNerdlogAgentPath returns the logstream-side path to the nerdlog_query.sh
+// getLStreamNerdlogAgentPath returns the logstream-side path to the nerdlog_agent.sh
 // for the particular log stream.
 func (lsc *LStreamClient) getLStreamNerdlogAgentPath() string {
 	return fmt.Sprintf(
-		"/tmp/nerdlog_query_%s_%s.sh",
+		"/tmp/nerdlog_agent_%s_%s.sh",
 		lsc.params.ClientID,
 		filepathToId(lsc.params.Config.LogFileLast),
 	)
@@ -1156,7 +1156,7 @@ func (lsc *LStreamClient) getLStreamNerdlogAgentPath() string {
 // the particular log stream.
 func (lsc *LStreamClient) getLStreamIndexFilePath() string {
 	return fmt.Sprintf(
-		"/tmp/nerdlog_query_index_%s_%s",
+		"/tmp/nerdlog_agent_index_%s_%s",
 		lsc.params.ClientID,
 		filepathToId(lsc.params.Config.LogFileLast),
 	)

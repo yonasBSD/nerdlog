@@ -65,7 +65,7 @@ type LStreamsManagerParams struct {
 	InitialLStreams string
 
 	// ClientID is just an arbitrary string (should be filename-friendly though)
-	// which will be appended to the nerdlog_query.sh and its cache filenames.
+	// which will be appended to the nerdlog_agent.sh and its cache filenames.
 	//
 	// Needed to make sure that different clients won't get conflicts over those
 	// files when using the tool concurrently on the same nodes.

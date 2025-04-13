@@ -1,0 +1,27 @@
+debug:hey4 1054
+logfile:/tmp/nerdlog_agent_test_output/in_the_middle_of_prev_file/01_basic/logfile.1:0
+logfile:/tmp/nerdlog_agent_test_output/in_the_middle_of_prev_file/01_basic/logfile:287
+s:Mar9-23:49,1
+s:Mar10-00:17,2
+s:Mar10-00:08,1
+s:Mar10-00:29,1
+s:Mar9-23:31,1
+s:Mar9-23:50,1
+s:Mar9-23:41,1
+s:Mar9-23:42,1
+s:Mar9-23:33,1
+s:Mar10-00:01,2
+s:Mar9-23:43,1
+s:Mar9-23:54,1
+s:Mar9-23:45,1
+s:Mar10-00:22,1
+m:138:Mar  9 23:49:53 myhost lpr[7525]: <notice> Service started
+m:139:Mar  9 23:50:16 myhost news[1351]: <warning> Disk space reclaimed
+m:140:Mar  9 23:54:28 myhost kern[108]: <alert> Database connection error
+m:141:Mar 10 00:01:58 myhost cron[3725]: <emerg> API request failed
+m:142:Mar 10 00:01:58 myhost uucp[2334]: <emerg> Database migration completed
+m:143:Mar 10 00:08:34 myhost lpr[3966]: <err> CPU temperature critical
+m:144:Mar 10 00:17:17 myhost user[3135]: <alert> Application crash reported
+m:145:Mar 10 00:17:17 myhost ftp[8324]: <notice> Error handling request
+m:146:Mar 10 00:22:38 myhost ftp[864]: <emerg> Server shutting down
+m:147:Mar 10 00:29:08 myhost lpr[3704]: <info> Configuration applied successfully

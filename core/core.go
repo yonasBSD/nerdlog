@@ -8,7 +8,7 @@ const (
 )
 
 type QueryLogsParams struct {
-	// maxNumLines is how many log lines the nerdlog_query.sh will return at
+	// maxNumLines is how many log lines the nerdlog_agent.sh will return at
 	// most.
 	MaxNumLines int
 
@@ -79,7 +79,7 @@ type LogMsg struct {
 
 	// CombinedLinenumber is the line number in pseudo-file: all (actually just
 	// two) log files concatenated. This is the linenumbers output by the
-	// nerdlog_query.sh for every "msg:" line, and this is the linenumber
+	// nerdlog_agent.sh for every "msg:" line, and this is the linenumber
 	// which should be used for --lines-until param.
 	CombinedLinenumber int
 

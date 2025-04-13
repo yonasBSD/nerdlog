@@ -51,7 +51,7 @@ type lstreamCmdQueryLogs struct {
 
 	query string
 
-	// If linesUntil is not zero, it'll be passed to nerdlog_query.sh as --lines-until.
+	// If linesUntil is not zero, it'll be passed to nerdlog_agent.sh as --lines-until.
 	// Effectively, only logs BEFORE this log line (not including it) will be output.
 	linesUntil int
 }
