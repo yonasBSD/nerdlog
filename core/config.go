@@ -10,12 +10,12 @@ import (
 )
 
 type Config struct {
-	LogStreams map[string]ConfigLogStreams `yaml:"log_streams"`
+	LogStreams map[string]ConfigLogStream `yaml:"log_streams"`
 }
 
-type ConfigLogStreams struct {
+type ConfigLogStream struct {
 	// Name is an arbitrary string which will be included in log messages as the
-	// "source" context tag; it must unique identify the ConfigLogStreams.
+	// "source" context tag; it must unique identify the ConfigLogStream.
 	Name string `yaml:"name"`
 
 	Host     ConfigHost  `yaml:"logstream"`
@@ -43,7 +43,7 @@ func (ch *ConfigHost) Key() string {
 }
 
 // TODO: it should take a predefined config, to support globs
-func parseConfigHost(s string) ([]*ConfigLogStreams, error) {
+func parseConfigHost(s string) ([]*ConfigLogStream, error) {
 	parts, err := shellescape.Parse(s)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -115,7 +115,7 @@ func parseConfigHost(s string) ([]*ConfigLogStreams, error) {
 		return nil, errors.Errorf("no logstream specified in %q", s)
 	}
 
-	return []*ConfigLogStreams{
+	return []*ConfigLogStream{
 		{
 			Name: s,
 

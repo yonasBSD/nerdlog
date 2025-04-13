@@ -179,7 +179,7 @@ type LStreamClientUpdateState struct {
 }
 
 type LStreamClientParams struct {
-	Config ConfigLogStreams
+	Config ConfigLogStream
 
 	Logger *log.Logger
 
@@ -706,7 +706,7 @@ type lstreamConnRes struct {
 
 func connectToLogStream(
 	logger *log.Logger,
-	config ConfigLogStreams,
+	config ConfigLogStream,
 	resCh chan<- lstreamConnRes,
 ) (res lstreamConnRes) {
 	defer func() {

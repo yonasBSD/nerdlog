@@ -914,7 +914,7 @@ func (mv *MainView) applyHMState(lsmanState *core.LStreamsManagerState) {
 	if !mv.curHMState.Connected && !mv.curHMState.NoMatchingLStreams {
 		var sb strings.Builder
 
-		sb.WriteString("Connecting to lstreams...")
+		sb.WriteString("Connecting to hosts...")
 
 		for logstream, connDetails := range lsmanState.ConnDetailsByLStream {
 			sb.WriteString("\n")

@@ -19,7 +19,7 @@ type LStreamsManager struct {
 	params LStreamsManagerParams
 
 	lstreamsStr      string
-	parsedLogStreams map[string]*ConfigLogStreams
+	parsedLogStreams map[string]*ConfigLogStream
 
 	lscs      map[string]*LStreamClient
 	lscStates map[string]LStreamClientState
@@ -95,7 +95,7 @@ func NewLStreamsManager(params LStreamsManagerParams) *LStreamsManager {
 	}
 
 	if err := lsman.setLStreams(params.InitialLStreams); err != nil {
-		panic("setLStreams didn't like the initial filter: " + err.Error())
+		panic("setLStreams didn't like the initial logStreamsSpec: " + err.Error())
 	}
 
 	lsman.updateHAs()
@@ -107,9 +107,8 @@ func NewLStreamsManager(params LStreamsManagerParams) *LStreamsManager {
 	return lsman
 }
 
-// TODO: rename to something like setHosts
 func (lsman *LStreamsManager) setLStreams(lstreamsStr string) error {
-	parsedLogStreams := map[string]*ConfigLogStreams{}
+	parsedLogStreams := map[string]*ConfigLogStream{}
 
 	// TODO: when json is supported, splitting by commas will need to be improved.
 	parts := strings.Split(lstreamsStr, ",")
@@ -154,7 +153,7 @@ func (lsman *LStreamsManager) setLStreams(lstreamsStr string) error {
 		//}
 	}
 
-	// All went well, remember the filter
+	// All went well, remember the logstreams spec
 	lsman.lstreamsStr = lstreamsStr
 	lsman.parsedLogStreams = parsedLogStreams
 
@@ -383,14 +382,14 @@ func (lsman *LStreamsManager) run() {
 
 			case req.updLStreams != nil:
 				r := req.updLStreams
-				lsman.params.Logger.Infof("LStreams manager: update logstreams filter: %s", r.filter)
+				lsman.params.Logger.Infof("LStreams manager: update logstreams spec: %s", r.logStreamsSpec)
 
 				if lsman.curQueryLogsCtx != nil {
 					r.resCh <- ErrBusyWithAnotherQuery
 					continue
 				}
 
-				if err := lsman.setLStreams(r.filter); err != nil {
+				if err := lsman.setLStreams(r.logStreamsSpec); err != nil {
 					r.resCh <- errors.Trace(err)
 					continue
 				}
@@ -536,8 +535,8 @@ type lstreamsManagerReq struct {
 }
 
 type lstreamsManagerReqUpdLStreams struct {
-	filter string
-	resCh  chan<- error
+	logStreamsSpec string
+	resCh          chan<- error
 }
 
 func (lsman *LStreamsManager) QueryLogs(params QueryLogsParams) {
@@ -547,13 +546,13 @@ func (lsman *LStreamsManager) QueryLogs(params QueryLogsParams) {
 	}
 }
 
-func (lsman *LStreamsManager) SetLStreams(filter string) error {
+func (lsman *LStreamsManager) SetLStreams(logStreamsSpec string) error {
 	resCh := make(chan error, 1)
 
 	lsman.reqCh <- lstreamsManagerReq{
 		updLStreams: &lstreamsManagerReqUpdLStreams{
-			filter: filter,
-			resCh:  resCh,
+			logStreamsSpec: logStreamsSpec,
+			resCh:          resCh,
 		},
 	}
 
