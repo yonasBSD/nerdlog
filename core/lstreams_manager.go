@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"math/rand"
+	"os/user"
 	"sort"
 	"strings"
 	"time"
@@ -19,7 +20,7 @@ type LStreamsManager struct {
 	params LStreamsManagerParams
 
 	lstreamsStr      string
-	parsedLogStreams map[string]*ConfigLogStream
+	parsedLogStreams map[string]*LogStream
 
 	lscs      map[string]*LStreamClient
 	lscStates map[string]LStreamClientState
@@ -108,49 +109,18 @@ func NewLStreamsManager(params LStreamsManagerParams) *LStreamsManager {
 }
 
 func (lsman *LStreamsManager) setLStreams(lstreamsStr string) error {
-	parsedLogStreams := map[string]*ConfigLogStream{}
+	u, err := user.Current()
+	if err != nil {
+		return errors.Annotatef(err, "getting current OS user")
+	}
 
-	// TODO: when json is supported, splitting by commas will need to be improved.
-	parts := strings.Split(lstreamsStr, ",")
-	for _, part := range parts {
-		if part == "" {
-			continue
-		}
+	resolver := NewLStreamsResolver(LStreamsResolverParams{
+		CurOSUser: u.Username,
+	})
 
-		cfs, err := parseConfigHost(part)
-		if err != nil {
-			return errors.Annotatef(err, "parsing %q", part)
-		}
-
-		for _, ch := range cfs {
-			key := ch.Name
-
-			if _, exists := parsedLogStreams[key]; exists {
-				return errors.Errorf("the logstream %s is present at least twice", key)
-			}
-
-			parsedLogStreams[key] = ch
-		}
-
-		//matcher, err := glob.Compile(part)
-		//if err != nil {
-		//return errors.Annotatef(err, "pattern %q", part)
-		//}
-
-		//numMatchedPart := 0
-
-		//for _, hc := range lsman.params.ConfigHosts {
-		//if !matcher.MatchString(hc.Name) {
-		//continue
-		//}
-
-		//matchingHANames[hc.Name] = struct{}{}
-		//numMatchedPart++
-		//}
-
-		//if numMatchedPart == 0 {
-		//return errors.Errorf("%q didn't match anything", part)
-		//}
+	parsedLogStreams, err := resolver.Resolve(lstreamsStr)
+	if err != nil {
+		return errors.Trace(err)
 	}
 
 	// All went well, remember the logstreams spec
@@ -181,7 +151,7 @@ func (lsman *LStreamsManager) updateHAs() {
 	}
 
 	// Create new logstream clients
-	for key, hc := range lsman.parsedLogStreams {
+	for key, ls := range lsman.parsedLogStreams {
 		if _, ok := lsman.lscs[key]; ok {
 			// This logstream client already exists
 			continue
@@ -189,7 +159,7 @@ func (lsman *LStreamsManager) updateHAs() {
 
 		// We need to create a new logstream client
 		lsc := NewLStreamClient(LStreamClientParams{
-			Config:    *hc,
+			LogStream: *ls,
 			Logger:    lsman.params.Logger,
 			ClientID:  lsman.params.ClientID, //fmt.Sprintf("%s-%d", lsman.params.ClientID, rand.Int()),
 			UpdatesCh: lsman.lstreamUpdatesCh,

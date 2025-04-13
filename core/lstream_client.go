@@ -179,7 +179,7 @@ type LStreamClientUpdateState struct {
 }
 
 type LStreamClientParams struct {
-	Config ConfigLogStream
+	LogStream LogStream
 
 	Logger *log.Logger
 
@@ -195,7 +195,7 @@ type LStreamClientParams struct {
 
 func NewLStreamClient(params LStreamClientParams) *LStreamClient {
 	params.Logger = params.Logger.WithNamespaceAppended(
-		fmt.Sprintf("LSClient_%s", params.Config.Name),
+		fmt.Sprintf("LSClient_%s", params.LogStream.Name),
 	)
 
 	lsc := &LStreamClient{
@@ -272,7 +272,7 @@ func (lsc *LStreamClient) changeState(newState LStreamClientState) {
 	case LStreamClientStateConnecting:
 		lsc.numConnAttempts++
 		lsc.connectResCh = make(chan lstreamConnRes, 1)
-		go connectToLogStream(lsc.params.Logger, lsc.params.Config, lsc.connectResCh)
+		go connectToLogStream(lsc.params.Logger, lsc.params.LogStream, lsc.connectResCh)
 
 	case LStreamClientStateConnectedIdle:
 		if len(lsc.cmdQueue) > 0 {
@@ -304,7 +304,7 @@ func (lsc *LStreamClient) sendCmdResp(resp interface{}, err error) {
 	}
 
 	lsc.curCmdCtx.cmd.respCh <- lstreamCmdRes{
-		hostname: lsc.params.Config.Name,
+		hostname: lsc.params.LogStream.Name,
 		resp:     resp,
 		err:      err,
 	}
@@ -370,7 +370,7 @@ func (lsc *LStreamClient) run() {
 				continue
 			}
 
-			//lsc.params.Logger.Verbose1f("hey line(%s): %s", lsc.params.Config.Name, line)
+			//lsc.params.Logger.Verbose1f("hey line(%s): %s", lsc.params.LogStream.Name, line)
 
 			lastUpdTime = time.Now()
 
@@ -501,7 +501,7 @@ func (lsc *LStreamClient) run() {
 							continue
 						}
 
-						parseRes.ctxMap["source"] = lsc.params.Config.Name
+						parseRes.ctxMap["source"] = lsc.params.LogStream.Name
 
 						resp.Logs = append(resp.Logs, LogMsg{
 							Time:               parseRes.time,
@@ -596,7 +596,7 @@ func (lsc *LStreamClient) run() {
 				continue
 			}
 
-			lsc.params.Logger.Verbose2f("hey stderr line(%s): %s", lsc.params.Config.Name, line)
+			lsc.params.Logger.Verbose2f("hey stderr line(%s): %s", lsc.params.LogStream.Name, line)
 
 			lastUpdTime = time.Now()
 
@@ -671,7 +671,7 @@ func (lsc *LStreamClient) run() {
 			}
 
 			if req.changeName != "" {
-				lsc.params.Config.Name = req.changeName
+				lsc.params.LogStream.Name = req.changeName
 			}
 
 			// If we're already disconnected, consider ourselves torn-down already.
@@ -695,7 +695,7 @@ func (lsc *LStreamClient) run() {
 }
 
 func (lsc *LStreamClient) sendUpdate(upd *LStreamClientUpdate) {
-	upd.Name = lsc.params.Config.Name
+	upd.Name = lsc.params.LogStream.Name
 	lsc.params.UpdatesCh <- upd
 }
 
@@ -706,7 +706,7 @@ type lstreamConnRes struct {
 
 func connectToLogStream(
 	logger *log.Logger,
-	config ConfigLogStream,
+	logStream LogStream,
 	resCh chan<- lstreamConnRes,
 ) (res lstreamConnRes) {
 	defer func() {
@@ -719,26 +719,26 @@ func connectToLogStream(
 
 	var sshClient *ssh.Client
 
-	conf := getClientConfig(logger, config.Host.User)
+	conf := getClientConfig(logger, logStream.Host.User)
 	//fmt.Println("hey2", conn, conf)
 
-	if config.Jumphost != nil {
+	if logStream.Jumphost != nil {
 		logger.Infof("Connecting via jumphost")
 		// Use jumphost
-		jumphost, err := getJumphostClient(logger, config.Jumphost)
+		jumphost, err := getJumphostClient(logger, logStream.Jumphost)
 		if err != nil {
 			logger.Errorf("Jumphost connection failed: %s", err)
 			res.err = errors.Annotatef(err, "getting jumphost client")
 			return res
 		}
 
-		conn, err := dialWithTimeout(jumphost, "tcp", config.Host.Addr, connectionTimeout)
+		conn, err := dialWithTimeout(jumphost, "tcp", logStream.Host.Addr, connectionTimeout)
 		if err != nil {
 			res.err = errors.Trace(err)
 			return res
 		}
 
-		authConn, chans, reqs, err := ssh.NewClientConn(conn, config.Host.Addr, conf)
+		authConn, chans, reqs, err := ssh.NewClientConn(conn, logStream.Host.Addr, conf)
 		if err != nil {
 			res.err = errors.Trace(err)
 			return res
@@ -746,9 +746,9 @@ func connectToLogStream(
 
 		sshClient = ssh.NewClient(authConn, chans, reqs)
 	} else {
-		logger.Infof("Connecting to %s (%+v)", config.Host.Addr, conf)
+		logger.Infof("Connecting to %s (%+v)", logStream.Host.Addr, conf)
 		var err error
-		sshClient, err = ssh.Dial("tcp", config.Host.Addr, conf)
+		sshClient, err = ssh.Dial("tcp", logStream.Host.Addr, conf)
 		if err != nil {
 			res.err = errors.Trace(err)
 			return res
@@ -756,7 +756,7 @@ func connectToLogStream(
 	}
 	//defer client.Close()
 
-	logger.Infof("Connected to %s", config.Host.Addr)
+	logger.Infof("Connected to %s", logStream.Host.Addr)
 
 	sshSession, err := sshClient.NewSession()
 	if err != nil {
@@ -1104,9 +1104,12 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 			"bash", lsc.getLStreamNerdlogAgentPath(),
 			"--cache-file", lsc.getLStreamIndexFilePath(),
 			"--max-num-lines", strconv.Itoa(cmdCtx.cmd.queryLogs.maxNumLines),
-			"--logfile-last", lsc.params.Config.LogFileLast,
-			"--logfile-prev", lsc.params.Config.LogFilePrev,
+			"--logfile-last", lsc.params.LogStream.LogFileLast(),
 		)
+
+		if logFilePrev, ok := lsc.params.LogStream.LogFilePrev(); ok {
+			parts = append(parts, "--logfile-prev", logFilePrev)
+		}
 
 		if !cmdCtx.cmd.queryLogs.from.IsZero() {
 			parts = append(parts, "--from", cmdCtx.cmd.queryLogs.from.In(lsc.location).Format(queryLogsArgsTimeLayout))
@@ -1129,7 +1132,7 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		}
 
 		cmd := strings.Join(parts, " ") + "\n"
-		lsc.params.Logger.Verbose2f("hey command(%s): %s", lsc.params.Config.Name, cmd)
+		lsc.params.Logger.Verbose2f("hey command(%s): %s", lsc.params.LogStream.Name, cmd)
 
 		lsc.conn.stdinBuf.Write([]byte(cmd))
 
@@ -1148,7 +1151,7 @@ func (lsc *LStreamClient) getLStreamNerdlogAgentPath() string {
 	return fmt.Sprintf(
 		"/tmp/nerdlog_agent_%s_%s.sh",
 		lsc.params.ClientID,
-		filepathToId(lsc.params.Config.LogFileLast),
+		filepathToId(lsc.params.LogStream.LogFileLast()),
 	)
 }
 
@@ -1158,7 +1161,7 @@ func (lsc *LStreamClient) getLStreamIndexFilePath() string {
 	return fmt.Sprintf(
 		"/tmp/nerdlog_agent_index_%s_%s",
 		lsc.params.ClientID,
-		filepathToId(lsc.params.Config.LogFileLast),
+		filepathToId(lsc.params.LogStream.LogFileLast()),
 	)
 }
 

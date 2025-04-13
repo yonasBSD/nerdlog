@@ -2,27 +2,44 @@ package core
 
 import (
 	"fmt"
-	"os/user"
 	"strings"
 
 	"github.com/dimonomid/nerdlog/shellescape"
 	"github.com/juju/errors"
 )
 
-type Config struct {
-	LogStreams map[string]ConfigLogStream `yaml:"log_streams"`
+type LStreamsResolver struct {
+	params LStreamsResolverParams
 }
 
-type ConfigLogStream struct {
+type LStreamsResolverParams struct {
+	// CurOSUser is the current OS username, it's used as the last resort when
+	// determining the user for a particular host connection.
+	CurOSUser string
+
+	// TODO: add ssh config and nerdlog config here, which will help with the resolving.
+}
+
+func NewLStreamsResolver(params LStreamsResolverParams) *LStreamsResolver {
+	return &LStreamsResolver{
+		params: params,
+	}
+}
+
+type LogStream struct {
 	// Name is an arbitrary string which will be included in log messages as the
-	// "source" context tag; it must unique identify the ConfigLogStream.
-	Name string `yaml:"name"`
+	// "source" context tag; it must uniquely identify the LogStream.
+	Name string
 
-	Host     ConfigHost  `yaml:"logstream"`
-	Jumphost *ConfigHost `yaml:"jumphost"`
+	Host     ConfigHost
+	Jumphost *ConfigHost
 
-	LogFileLast string `yaml:"log_file_last"`
-	LogFilePrev string `yaml:"log_file_prev"`
+	// LogFiles contains a list of files which are part of the logstream, like
+	// ["/var/log/syslog", "/var/log/syslog.1"]. The [0]th item is the latest log
+	// file [1]st is the previous one, etc.
+	//
+	// It must contain at least a single item, otherwise LogStream is invalid.
+	LogFiles []string
 }
 
 type ConfigHost struct {
@@ -33,17 +50,103 @@ type ConfigHost struct {
 	// a service name.
 	//
 	// Examples: "golang.org:http", "192.0.2.1:http", "198.51.100.1:22".
-	Addr string `yaml:"addr"`
+	Addr string
 	// User is the username to authenticate as.
-	User string `yaml:"user"`
+	User string
 }
 
 func (ch *ConfigHost) Key() string {
 	return fmt.Sprintf("%s@%s", ch.Addr, ch.User)
 }
 
+func (ls *LogStream) LogFileLast() string {
+	// LogFiles must contain at least a single item, so we don't check anything
+	// here, and let it panic naturally if the invariant breaks due to some bug.
+	return ls.LogFiles[0]
+}
+
+func (ls *LogStream) LogFilePrev() (string, bool) {
+	if len(ls.LogFiles) >= 2 {
+		return ls.LogFiles[1], true
+	}
+
+	return "", false
+}
+
+// Resolve parses the given logstream spec, and returns the mapping from
+// LogStream.Name to the corresponding LogStream. Examples of logstream spec are:
+//
+// - "myuser@myserver.com:22:/var/log/syslog"
+// - "myuser@myserver.com:22"
+// - "myuser@myserver.com"
+// - "myserver.com"
+func (r *LStreamsResolver) Resolve(lstreamsStr string) (map[string]*LogStream, error) {
+	lstreamsStr = strings.TrimSpace(lstreamsStr)
+
+	parsedLogStreams := map[string]*LogStream{}
+
+	// Special case for an empty input: it's allowed and just results in no
+	// logstreams.
+	if lstreamsStr == "" {
+		return parsedLogStreams, nil
+	}
+
+	// TODO: when json is supported, splitting by commas will need to be improved.
+	parts := strings.Split(lstreamsStr, ",")
+	for i, part := range parts {
+		part = strings.TrimSpace(part)
+
+		if part == "" {
+			return nil, errors.Errorf("entry #%d is empty", i+1)
+		}
+
+		cfs, err := r.parseLogStreamSpecEntry(part)
+		if err != nil {
+			return nil, errors.Annotatef(err, "parsing entry #%d (%s)", i+1, part)
+		}
+
+		for _, ch := range cfs {
+			key := ch.Name
+
+			if _, exists := parsedLogStreams[key]; exists {
+				return nil, errors.Errorf("the logstream %s is present at least twice", key)
+			}
+
+			parsedLogStreams[key] = ch
+		}
+
+		//matcher, err := glob.Compile(part)
+		//if err != nil {
+		//return errors.Annotatef(err, "pattern %q", part)
+		//}
+
+		//numMatchedPart := 0
+
+		//for _, hc := range lsman.params.ConfigHosts {
+		//if !matcher.MatchString(hc.Name) {
+		//continue
+		//}
+
+		//matchingHANames[hc.Name] = struct{}{}
+		//numMatchedPart++
+		//}
+
+		//if numMatchedPart == 0 {
+		//return errors.Errorf("%q didn't match anything", part)
+		//}
+	}
+
+	return parsedLogStreams, nil
+}
+
+// parseLogStreamSpecEntry parses a single logstream spec entry like
+// "myuser@myserver.com:22:/var/log/syslog", or "myserver.com", or
+// "myserver-*", and returns the corresponding LogStream-s. Note that the spec
+// might contain a glob, in which case we might return more than 1 LogStream.
+// If the glob didn't match anything, an error is returned.
+//
 // TODO: it should take a predefined config, to support globs
-func parseConfigHost(s string) ([]*ConfigLogStream, error) {
+func (r *LStreamsResolver) parseLogStreamSpecEntry(s string) ([]*LogStream, error) {
 	parts, err := shellescape.Parse(s)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -62,7 +165,7 @@ func parseConfigHost(s string) ([]*ConfigLogStream, error) {
 
 		switch curFlag {
 		case "-J", "--jumphost":
-			jhparsed, err := parseLStreamStr(part)
+			jhparsed, err := r.parseLStreamStr(part)
 			if err != nil {
 				return nil, errors.Annotatef(err, "parsing %q as a jumphost", part)
 			}
@@ -84,7 +187,7 @@ func parseConfigHost(s string) ([]*ConfigLogStream, error) {
 
 		case "":
 			var err error
-			plstream, err = parseLStreamStr(part)
+			plstream, err = r.parseLStreamStr(part)
 			if err != nil {
 				return nil, errors.Annotatef(err, "parsing %q as a logstream", part)
 			}
@@ -115,7 +218,7 @@ func parseConfigHost(s string) ([]*ConfigLogStream, error) {
 		return nil, errors.Errorf("no logstream specified in %q", s)
 	}
 
-	return []*ConfigLogStream{
+	return []*LogStream{
 		{
 			Name: s,
 
@@ -125,8 +228,7 @@ func parseConfigHost(s string) ([]*ConfigLogStream, error) {
 			},
 			Jumphost: jhconf,
 
-			LogFileLast: logFileLast,
-			LogFilePrev: logFilePrev,
+			LogFiles: []string{logFileLast, logFilePrev},
 		},
 	}, nil
 }
@@ -139,7 +241,7 @@ type parsedLStream struct {
 	colonParts []string
 }
 
-func parseLStreamStr(s string) (*parsedLStream, error) {
+func (r *LStreamsResolver) parseLStreamStr(s string) (*parsedLStream, error) {
 	// Parsing the logstream descriptor like
 	// "user@hostname:/path/to/logfile:/path/to/logfile.1"
 
@@ -153,18 +255,17 @@ func parseLStreamStr(s string) (*parsedLStream, error) {
 		s = s[atIdx+1:]
 	}
 	if username == "" {
-		u, err := user.Current()
-		if err != nil {
-			return nil, errors.Trace(err)
+		if r.params.CurOSUser == "" {
+			return nil, errors.Errorf("username is not provided, and CurOSUser is also empty")
 		}
 
-		username = u.Username
+		username = r.params.CurOSUser
 	}
 
 	port := "22"
 	colonParts := []string{}
 	parts := strings.Split(s, ":")
-	if len(parts) == 0 {
+	if len(parts) == 0 || parts[0] == "" {
 		return nil, errors.Errorf("no hostname")
 	}
 
