@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/juju/errors"
+	"github.com/kevinburke/ssh_config"
 
 	"github.com/dimonomid/nerdlog/log"
 )
@@ -58,8 +59,13 @@ type LStreamsManager struct {
 }
 
 type LStreamsManagerParams struct {
-	// ConfigLogStreams contains nerdlog-specific config.
+	// ConfigLogStreams contains nerdlog-specific config, typically coming from
+	// ~/.config/nerdlog/logstreams.yaml.
 	ConfigLogStreams ConfigLogStreams
+
+	// SSHConfig contains the general ssh config, typically coming from
+	// ~/.ssh/config.
+	SSHConfig *ssh_config.Config
 
 	Logger *log.Logger
 
@@ -118,6 +124,7 @@ func (lsman *LStreamsManager) setLStreams(lstreamsStr string) error {
 		CurOSUser: u.Username,
 
 		ConfigLogStreams: lsman.params.ConfigLogStreams,
+		SSHConfig:        lsman.params.SSHConfig,
 	})
 
 	parsedLogStreams, err := resolver.Resolve(lstreamsStr)

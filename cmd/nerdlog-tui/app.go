@@ -10,6 +10,7 @@ import (
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/dimonomid/nerdlog/log"
 	"github.com/juju/errors"
+	"github.com/kevinburke/ssh_config"
 	"github.com/rivo/tview"
 )
 
@@ -255,11 +256,31 @@ func (app *nerdlogApp) initLStreamsManager(
 		logstreamsCfg = appLogstreamsCfg.LogStreams
 	}
 
+	var sshConfig *ssh_config.Config
+	sshConfigFile, err := os.Open(filepath.Join(homeDir, ".ssh", "config"))
+	if err != nil {
+		if !os.IsNotExist(err) {
+			// TODO: would perhaps be more useful if we warn the user about it,
+			// but still proceed.
+			return errors.Annotatef(err, "reading ssh config")
+		}
+	} else {
+		var err error
+		sshConfig, err = ssh_config.Decode(sshConfigFile)
+		if err != nil {
+			// TODO: would perhaps be more useful if we warn the user about it,
+			// but still proceed.
+			return errors.Annotatef(err, "parsing ssh config")
+		}
+	}
+
 	app.lsman = core.NewLStreamsManager(core.LStreamsManagerParams{
 		Logger: logger,
 
 		ConfigLogStreams: logstreamsCfg,
-		InitialLStreams:  initialLStreams,
+		SSHConfig:        sshConfig,
+
+		InitialLStreams: initialLStreams,
 
 		ClientID: envUser,
 
