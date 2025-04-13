@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/dimonomid/nerdlog/shellescape"
+	"github.com/gobwas/glob"
 	"github.com/juju/errors"
 )
 
@@ -17,7 +18,9 @@ type LStreamsResolverParams struct {
 	// determining the user for a particular host connection.
 	CurOSUser string
 
-	// TODO: add ssh config and nerdlog config here, which will help with the resolving.
+	ConfigLogStreams ConfigLogStreams
+
+	// TODO: add ssh config
 }
 
 func NewLStreamsResolver(params LStreamsResolverParams) *LStreamsResolver {
@@ -45,7 +48,7 @@ type LogStream struct {
 type ConfigHost struct {
 	// Addr is the address to connect to, in the same format which is used by
 	// net.Dial. To copy-paste some docs from net.Dial: the address has the form
-	// "logstream:port". The logstream must be a literal IP address, or a logstream name that
+	// "host:port". The host must be a literal IP address, or a host name that
 	// can be resolved to IP addresses. The port must be a literal port number or
 	// a service name.
 	//
@@ -59,13 +62,13 @@ func (ch *ConfigHost) Key() string {
 	return fmt.Sprintf("%s@%s", ch.Addr, ch.User)
 }
 
-func (ls *LogStream) LogFileLast() string {
+func (ls LogStream) LogFileLast() string {
 	// LogFiles must contain at least a single item, so we don't check anything
 	// here, and let it panic naturally if the invariant breaks due to some bug.
 	return ls.LogFiles[0]
 }
 
-func (ls *LogStream) LogFilePrev() (string, bool) {
+func (ls LogStream) LogFilePrev() (string, bool) {
 	if len(ls.LogFiles) >= 2 {
 		return ls.LogFiles[1], true
 	}
@@ -80,10 +83,10 @@ func (ls *LogStream) LogFilePrev() (string, bool) {
 // - "myuser@myserver.com:22"
 // - "myuser@myserver.com"
 // - "myserver.com"
-func (r *LStreamsResolver) Resolve(lstreamsStr string) (map[string]*LogStream, error) {
+func (r *LStreamsResolver) Resolve(lstreamsStr string) (map[string]LogStream, error) {
 	lstreamsStr = strings.TrimSpace(lstreamsStr)
 
-	parsedLogStreams := map[string]*LogStream{}
+	parsedLogStreams := map[string]LogStream{}
 
 	// Special case for an empty input: it's allowed and just results in no
 	// logstreams.
@@ -146,7 +149,7 @@ func (r *LStreamsResolver) Resolve(lstreamsStr string) (map[string]*LogStream, e
 // If the glob didn't match anything, an error is returned.
 //
 // TODO: it should take a predefined config, to support globs
-func (r *LStreamsResolver) parseLogStreamSpecEntry(s string) ([]*LogStream, error) {
+func (r *LStreamsResolver) parseLogStreamSpecEntry(s string) ([]LogStream, error) {
 	parts, err := shellescape.Parse(s)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -154,7 +157,7 @@ func (r *LStreamsResolver) parseLogStreamSpecEntry(s string) ([]*LogStream, erro
 
 	var plstream *parsedLStream
 	var jhconf *ConfigHost
-	var logFileLast, logFilePrev string
+	var logFiles []string
 
 	curFlag := ""
 	for _, part := range parts {
@@ -193,15 +196,11 @@ func (r *LStreamsResolver) parseLogStreamSpecEntry(s string) ([]*LogStream, erro
 			}
 
 			if len(plstream.colonParts) > 0 {
-				logFileLast = plstream.colonParts[0]
-			} else {
-				logFileLast = "/var/log/syslog"
+				logFiles = append(logFiles, plstream.colonParts[0])
 			}
 
 			if len(plstream.colonParts) > 1 {
-				logFilePrev = plstream.colonParts[1]
-			} else {
-				logFilePrev = logFileLast + ".1"
+				logFiles = append(logFiles, plstream.colonParts[1])
 			}
 
 			if len(plstream.colonParts) > 2 {
@@ -218,7 +217,7 @@ func (r *LStreamsResolver) parseLogStreamSpecEntry(s string) ([]*LogStream, erro
 		return nil, errors.Errorf("no logstream specified in %q", s)
 	}
 
-	return []*LogStream{
+	ret := []LogStream{
 		{
 			Name: s,
 
@@ -228,9 +227,34 @@ func (r *LStreamsResolver) parseLogStreamSpecEntry(s string) ([]*LogStream, erro
 			},
 			Jumphost: jhconf,
 
-			LogFiles: []string{logFileLast, logFilePrev},
+			LogFiles: logFiles,
 		},
-	}, nil
+	}
+
+	ret, err = expandFromLogStreamsConfig(ret, r.params.ConfigLogStreams)
+	if err != nil {
+		return nil, errors.Annotatef(err, "expanding from nerdlog config")
+	}
+
+	// TODO: expand from ssh config as well
+
+	ret, err = setLogStreamsDefaults(ret, r.params.CurOSUser)
+	if err != nil {
+		return nil, errors.Annotatef(err, "setting defaults")
+	}
+
+	// Check if some of the items were clearly indended to be globs matching
+	// something (those with asterisks in them), and didn't match anything.
+	for _, ls := range ret {
+		// TODO: would perhaps be useful to implement a function like IsValidDialAddress,
+		// which checks a bunch of other things, but for now, a single asterisk check
+		// will do.
+		if strings.Contains(ls.Host.Addr, "*") {
+			return nil, errors.Errorf("glob %q didn't match anything (having address %q)", s, ls.Host.Addr)
+		}
+	}
+
+	return ret, nil
 }
 
 type parsedLStream struct {
@@ -254,15 +278,8 @@ func (r *LStreamsResolver) parseLStreamStr(s string) (*parsedLStream, error) {
 		username = s[:atIdx]
 		s = s[atIdx+1:]
 	}
-	if username == "" {
-		if r.params.CurOSUser == "" {
-			return nil, errors.Errorf("username is not provided, and CurOSUser is also empty")
-		}
 
-		username = r.params.CurOSUser
-	}
-
-	port := "22"
+	port := ""
 	colonParts := []string{}
 	parts := strings.Split(s, ":")
 	if len(parts) == 0 || parts[0] == "" {
@@ -283,41 +300,167 @@ func (r *LStreamsResolver) parseLStreamStr(s string) (*parsedLStream, error) {
 		port:       port,
 		colonParts: colonParts,
 	}, nil
+}
 
-	//hostname := parts[0]
+type ConfigLogStreamWKey struct {
+	// Key is the key at which the corresponding ConfigLogStream was
+	// stored in the ConfigLogStreams map.
+	Key string
 
-	//port := ""
-	//if len(parts) >= 2 {
-	//port = parts[1]
-	//}
-	//if port == "" {
-	//port = "22"
-	//}
+	ConfigLogStream
+}
 
-	//logFileLast := ""
-	//if len(parts) >= 3 {
-	//logFileLast = parts[2]
-	//}
-	//if logFileLast == "" {
-	//logFileLast = "/var/log/syslog"
-	//}
+// expandFromLogStreamsConfig goes through each of the logstreams, and
+// potentially expands every item as per the provided config.
+func expandFromLogStreamsConfig(
+	logStreams []LogStream,
+	lsConfig ConfigLogStreams,
+) ([]LogStream, error) {
+	var ret []LogStream
 
-	//logFilePrev := ""
-	//if len(parts) >= 4 {
-	//logFilePrev = parts[3]
-	//}
-	//if logFilePrev == "" {
-	//logFilePrev = logFileLast + ".1"
-	//}
+	for i, ls := range logStreams {
+		var matchedConfigItems []*ConfigLogStreamWKey
 
-	//if len(parts) > 4 {
-	//return nil, errors.Errorf("malformed logstream descriptor: too many colons")
-	//}
+		addr, err := parseAddr(ls.Host.Addr)
+		if err != nil {
+			return nil, errors.Annotatef(err, "logstream #%d, parsing address", i+1)
+		}
 
-	//return &parsedLStream{
-	//addr:        fmt.Sprintf("%s:%s", hostname, port),
-	//user:        username,
-	//logFileLast: logFileLast,
-	//logFilePrev: logFilePrev,
-	//}, nil
+		globPattern := addr.host
+		matcher, err := glob.Compile(globPattern)
+		if err != nil {
+			return nil, errors.Annotatef(err, "logstream #%d, parsing hostname %q as a glob pattern", i+1, addr.host)
+		}
+
+		for _, key := range lsConfig.Keys() {
+			if matcher.Match(key) {
+				matchedConfigItems = append(matchedConfigItems, &ConfigLogStreamWKey{
+					Key:             key,
+					ConfigLogStream: lsConfig[key],
+				})
+			}
+		}
+
+		// If there's no match, just copy that logstream unchanged.
+		if len(matchedConfigItems) == 0 {
+			ret = append(ret, ls)
+			continue
+		}
+
+		// There are some matches, so we need to expand things.
+		for _, matchedItem := range matchedConfigItems {
+			lsCopy := ls
+			addrCopy := addr
+
+			// Always override the name with the key from the config.
+			//
+			// TODO: actually, if the original name is like
+			// "myhost-*:22:/var/log/syslog", ideally we want to just replace the *
+			// part... but for now not bothering about it.
+			//lsCopy.Name = matchedItem.Key
+			lsCopy.Name = strings.Replace(lsCopy.Name, globPattern, matchedItem.Key, -1)
+
+			// If the item from the config defines the host address, then use that
+			// instead of what what we've had (since what we've had might be a glob).
+			if matchedItem.Hostname != "" {
+				addrCopy.host = matchedItem.Hostname
+			}
+
+			// Everything else we'll only override if it's not specified already.
+
+			if addrCopy.port == "" {
+				addrCopy.port = matchedItem.Port
+			}
+
+			if lsCopy.Host.User == "" {
+				lsCopy.Host.User = matchedItem.User
+			}
+
+			if len(lsCopy.LogFiles) == 0 {
+				lsCopy.LogFiles = matchedItem.LogFiles
+			}
+
+			lsCopy.Host.Addr = fmt.Sprintf("%s:%s", addrCopy.host, addrCopy.port)
+
+			ret = append(ret, lsCopy)
+		}
+	}
+
+	return ret, nil
+}
+
+// setLogStreamsDefaults goes through each of the logstreams, and fills in
+// missing pieces for which it knows the defaults: port 22, user as the current
+// OS user.
+func setLogStreamsDefaults(
+	logStreams []LogStream,
+	osUser string,
+) ([]LogStream, error) {
+	ret := make([]LogStream, 0, len(logStreams))
+
+	for i, ls := range logStreams {
+		port, err := portFromAddr(ls.Host.Addr)
+		if err != nil {
+			return nil, errors.Annotatef(err, "logstream #%d, getting port", i+1)
+		}
+
+		if port == "" {
+			ls.Host.Addr += "22"
+		}
+
+		if ls.Host.User == "" {
+			ls.Host.User = osUser
+		}
+
+		if len(ls.LogFiles) == 0 {
+			ls.LogFiles = append(ls.LogFiles, "/var/log/syslog")
+		}
+
+		if len(ls.LogFiles) == 1 {
+			ls.LogFiles = append(ls.LogFiles, ls.LogFiles[0]+".1")
+		}
+
+		ret = append(ret, ls)
+	}
+
+	return ret, nil
+}
+
+type parsedAddr struct {
+	host string
+	port string
+}
+
+func parseAddr(addr string) (parsedAddr, error) {
+	parts := strings.Split(addr, ":")
+	if len(parts) != 2 {
+		return parsedAddr{}, errors.Errorf("not a valid addr %q, expected host:port", addr)
+	}
+
+	return parsedAddr{
+		host: parts[0],
+		port: parts[1],
+	}, nil
+}
+
+// hostnameFromAddr takes an address like net.Dial takes, in the form of
+// "host:port", and returns the host part.
+func hostnameFromAddr(addr string) (string, error) {
+	parts := strings.Split(addr, ":")
+	if len(parts) != 2 {
+		return "", errors.Errorf("not a valid addr %q, expected host:port", addr)
+	}
+
+	return parts[0], nil
+}
+
+// portFromAddr takes an address like net.Dial takes, in the form of
+// "host:port", and returns the port part.
+func portFromAddr(addr string) (string, error) {
+	parts := strings.Split(addr, ":")
+	if len(parts) != 2 {
+		return "", errors.Errorf("not a valid addr %q, expected host:port", addr)
+	}
+
+	return parts[1], nil
 }

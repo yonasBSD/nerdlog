@@ -20,7 +20,7 @@ type LStreamsManager struct {
 	params LStreamsManagerParams
 
 	lstreamsStr      string
-	parsedLogStreams map[string]*LogStream
+	parsedLogStreams map[string]LogStream
 
 	lscs      map[string]*LStreamClient
 	lscStates map[string]LStreamClientState
@@ -159,7 +159,7 @@ func (lsman *LStreamsManager) updateHAs() {
 
 		// We need to create a new logstream client
 		lsc := NewLStreamClient(LStreamClientParams{
-			LogStream: *ls,
+			LogStream: ls,
 			Logger:    lsman.params.Logger,
 			ClientID:  lsman.params.ClientID, //fmt.Sprintf("%s-%d", lsman.params.ClientID, rand.Int()),
 			UpdatesCh: lsman.lstreamUpdatesCh,
