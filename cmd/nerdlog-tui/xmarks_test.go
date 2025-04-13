@@ -147,7 +147,7 @@ func TestGetXMarksForTimeRange(t *testing.T) {
 			from, _ := time.Parse(time.RFC3339, tt.from)
 			to, _ := time.Parse(time.RFC3339, tt.to)
 
-			actual := getXMarksForTimeRange(from, to, tt.maxMarks)
+			actual := getXMarksForTimeRange(time.UTC, from, to, tt.maxMarks)
 			actualStrs := formatRFC3339Slice(actual)
 
 			assert.Equal(t, tt.expected, actualStrs)
