@@ -1,6 +1,7 @@
 # Nerdlog: fast, remote-first, multi-host TUI log viewer with timeline histogram and no central server
 
-Loosely inspired by Graylog/Kibana, but without the bloat.
+Loosely inspired by Graylog/Kibana, but without the bloat. Pretty much no setup
+needed, either.
 
 First of all, a little demo. Here, we're dealing with logs from 4 remote nodes,
 each having about 2GB log file, generating about 600K log messages per hour in
@@ -15,32 +16,38 @@ TODO: implement the demo, and update the numbers above.
 It might be useful to know the history to understand the project motivation and
 overall direction.
 
-My team and I were working on a project which was printing a fairly sizeable
+My team and I were working on a service which was printing a fairly sizeable
 amount of logs from a distributed cluster of 20+ nodes: about 2-3M log messages
-per hour in total. We were using Graylog back then, and querying those logs for
-an hour was taking no more than 1-2 seconds, so it was pretty quick.
+per hour in total. There was no containerization: the nodes were actual AWS
+instances running Ubuntu, and our web services were running there directly as
+just systemd services, naturally printing logs to `/var/log/syslog`. To read
+the logs though, we were using Graylog, and querying those logs for an hour was
+taking no more than 1-2 seconds, so it was pretty quick.
 
 Infra people hated Graylog though, since it required some annoying maintenance
 from them, and so at some point the decision was made to switch to Splunk
 instead. And when Splunk was finally rolled out, I had to find out that it was
-incredibly, ridiculously slow. Honestly looking at it, I don't quite understand
-how they are even selling it. If you've used Splunk, you might know that it has
-two modes: "Smart" and "Fast". In "Smart" mode, the same query for an hour of
-logs was taking _a few minutes_. And in so called "Fast" mode, it was taking
-30-60s (and that "Fast" mode has some other limitations which makes it a lot
-less useful).  It might have been a misconfiguration of some sort (I'm not an
-infra guy so I don't know), but no one knew how or wanted to fix it, and so it
-was clear that once Graylog is finally shut down, we'll lose our ability to
-query logs quickly, and it was a massive bummer for us.
+incredibly, ridiculously slow. Honestly, looking at it, I don't quite
+understand how they are even selling it. If you've used Splunk, you might know
+that it has two modes: "Smart" and "Fast". In "Smart" mode, the same query for
+an hour of logs was taking _a few minutes_. And in so called "Fast" mode, it
+was taking 30-60s (and that "Fast" mode has some other limitations which makes
+it a lot less useful). It might have been a misconfiguration of some sort (I'm
+not an infra guy so I don't know), but no one knew how or wanted to fix it, and
+so it was clear that once Graylog is finally shut down, we'll lose our ability
+to query logs quickly, and it was a massive bummer for us.
 
 And I thought that it's just ridiculous. 2-3M log messages doesn't sound like
 such a big amount of logs, and it seemed like some old-school shell hacks on
 plain log files, without having any centralized logging server, should be able
 to be about as fast as Graylog was, and it should be enough for most of our
-needs. And so that's how that project started: I couldn't stop thinking of it,
-so I took a week off, and went on a personal hackathon to implement this
-proof-of-concept log fetcher and viewer, which is ssh-ing directly to the nodes,
-and analyzing plain log files using `bash` + `tail` + `head` + `awk` hacks.
+needs. As you remember, our stuff was running as systemd services printing logs
+to `/var/log/syslog`, so these plain log files were readily available to us.
+And so that's how the project started: I couldn't stop thinking of it, so I
+took a week off, and went on a personal hackathon to implement this
+proof-of-concept log fetcher and viewer, which is ssh-ing directly to the
+nodes, and analyzing plain log files using `bash` + `tail` + `head` + `awk`
+hacks.
 
 It has proven to be very capable of replacing the essential features we had in
 Graylog: being fast, querying logs from multiple remote nodes simultaneously,
