@@ -930,15 +930,15 @@ func (mv *MainView) applyHMState(lsmanState *core.LStreamsManagerState) {
 		// If we have info about lstreams busy stage, show the slowest one.
 		if len(lsmanState.BusyStageByLStream) > 0 {
 			type lstreamWBusyStage struct {
-				logstream  string
-				stage core.BusyStage
+				logstream string
+				stage     core.BusyStage
 			}
 
 			vs := make([]lstreamWBusyStage, 0, len(lsmanState.BusyStageByLStream))
 			for logstream, stage := range lsmanState.BusyStageByLStream {
 				vs = append(vs, lstreamWBusyStage{
-					logstream:  logstream,
-					stage: stage,
+					logstream: logstream,
+					stage:     stage,
 				})
 			}
 
@@ -1685,7 +1685,7 @@ func (mv *MainView) getQueryFull() QueryFull {
 	return QueryFull{
 		Time:        ftr.String(),
 		Query:       mv.query,
-		LStreams: mv.lstreamsSpec,
+		LStreams:    mv.lstreamsSpec,
 		SelectQuery: mv.selectQuery.Marshal(),
 	}
 }

@@ -833,8 +833,8 @@ func (rdv *RowDetailsView) Hide() {
 
 func (rdv *RowDetailsView) GetQueryFull() QueryFull {
 	return QueryFull{
-		Time:        rdv.queryFull.Time,
-		Query:       rdv.queryFull.Query,
+		Time:     rdv.queryFull.Time,
+		Query:    rdv.queryFull.Query,
 		LStreams: rdv.queryFull.LStreams,
 
 		SelectQuery: rdv.sq.Marshal(),

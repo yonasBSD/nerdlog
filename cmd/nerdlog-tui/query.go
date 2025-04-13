@@ -9,8 +9,8 @@ import (
 // and the query to filter logs.
 type QueryFull struct {
 	LStreams string
-	Time        string
-	Query       string
+	Time     string
+	Query    string
 
 	SelectQuery SelectQuery
 }

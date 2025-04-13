@@ -18,10 +18,10 @@ var ErrNotYetConnected = errors.Errorf("not connected to all lstreams yet")
 type LStreamsManager struct {
 	params LStreamsManagerParams
 
-	lstreamsStr          string
+	lstreamsStr      string
 	parsedLogStreams map[string]*ConfigLogStreams
 
-	lscs map[string]*LStreamClient
+	lscs      map[string]*LStreamClient
 	lscStates map[string]LStreamClientState
 	// lscConnDetails only contains items for lstreams which are in the
 	// LStreamClientStateConnectinConnecting state.
@@ -36,12 +36,12 @@ type LStreamsManager struct {
 	// with one key, and add an item here with a different key.
 	lscPendingTeardown map[string]int
 
-	lstreamsByState    map[LStreamClientState]map[string]struct{}
+	lstreamsByState map[LStreamClientState]map[string]struct{}
 	numNotConnected int
 
 	lstreamUpdatesCh chan *LStreamClientUpdate
-	reqCh         chan lstreamsManagerReq
-	respCh        chan lstreamCmdRes
+	reqCh            chan lstreamsManagerReq
+	respCh           chan lstreamCmdRes
 
 	// teardownReqCh is written to once when Close is called.
 	teardownReqCh chan struct{}
@@ -87,8 +87,8 @@ func NewLStreamsManager(params LStreamsManagerParams) *LStreamsManager {
 		lscPendingTeardown: map[string]int{},
 
 		lstreamUpdatesCh: make(chan *LStreamClientUpdate, 1024),
-		reqCh:         make(chan lstreamsManagerReq, 8),
-		respCh:        make(chan lstreamCmdRes),
+		reqCh:            make(chan lstreamsManagerReq, 8),
+		respCh:           make(chan lstreamCmdRes),
 
 		teardownReqCh: make(chan struct{}, 1),
 		torndownCh:    make(chan struct{}, 1),
@@ -528,11 +528,11 @@ func (lsman *LStreamsManager) Wait() {
 type lstreamsManagerReq struct {
 	// Exactly one field must be non-nil
 
-	queryLogs      *QueryLogsParams
+	queryLogs   *QueryLogsParams
 	updLStreams *lstreamsManagerReqUpdLStreams
-	ping           bool
-	reconnect      bool
-	disconnect     bool
+	ping        bool
+	reconnect   bool
+	disconnect  bool
 }
 
 type lstreamsManagerReqUpdLStreams struct {
@@ -682,13 +682,13 @@ func (lsman *LStreamsManager) sendStateUpdate() {
 		State: &LStreamsManagerState{
 			NumLStreams:          len(lsman.lscs),
 			LStreamsByState:      lsman.lstreamsByState,
-			NumConnected:      numConnected,
+			NumConnected:         numConnected,
 			NoMatchingLStreams:   lsman.numNotConnected == 0 && numConnected == 0,
-			Connected:         lsman.numNotConnected == 0 && numConnected > 0,
-			Busy:              lsman.curQueryLogsCtx != nil,
+			Connected:            lsman.numNotConnected == 0 && numConnected > 0,
+			Busy:                 lsman.curQueryLogsCtx != nil,
 			ConnDetailsByLStream: connDetailsCopy,
 			BusyStageByLStream:   busyStagesCopy,
-			TearingDown:       tearingDown,
+			TearingDown:          tearingDown,
 		},
 	}
 

@@ -49,9 +49,9 @@ type QueryEditView struct {
 	backBtn *tview.Button
 	fwdBtn  *tview.Button
 
-	timeInput  *tview.InputField
+	timeInput     *tview.InputField
 	lstreamsInput *tview.InputField
-	queryInput *tview.InputField
+	queryInput    *tview.InputField
 
 	selectQueryInput   *tview.InputField
 	selectQueryEditBtn *tview.Button
@@ -375,7 +375,7 @@ func (qev *QueryEditView) GetQueryFull() QueryFull {
 	return QueryFull{
 		Time:        qev.timeInput.GetText(),
 		Query:       qev.queryInput.GetText(),
-		LStreams: qev.lstreamsInput.GetText(),
+		LStreams:    qev.lstreamsInput.GetText(),
 		SelectQuery: SelectQuery(qev.selectQueryInput.GetText()),
 	}
 }

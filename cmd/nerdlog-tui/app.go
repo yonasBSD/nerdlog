@@ -22,7 +22,7 @@ type nerdlogApp struct {
 	// to nil.
 	tviewApp *tview.Application
 
-	lsman       *core.LStreamsManager
+	lsman    *core.LStreamsManager
 	mainView *MainView
 
 	// cmdLineHistory is the command line history
@@ -241,7 +241,7 @@ func (app *nerdlogApp) initLStreamsManager(initialLStreams string, logger *log.L
 		Logger: logger,
 
 		PredefinedConfigHosts: makeConfigHosts(),
-		InitialLStreams:          initialLStreams,
+		InitialLStreams:       initialLStreams,
 
 		ClientID: envUser,
 
