@@ -25,7 +25,7 @@ var timeLabelText = `Time range in the format "[yellow]<time>[ to <time>][-]", w
 current time is used.
 `
 
-var hostsLabelText = `Hosts. Comma-separated strings of the format "[yellow][user@]myserver.com[:port[:/path/to/logfile]][-]".
+var lstreamsLabelText = `Logstreams. Comma-separated strings of the format "[yellow][user@]myserver.com[:port[:/path/to/logfile]][-]".
 Examples: "[yellow]user@myserver.com[-]", or "[yellow]user@myserver.com:22:/var/log/syslog[-]"`
 
 var selectQueryLabelText = `Select field query. Example: "[yellow]time STICKY, message, source, level_name AS level, *[-]".`
@@ -50,7 +50,7 @@ type QueryEditView struct {
 	fwdBtn  *tview.Button
 
 	timeInput  *tview.InputField
-	hostsInput *tview.InputField
+	lstreamsInput *tview.InputField
 	queryInput *tview.InputField
 
 	selectQueryInput   *tview.InputField
@@ -153,14 +153,14 @@ func NewQueryEditView(
 
 	qev.flex.AddItem(nil, 1, 0, false)
 
-	hostsLabel := tview.NewTextView()
-	hostsLabel.SetText(hostsLabelText)
-	hostsLabel.SetDynamicColors(true)
-	qev.flex.AddItem(hostsLabel, 2, 0, false)
+	lstreamsLabel := tview.NewTextView()
+	lstreamsLabel.SetText(lstreamsLabelText)
+	lstreamsLabel.SetDynamicColors(true)
+	qev.flex.AddItem(lstreamsLabel, 2, 0, false)
 
-	qev.hostsInput = tview.NewInputField()
-	qev.flex.AddItem(qev.hostsInput, 1, 0, false)
-	focusers = append(focusers, qev.hostsInput)
+	qev.lstreamsInput = tview.NewInputField()
+	qev.flex.AddItem(qev.lstreamsInput, 1, 0, false)
+	focusers = append(focusers, qev.lstreamsInput)
 
 	qev.flex.AddItem(nil, 1, 0, false)
 
@@ -266,12 +266,12 @@ func NewQueryEditView(
 		return event
 	})
 
-	qev.hostsInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	qev.lstreamsInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		event = qev.genericInputHandler(
 			event,
-			getGenericTabHandler(qev.hostsInput),
-			func(qf QueryFull) string { return qf.HostsFilter },
-			func(qf *QueryFull, part string) { qf.HostsFilter = part },
+			getGenericTabHandler(qev.lstreamsInput),
+			func(qf QueryFull) string { return qf.LStreams },
+			func(qf *QueryFull, part string) { qf.LStreams = part },
 		)
 		if event == nil {
 			return nil
@@ -375,14 +375,14 @@ func (qev *QueryEditView) GetQueryFull() QueryFull {
 	return QueryFull{
 		Time:        qev.timeInput.GetText(),
 		Query:       qev.queryInput.GetText(),
-		HostsFilter: qev.hostsInput.GetText(),
+		LStreams: qev.lstreamsInput.GetText(),
 		SelectQuery: SelectQuery(qev.selectQueryInput.GetText()),
 	}
 }
 
 func (qev *QueryEditView) SetQueryFull(qf QueryFull) {
 	qev.timeInput.SetText(qf.Time)
-	qev.hostsInput.SetText(qf.HostsFilter)
+	qev.lstreamsInput.SetText(qf.LStreams)
 	qev.queryInput.SetText(qf.Query)
 
 	qev.selectQueryInput.SetText(string(qf.SelectQuery))

@@ -2,48 +2,48 @@ package core
 
 import "time"
 
-type hostCmd struct {
+type lstreamCmd struct {
 	// respCh must be either nil, or 1-buffered and it'll receive exactly one
 	// message.
-	respCh chan hostCmdRes
+	respCh chan lstreamCmdRes
 
 	// Exactly one of the fields below must be non-nil.
 
-	bootstrap *hostCmdBootstrap
-	ping      *hostCmdPing
-	queryLogs *hostCmdQueryLogs
+	bootstrap *lstreamCmdBootstrap
+	ping      *lstreamCmdPing
+	queryLogs *lstreamCmdQueryLogs
 }
 
-type hostCmdCtx struct {
-	cmd hostCmd
+type lstreamCmdCtx struct {
+	cmd lstreamCmd
 
 	idx int
 
-	bootstrapCtx *hostCmdCtxBootstrap
-	pingCtx      *hostCmdCtxPing
-	queryLogsCtx *hostCmdCtxQueryLogs
+	bootstrapCtx *lstreamCmdCtxBootstrap
+	pingCtx      *lstreamCmdCtxPing
+	queryLogsCtx *lstreamCmdCtxQueryLogs
 }
 
-type hostCmdRes struct {
+type lstreamCmdRes struct {
 	hostname string
 
 	err  error
 	resp interface{}
 }
 
-type hostCmdBootstrap struct{}
+type lstreamCmdBootstrap struct{}
 
-type hostCmdCtxBootstrap struct {
+type lstreamCmdCtxBootstrap struct {
 	receivedSuccess bool
 	receivedFailure bool
 }
 
-type hostCmdPing struct{}
+type lstreamCmdPing struct{}
 
-type hostCmdCtxPing struct {
+type lstreamCmdCtxPing struct {
 }
 
-type hostCmdQueryLogs struct {
+type lstreamCmdQueryLogs struct {
 	maxNumLines int
 
 	from time.Time
@@ -56,7 +56,7 @@ type hostCmdQueryLogs struct {
 	linesUntil int
 }
 
-type hostCmdCtxQueryLogs struct {
+type lstreamCmdCtxQueryLogs struct {
 	Resp *LogResp
 
 	logfiles []logfileWithStartingLinenumber

@@ -835,7 +835,7 @@ func (rdv *RowDetailsView) GetQueryFull() QueryFull {
 	return QueryFull{
 		Time:        rdv.queryFull.Time,
 		Query:       rdv.queryFull.Query,
-		HostsFilter: rdv.queryFull.HostsFilter,
+		LStreams: rdv.queryFull.LStreams,
 
 		SelectQuery: rdv.sq.Marshal(),
 	}

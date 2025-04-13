@@ -69,26 +69,26 @@ const syslogTimeLayout = "Jan _2 15:04:05"
 //go:embed nerdlog_query.sh
 var nerdlogQuerySh string
 
-type HostAgent struct {
-	params HostAgentParams
+type LStreamClient struct {
+	params LStreamClientParams
 
-	connectResCh chan hostConnectRes
-	enqueueCmdCh chan hostCmd
+	connectResCh chan lstreamConnRes
+	enqueueCmdCh chan lstreamCmd
 
-	// timezone is a string received from the host
+	// timezone is a string received from the logstream
 	timezone string
 	// location is loaded based on the timezone. If failed, it'll be UTC.
 	location *time.Location
 
 	numConnAttempts int
 
-	state     HostAgentState
+	state     LStreamClientState
 	busyStage BusyStage
 
 	conn *connCtx
 
-	cmdQueue   []hostCmd
-	curCmdCtx  *hostCmdCtx
+	cmdQueue   []lstreamCmd
+	curCmdCtx  *lstreamCmdCtx
 	nextCmdIdx int
 
 	// disconnectReqCh is sent to when Close is called.
@@ -104,13 +104,13 @@ type HostAgent struct {
 // disconnectReq represents a request to abort whatever connection we have,
 // and either teardown or reconnect again.
 type disconnectReq struct {
-	// If teardown is true, it means the HostAgent should completely stop. Otherwise,
+	// If teardown is true, it means the LStreamClient should completely stop. Otherwise,
 	// after disconnecting, it will reconnect.
 	teardown bool
 
-	// If changeName is non-empty, the HostAgent's Name will be updated;
+	// If changeName is non-empty, the LStreamClient's Name will be updated;
 	// it's useful for teardowns, to distinguish from potentially-existing
-	// another HostAgent with the same (old) name.
+	// another LStreamClient with the same (old) name.
 	changeName string
 }
 
@@ -125,7 +125,7 @@ type connCtx struct {
 
 type BusyStage struct {
 	// Num is just a stage number. Its meaning depends on the kind of command the
-	// host is executing, but a general rule is that this number starts from 1
+	// logstream is executing, but a general rule is that this number starts from 1
 	// and then increases, as the process goes on, so we can compare different
 	// nodes and e.g. find the slowest one.
 	Num int
@@ -158,28 +158,28 @@ func (c *connCtx) getStderrLinesCh() chan string {
 	return c.stderrLinesCh
 }
 
-// HostAgentUpdate represents an update from host agent. Name is always
-// populated and it's the host's name, and from all the other fields, exactly
+// LStreamClientUpdate represents an update from logstream client. Name is always
+// populated and it's the logstream's name, and from all the other fields, exactly
 // one field must be non-nil.
-type HostAgentUpdate struct {
+type LStreamClientUpdate struct {
 	Name string
 
-	State *HostAgentUpdateState
+	State *LStreamClientUpdateState
 
 	ConnDetails *ConnDetails
 	BusyStage   *BusyStage
 
-	// If TornDown is true, it means it's the last update from that agent.
+	// If TornDown is true, it means it's the last update from that client.
 	TornDown bool
 }
 
-type HostAgentUpdateState struct {
-	OldState HostAgentState
-	NewState HostAgentState
+type LStreamClientUpdateState struct {
+	OldState LStreamClientState
+	NewState LStreamClientState
 }
 
-type HostAgentParams struct {
-	Config ConfigLogSubject
+type LStreamClientParams struct {
+	Config ConfigLogStreams
 
 	Logger *log.Logger
 
@@ -190,144 +190,144 @@ type HostAgentParams struct {
 	// files when using the tool concurrently on the same nodes.
 	ClientID string
 
-	UpdatesCh chan<- *HostAgentUpdate
+	UpdatesCh chan<- *LStreamClientUpdate
 }
 
-func NewHostAgent(params HostAgentParams) *HostAgent {
+func NewLStreamClient(params LStreamClientParams) *LStreamClient {
 	params.Logger = params.Logger.WithNamespaceAppended(
 		fmt.Sprintf("LSClient_%s", params.Config.Name),
 	)
 
-	ha := &HostAgent{
+	lsc := &LStreamClient{
 		params: params,
 
 		timezone: "UTC",
 		location: time.UTC,
 
-		state:        HostAgentStateDisconnected,
-		enqueueCmdCh: make(chan hostCmd, 32),
+		state:        LStreamClientStateDisconnected,
+		enqueueCmdCh: make(chan lstreamCmd, 32),
 
 		disconnectReqCh:              make(chan disconnectReq, 1),
 		disconnectedBeforeTeardownCh: make(chan struct{}),
 	}
 
-	//debugFile, _ := os.Create("/tmp/host_agent_debug.log")
-	//ha.debugFile = debugFile
+	//debugFile, _ := os.Create("/tmp/lsclient_debug.log")
+	//lsc.debugFile = debugFile
 
-	ha.changeState(HostAgentStateConnecting)
+	lsc.changeState(LStreamClientStateConnecting)
 
-	go ha.run()
+	go lsc.run()
 
-	return ha
+	return lsc
 }
 
-func (ha *HostAgent) SendFoo() {
+func (lsc *LStreamClient) SendFoo() {
 }
 
-type HostAgentState string
+type LStreamClientState string
 
 const (
-	HostAgentStateDisconnected  HostAgentState = "disconnected"
-	HostAgentStateConnecting    HostAgentState = "connecting"
-	HostAgentStateDisconnecting HostAgentState = "disconnecting"
-	HostAgentStateConnectedIdle HostAgentState = "connected_idle"
-	HostAgentStateConnectedBusy HostAgentState = "connected_busy"
+	LStreamClientStateDisconnected  LStreamClientState = "disconnected"
+	LStreamClientStateConnecting    LStreamClientState = "connecting"
+	LStreamClientStateDisconnecting LStreamClientState = "disconnecting"
+	LStreamClientStateConnectedIdle LStreamClientState = "connected_idle"
+	LStreamClientStateConnectedBusy LStreamClientState = "connected_busy"
 )
 
-func isStateConnected(state HostAgentState) bool {
-	return state == HostAgentStateConnectedIdle || state == HostAgentStateConnectedBusy
+func isStateConnected(state LStreamClientState) bool {
+	return state == LStreamClientStateConnectedIdle || state == LStreamClientStateConnectedBusy
 }
 
-func (ha *HostAgent) changeState(newState HostAgentState) {
-	oldState := ha.state
+func (lsc *LStreamClient) changeState(newState LStreamClientState) {
+	oldState := lsc.state
 
 	// Properly leave old state
 
 	if isStateConnected(oldState) && !isStateConnected(newState) {
 		// Initiate disconnect
-		ha.conn.stdinBuf.Close()
-		ha.conn.sshSession.Close()
-		ha.conn.sshClient.Close()
+		lsc.conn.stdinBuf.Close()
+		lsc.conn.sshSession.Close()
+		lsc.conn.sshClient.Close()
 	}
 
 	switch oldState {
-	case HostAgentStateConnecting:
-		ha.connectResCh = nil
-	case HostAgentStateConnectedBusy:
-		ha.curCmdCtx = nil
-		ha.busyStage = BusyStage{}
+	case LStreamClientStateConnecting:
+		lsc.connectResCh = nil
+	case LStreamClientStateConnectedBusy:
+		lsc.curCmdCtx = nil
+		lsc.busyStage = BusyStage{}
 	}
 
 	// Enter new state
 
-	ha.state = newState
-	ha.sendUpdate(&HostAgentUpdate{
-		State: &HostAgentUpdateState{
+	lsc.state = newState
+	lsc.sendUpdate(&LStreamClientUpdate{
+		State: &LStreamClientUpdateState{
 			OldState: oldState,
 			NewState: newState,
 		},
 	})
 
-	switch ha.state {
-	case HostAgentStateConnecting:
-		ha.numConnAttempts++
-		ha.connectResCh = make(chan hostConnectRes, 1)
-		go connectToLogSubj(ha.params.Logger, ha.params.Config, ha.connectResCh)
+	switch lsc.state {
+	case LStreamClientStateConnecting:
+		lsc.numConnAttempts++
+		lsc.connectResCh = make(chan lstreamConnRes, 1)
+		go connectToLogStream(lsc.params.Logger, lsc.params.Config, lsc.connectResCh)
 
-	case HostAgentStateConnectedIdle:
-		if len(ha.cmdQueue) > 0 {
-			nextCmd := ha.cmdQueue[0]
-			ha.cmdQueue = ha.cmdQueue[1:]
+	case LStreamClientStateConnectedIdle:
+		if len(lsc.cmdQueue) > 0 {
+			nextCmd := lsc.cmdQueue[0]
+			lsc.cmdQueue = lsc.cmdQueue[1:]
 
-			ha.startCmd(nextCmd)
+			lsc.startCmd(nextCmd)
 		}
 
-	case HostAgentStateDisconnected:
-		ha.conn = nil
+	case LStreamClientStateDisconnected:
+		lsc.conn = nil
 	}
 }
 
-func (ha *HostAgent) sendBusyStageUpdate() {
-	upd := ha.busyStage
-	ha.sendUpdate(&HostAgentUpdate{
+func (lsc *LStreamClient) sendBusyStageUpdate() {
+	upd := lsc.busyStage
+	lsc.sendUpdate(&LStreamClientUpdate{
 		BusyStage: &upd,
 	})
 }
 
-func (ha *HostAgent) sendCmdResp(resp interface{}, err error) {
-	if ha.curCmdCtx == nil {
+func (lsc *LStreamClient) sendCmdResp(resp interface{}, err error) {
+	if lsc.curCmdCtx == nil {
 		return
 	}
 
-	if ha.curCmdCtx.cmd.respCh == nil {
+	if lsc.curCmdCtx.cmd.respCh == nil {
 		return
 	}
 
-	ha.curCmdCtx.cmd.respCh <- hostCmdRes{
-		hostname: ha.params.Config.Name,
+	lsc.curCmdCtx.cmd.respCh <- lstreamCmdRes{
+		hostname: lsc.params.Config.Name,
 		resp:     resp,
 		err:      err,
 	}
 }
 
-func (ha *HostAgent) run() {
+func (lsc *LStreamClient) run() {
 	ticker := time.NewTicker(1 * time.Second)
 	var connectAfter time.Time
 	var lastUpdTime time.Time
 
 	for {
 		select {
-		case res := <-ha.connectResCh:
+		case res := <-lsc.connectResCh:
 			if res.err != nil {
-				ha.sendUpdate(&HostAgentUpdate{
+				lsc.sendUpdate(&LStreamClientUpdate{
 					ConnDetails: &ConnDetails{
-						Err: fmt.Sprintf("attempt %d: %s", ha.numConnAttempts, res.err.Error()),
+						Err: fmt.Sprintf("attempt %d: %s", lsc.numConnAttempts, res.err.Error()),
 					},
 				})
 
-				ha.changeState(HostAgentStateDisconnected)
-				if ha.tearingDown {
-					close(ha.disconnectedBeforeTeardownCh)
+				lsc.changeState(LStreamClientStateDisconnected)
+				if lsc.tearingDown {
+					close(lsc.disconnectedBeforeTeardownCh)
 					continue
 				}
 
@@ -335,83 +335,83 @@ func (ha *HostAgent) run() {
 				continue
 			}
 
-			ha.numConnAttempts = 0
+			lsc.numConnAttempts = 0
 
 			lastUpdTime = time.Now()
 
-			ha.conn = res.conn
-			ha.changeState(HostAgentStateConnectedIdle)
+			lsc.conn = res.conn
+			lsc.changeState(LStreamClientStateConnectedIdle)
 
 			// Send bootstrap command
-			ha.startCmd(hostCmd{
-				bootstrap: &hostCmdBootstrap{},
+			lsc.startCmd(lstreamCmd{
+				bootstrap: &lstreamCmdBootstrap{},
 			})
 
-		case cmd := <-ha.enqueueCmdCh:
+		case cmd := <-lsc.enqueueCmdCh:
 			// Require a connection.
-			if !isStateConnected(ha.state) {
-				ha.sendCmdResp(nil, errors.Errorf("not connected"))
+			if !isStateConnected(lsc.state) {
+				lsc.sendCmdResp(nil, errors.Errorf("not connected"))
 				continue
 			}
 
 			// And then, depending on whether we're busy or idle, either act
 			// right away, or enqueue for later.
-			if ha.state == HostAgentStateConnectedIdle {
-				ha.startCmd(cmd)
+			if lsc.state == LStreamClientStateConnectedIdle {
+				lsc.startCmd(cmd)
 			} else {
-				ha.addCmdToQueue(cmd)
+				lsc.addCmdToQueue(cmd)
 			}
 
-		case line, ok := <-ha.conn.getStdoutLinesCh():
+		case line, ok := <-lsc.conn.getStdoutLinesCh():
 			if !ok {
 				// Stdout was just closed
-				ha.conn.stdoutLinesCh = nil
-				ha.checkIfDisconnected()
+				lsc.conn.stdoutLinesCh = nil
+				lsc.checkIfDisconnected()
 				continue
 			}
 
-			//ha.params.Logger.Verbose1f("hey line(%s): %s", ha.params.Config.Name, line)
+			//lsc.params.Logger.Verbose1f("hey line(%s): %s", lsc.params.Config.Name, line)
 
 			lastUpdTime = time.Now()
 
-			switch ha.state {
-			case HostAgentStateConnectedBusy:
-				if ha.curCmdCtx == nil {
+			switch lsc.state {
+			case LStreamClientStateConnectedBusy:
+				if lsc.curCmdCtx == nil {
 					// We received some line before printing any command, must be
 					// just standard welcome message, but we're not interested in that.
 					continue
 				}
 
 				switch {
-				case ha.curCmdCtx.cmd.bootstrap != nil:
+				case lsc.curCmdCtx.cmd.bootstrap != nil:
 					tzPrefix := "host_timezone:"
 					if strings.HasPrefix(line, tzPrefix) {
 						tz := strings.TrimPrefix(line, tzPrefix)
-						ha.params.Logger.Verbose1f("Got host timezone: %s\n", tz)
+						lsc.params.Logger.Verbose1f("Got logstream timezone: %s\n", tz)
 
 						location, err := time.LoadLocation(tz)
 						if err != nil {
-							ha.params.Logger.Errorf("Error: failed to load location %s, will use UTC\n", tz)
+							lsc.params.Logger.Errorf("Error: failed to load location %s, will use UTC\n", tz)
 							// TODO: send an update and then the receiver should show a message
 							// to the user
 						} else {
-							ha.timezone = tz
-							ha.location = location
+							lsc.timezone = tz
+							lsc.location = location
 						}
 					}
 
 					if line == "bootstrap ok" {
-						ha.curCmdCtx.bootstrapCtx.receivedSuccess = true
+						lsc.curCmdCtx.bootstrapCtx.receivedSuccess = true
 					} else if line == "bootstrap failed" {
-						ha.curCmdCtx.bootstrapCtx.receivedFailure = true
+						lsc.curCmdCtx.bootstrapCtx.receivedFailure = true
 					}
 
-				case ha.curCmdCtx.cmd.ping != nil:
+				case lsc.curCmdCtx.cmd.ping != nil:
 					// Nothing special to do
 
-				case ha.curCmdCtx.cmd.queryLogs != nil:
-					// TODO: collect all the info into ha.curCmdCtx.queryLogsCtx
-					respCtx := ha.curCmdCtx.queryLogsCtx
+				case lsc.curCmdCtx.cmd.queryLogs != nil:
+					// TODO: collect all the info into lsc.curCmdCtx.queryLogsCtx
+					respCtx := lsc.curCmdCtx.queryLogsCtx
 					resp := respCtx.Resp
 
 					switch {
@@ -423,7 +423,7 @@ func (ha *HostAgent) run() {
 							continue
 						}
 
-						t, err := time.ParseInLocation(queryLogsMstatsTimeLayout, parts[0], ha.location)
+						t, err := time.ParseInLocation(queryLogsMstatsTimeLayout, parts[0], lsc.location)
 						if err != nil {
 							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing mstats"))
 							continue
@@ -495,13 +495,13 @@ func (ha *HostAgent) run() {
 
 						origLine := msg
 
-						parseRes, err := parseLine(ha.location, msg, respCtx.lastTime)
+						parseRes, err := parseLine(lsc.location, msg, respCtx.lastTime)
 						if err != nil {
 							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing log msg: no time in %q", line))
 							continue
 						}
 
-						parseRes.ctxMap["source"] = ha.params.Config.Name
+						parseRes.ctxMap["source"] = lsc.params.Config.Name
 
 						resp.Logs = append(resp.Logs, LogMsg{
 							Time:               parseRes.time,
@@ -538,30 +538,30 @@ func (ha *HostAgent) run() {
 						continue
 					}
 
-					if rxIdx != ha.curCmdCtx.idx {
-						fmt.Printf("received unexpected index with command_done: waiting for %d, got %d\n", ha.curCmdCtx.idx, rxIdx)
+					if rxIdx != lsc.curCmdCtx.idx {
+						fmt.Printf("received unexpected index with command_done: waiting for %d, got %d\n", lsc.curCmdCtx.idx, rxIdx)
 						continue
 					}
 
 					// Current command is done
 
 					switch {
-					case ha.curCmdCtx.cmd.bootstrap != nil:
-						ha.sendCmdResp(nil, nil)
-						if ha.curCmdCtx.bootstrapCtx.receivedSuccess {
-							ha.changeState(HostAgentStateConnectedIdle)
+					case lsc.curCmdCtx.cmd.bootstrap != nil:
+						lsc.sendCmdResp(nil, nil)
+						if lsc.curCmdCtx.bootstrapCtx.receivedSuccess {
+							lsc.changeState(LStreamClientStateConnectedIdle)
 						} else {
 							// TODO: proper disconnection
 							fmt.Println("bootstrap not successful")
-							ha.changeState(HostAgentStateDisconnected)
+							lsc.changeState(LStreamClientStateDisconnected)
 						}
 
-					case ha.curCmdCtx.cmd.ping != nil:
-						ha.sendCmdResp(nil, nil)
-						ha.changeState(HostAgentStateConnectedIdle)
+					case lsc.curCmdCtx.cmd.ping != nil:
+						lsc.sendCmdResp(nil, nil)
+						lsc.changeState(LStreamClientStateConnectedIdle)
 
-					case ha.curCmdCtx.cmd.queryLogs != nil:
-						resp := ha.curCmdCtx.queryLogsCtx.Resp
+					case lsc.curCmdCtx.cmd.queryLogs != nil:
+						resp := lsc.curCmdCtx.queryLogsCtx.Resp
 
 						var err error
 						if len(resp.Errs) > 0 {
@@ -579,24 +579,24 @@ func (ha *HostAgent) run() {
 							err = errors.Errorf("%d errors: %s", len(resp.Errs), strings.Join(ss, "; "))
 						}
 
-						ha.sendCmdResp(resp, err)
-						ha.changeState(HostAgentStateConnectedIdle)
+						lsc.sendCmdResp(resp, err)
+						lsc.changeState(LStreamClientStateConnectedIdle)
 
 					default:
-						panic(fmt.Sprintf("unhandled cmd %+v", ha.curCmdCtx.cmd))
+						panic(fmt.Sprintf("unhandled cmd %+v", lsc.curCmdCtx.cmd))
 					}
 				}
 			}
 
-		case line, ok := <-ha.conn.getStderrLinesCh():
+		case line, ok := <-lsc.conn.getStderrLinesCh():
 			if !ok {
 				// Stderr was just closed
-				ha.conn.stderrLinesCh = nil
-				ha.checkIfDisconnected()
+				lsc.conn.stderrLinesCh = nil
+				lsc.checkIfDisconnected()
 				continue
 			}
 
-			ha.params.Logger.Verbose2f("hey stderr line(%s): %s", ha.params.Config.Name, line)
+			lsc.params.Logger.Verbose2f("hey stderr line(%s): %s", lsc.params.Config.Name, line)
 
 			lastUpdTime = time.Now()
 
@@ -604,8 +604,8 @@ func (ha *HostAgent) run() {
 			// stdout is gzipped and thus we don't have any partial results (we get
 			// them all at once), but for the process info, we actually want it right
 			// when it's printed by the nerdlog_query.sh.
-			switch ha.state {
-			case HostAgentStateConnectedBusy:
+			switch lsc.state {
+			case LStreamClientStateConnectedBusy:
 				switch {
 				case strings.HasPrefix(line, "p:"):
 					// "p:" means process
@@ -626,11 +626,11 @@ func (ha *HostAgent) run() {
 							continue
 						}
 
-						ha.busyStage = BusyStage{
+						lsc.busyStage = BusyStage{
 							Num:   num,
 							Title: parts[1],
 						}
-						ha.sendBusyStageUpdate()
+						lsc.sendBusyStageUpdate()
 
 					case strings.HasPrefix(processLine, "p:"):
 						// second "p:" means percentage
@@ -641,52 +641,52 @@ func (ha *HostAgent) run() {
 							continue
 						}
 
-						ha.busyStage.Percentage = percentage
-						ha.sendBusyStageUpdate()
+						lsc.busyStage.Percentage = percentage
+						lsc.sendBusyStageUpdate()
 					}
 				}
 			}
 
-			//case data := <-ha.stdinCh:
-			//ha.stdinBuf.Write([]byte(data))
+			//case data := <-lsc.stdinCh:
+			//lsc.stdinBuf.Write([]byte(data))
 			//if len(data) > 0 && data[len(data)-1] != '\n' {
-			//ha.stdinBuf.Write([]byte("\n"))
+			//lsc.stdinBuf.Write([]byte("\n"))
 			//}
 
 		case <-ticker.C:
-			if ha.state == HostAgentStateConnectedIdle && time.Since(lastUpdTime) > 40*time.Second {
-				ha.startCmd(hostCmd{
-					ping: &hostCmdPing{},
+			if lsc.state == LStreamClientStateConnectedIdle && time.Since(lastUpdTime) > 40*time.Second {
+				lsc.startCmd(lstreamCmd{
+					ping: &lstreamCmdPing{},
 				})
 			} else if !connectAfter.IsZero() {
 				connectAfter = time.Time{}
-				ha.changeState(HostAgentStateConnecting)
+				lsc.changeState(LStreamClientStateConnecting)
 			}
 
-		case req := <-ha.disconnectReqCh:
-			ha.params.Logger.Infof("Received disconnect message (teardown:%v)", req.teardown)
+		case req := <-lsc.disconnectReqCh:
+			lsc.params.Logger.Infof("Received disconnect message (teardown:%v)", req.teardown)
 
 			if req.teardown {
-				ha.tearingDown = true
+				lsc.tearingDown = true
 			}
 
 			if req.changeName != "" {
-				ha.params.Config.Name = req.changeName
+				lsc.params.Config.Name = req.changeName
 			}
 
 			// If we're already disconnected, consider ourselves torn-down already.
 			// Otherwise, initiate disconnection.
-			if ha.state == HostAgentStateDisconnected {
+			if lsc.state == LStreamClientStateDisconnected {
 				if req.teardown {
-					close(ha.disconnectedBeforeTeardownCh)
+					close(lsc.disconnectedBeforeTeardownCh)
 				}
 			} else {
-				ha.changeState(HostAgentStateDisconnecting)
+				lsc.changeState(LStreamClientStateDisconnecting)
 			}
 
-		case <-ha.disconnectedBeforeTeardownCh:
-			ha.params.Logger.Infof("Teardown completed")
-			ha.sendUpdate(&HostAgentUpdate{
+		case <-lsc.disconnectedBeforeTeardownCh:
+			lsc.params.Logger.Infof("Teardown completed")
+			lsc.sendUpdate(&LStreamClientUpdate{
 				TornDown: true,
 			})
 			return
@@ -694,21 +694,21 @@ func (ha *HostAgent) run() {
 	}
 }
 
-func (ha *HostAgent) sendUpdate(upd *HostAgentUpdate) {
-	upd.Name = ha.params.Config.Name
-	ha.params.UpdatesCh <- upd
+func (lsc *LStreamClient) sendUpdate(upd *LStreamClientUpdate) {
+	upd.Name = lsc.params.Config.Name
+	lsc.params.UpdatesCh <- upd
 }
 
-type hostConnectRes struct {
+type lstreamConnRes struct {
 	conn *connCtx
 	err  error
 }
 
-func connectToLogSubj(
+func connectToLogStream(
 	logger *log.Logger,
-	config ConfigLogSubject,
-	resCh chan<- hostConnectRes,
-) (res hostConnectRes) {
+	config ConfigLogStreams,
+	resCh chan<- lstreamConnRes,
+) (res lstreamConnRes) {
 	defer func() {
 		if res.err != nil {
 			logger.Errorf("Connection failed: %s", res.err)
@@ -1030,19 +1030,19 @@ func getScannerFunc(name string, reader io.Reader, linesCh chan<- string) func()
 	}
 }
 
-func (ha *HostAgent) EnqueueCmd(cmd hostCmd) {
-	ha.enqueueCmdCh <- cmd
+func (lsc *LStreamClient) EnqueueCmd(cmd lstreamCmd) {
+	lsc.enqueueCmdCh <- cmd
 }
 
 // Close initiates the shutdown. It doesn't wait for the shutdown to complete;
 // client code needs to wait for the corresponding event (with TornDown: true).
 //
-// If changeName is non-empty, the HostAgent's Name will be updated; it's
-// useful to distinguish this HostAgent from potentially-existing another one
+// If changeName is non-empty, the LStreamClient's Name will be updated; it's
+// useful to distinguish this LStreamClient from potentially-existing another one
 // with the same (old) name.
-func (ha *HostAgent) Close(changeName string) {
+func (lsc *LStreamClient) Close(changeName string) {
 	select {
-	case ha.disconnectReqCh <- disconnectReq{
+	case lsc.disconnectReqCh <- disconnectReq{
 		teardown:   true,
 		changeName: changeName,
 	}:
@@ -1050,44 +1050,44 @@ func (ha *HostAgent) Close(changeName string) {
 	}
 }
 
-func (ha *HostAgent) Reconnect() {
+func (lsc *LStreamClient) Reconnect() {
 	select {
-	case ha.disconnectReqCh <- disconnectReq{
+	case lsc.disconnectReqCh <- disconnectReq{
 		teardown: false,
 	}:
 	default:
 	}
 }
 
-func (ha *HostAgent) addCmdToQueue(cmd hostCmd) {
-	ha.cmdQueue = append(ha.cmdQueue, cmd)
+func (lsc *LStreamClient) addCmdToQueue(cmd lstreamCmd) {
+	lsc.cmdQueue = append(lsc.cmdQueue, cmd)
 }
 
-func (ha *HostAgent) startCmd(cmd hostCmd) {
-	cmdCtx := &hostCmdCtx{
+func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
+	cmdCtx := &lstreamCmdCtx{
 		cmd: cmd,
-		idx: ha.nextCmdIdx,
+		idx: lsc.nextCmdIdx,
 	}
 
-	ha.curCmdCtx = cmdCtx
-	ha.nextCmdIdx++
+	lsc.curCmdCtx = cmdCtx
+	lsc.nextCmdIdx++
 
 	switch {
 	case cmdCtx.cmd.bootstrap != nil:
-		cmdCtx.bootstrapCtx = &hostCmdCtxBootstrap{}
+		cmdCtx.bootstrapCtx = &lstreamCmdCtxBootstrap{}
 
-		ha.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > " + ha.getHostNerdlogQueryPath() + "\n" + nerdlogQuerySh + "EOF\n"))
-		ha.conn.stdinBuf.Write([]byte(`echo "host_timezone:$(timedatectl show --property=Timezone --value)"` + "\n"))
-		ha.conn.stdinBuf.Write([]byte("if [[ $? == 0 ]]; then echo 'bootstrap ok'; else echo 'bootstrap failed'; fi\n"))
+		lsc.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > " + lsc.getLStreamNerdlogAgentPath() + "\n" + nerdlogQuerySh + "EOF\n"))
+		lsc.conn.stdinBuf.Write([]byte(`echo "host_timezone:$(timedatectl show --property=Timezone --value)"` + "\n"))
+		lsc.conn.stdinBuf.Write([]byte("if [[ $? == 0 ]]; then echo 'bootstrap ok'; else echo 'bootstrap failed'; fi\n"))
 
 	case cmdCtx.cmd.ping != nil:
-		cmdCtx.pingCtx = &hostCmdCtxPing{}
+		cmdCtx.pingCtx = &lstreamCmdCtxPing{}
 
 		cmd := "whoami\n"
-		ha.conn.stdinBuf.Write([]byte(cmd))
+		lsc.conn.stdinBuf.Write([]byte(cmd))
 
 	case cmdCtx.cmd.queryLogs != nil:
-		cmdCtx.queryLogsCtx = &hostCmdCtxQueryLogs{
+		cmdCtx.queryLogsCtx = &lstreamCmdCtxQueryLogs{
 			Resp: &LogResp{
 				MinuteStats: map[int64]MinuteStatsItem{},
 			},
@@ -1101,19 +1101,19 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 
 		parts = append(
 			parts,
-			"bash", ha.getHostNerdlogQueryPath(),
-			"--cache-file", ha.getHostIndexFilePath(),
+			"bash", lsc.getLStreamNerdlogAgentPath(),
+			"--cache-file", lsc.getLStreamIndexFilePath(),
 			"--max-num-lines", strconv.Itoa(cmdCtx.cmd.queryLogs.maxNumLines),
-			"--logfile-last", ha.params.Config.LogFileLast,
-			"--logfile-prev", ha.params.Config.LogFilePrev,
+			"--logfile-last", lsc.params.Config.LogFileLast,
+			"--logfile-prev", lsc.params.Config.LogFilePrev,
 		)
 
 		if !cmdCtx.cmd.queryLogs.from.IsZero() {
-			parts = append(parts, "--from", cmdCtx.cmd.queryLogs.from.In(ha.location).Format(queryLogsArgsTimeLayout))
+			parts = append(parts, "--from", cmdCtx.cmd.queryLogs.from.In(lsc.location).Format(queryLogsArgsTimeLayout))
 		}
 
 		if !cmdCtx.cmd.queryLogs.to.IsZero() {
-			parts = append(parts, "--to", cmdCtx.cmd.queryLogs.to.In(ha.location).Format(queryLogsArgsTimeLayout))
+			parts = append(parts, "--to", cmdCtx.cmd.queryLogs.to.In(lsc.location).Format(queryLogsArgsTimeLayout))
 		}
 
 		if cmdCtx.cmd.queryLogs.linesUntil > 0 {
@@ -1129,36 +1129,36 @@ func (ha *HostAgent) startCmd(cmd hostCmd) {
 		}
 
 		cmd := strings.Join(parts, " ") + "\n"
-		ha.params.Logger.Verbose2f("hey command(%s): %s", ha.params.Config.Name, cmd)
+		lsc.params.Logger.Verbose2f("hey command(%s): %s", lsc.params.Config.Name, cmd)
 
-		ha.conn.stdinBuf.Write([]byte(cmd))
+		lsc.conn.stdinBuf.Write([]byte(cmd))
 
 	default:
 		panic(fmt.Sprintf("invalid command %+v", cmdCtx.cmd))
 	}
 
-	ha.conn.stdinBuf.Write([]byte(fmt.Sprintf("echo 'command_done:%d'\n", cmdCtx.idx)))
+	lsc.conn.stdinBuf.Write([]byte(fmt.Sprintf("echo 'command_done:%d'\n", cmdCtx.idx)))
 
-	ha.changeState(HostAgentStateConnectedBusy)
+	lsc.changeState(LStreamClientStateConnectedBusy)
 }
 
-// getHostNerdlogQueryPath returns the host-side path to the nerdlog_query.sh
+// getLStreamNerdlogAgentPath returns the logstream-side path to the nerdlog_query.sh
 // for the particular log stream.
-func (ha *HostAgent) getHostNerdlogQueryPath() string {
+func (lsc *LStreamClient) getLStreamNerdlogAgentPath() string {
 	return fmt.Sprintf(
 		"/tmp/nerdlog_query_%s_%s.sh",
-		ha.params.ClientID,
-		filepathToId(ha.params.Config.LogFileLast),
+		lsc.params.ClientID,
+		filepathToId(lsc.params.Config.LogFileLast),
 	)
 }
 
-// getHostIndexFilePath returns the host-side path to the index file for
+// getLStreamIndexFilePath returns the logstream-side path to the index file for
 // the particular log stream.
-func (ha *HostAgent) getHostIndexFilePath() string {
+func (lsc *LStreamClient) getLStreamIndexFilePath() string {
 	return fmt.Sprintf(
 		"/tmp/nerdlog_query_index_%s_%s",
-		ha.params.ClientID,
-		filepathToId(ha.params.Config.LogFileLast),
+		lsc.params.ClientID,
+		filepathToId(lsc.params.Config.LogFileLast),
 	)
 }
 
@@ -1169,15 +1169,15 @@ func filepathToId(p string) string {
 	return replacer.Replace(p)
 }
 
-func (ha *HostAgent) checkIfDisconnected() {
-	if ha.conn.stderrLinesCh == nil && ha.conn.stdoutLinesCh == nil {
+func (lsc *LStreamClient) checkIfDisconnected() {
+	if lsc.conn.stderrLinesCh == nil && lsc.conn.stdoutLinesCh == nil {
 		// We're fully disconnected
-		ha.changeState(HostAgentStateDisconnected)
+		lsc.changeState(LStreamClientStateDisconnected)
 
-		if ha.tearingDown {
-			close(ha.disconnectedBeforeTeardownCh)
+		if lsc.tearingDown {
+			close(lsc.disconnectedBeforeTeardownCh)
 		} else {
-			ha.changeState(HostAgentStateConnecting)
+			lsc.changeState(LStreamClientStateConnecting)
 		}
 	}
 }

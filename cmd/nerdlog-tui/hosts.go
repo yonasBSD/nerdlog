@@ -9,13 +9,13 @@ func makeConfigHosts() []core.ConfigHost {
 	return nil
 
 	//if true {
-	//hosts := []core.ConfigHost{}
+	//lstreams := []core.ConfigHost{}
 
 	//f, _ := os.Open(filepath.Join(os.Getenv("HOME"), ".ssh", "config"))
 	//cfg, _ := ssh_config.Decode(f)
-	//for _, host := range cfg.Hosts {
-	//name := host.Patterns[0].String()
-	//hostName, err := cfg.Get(name, "HostName")
+	//for _, logstream := range cfg.Hosts {
+	//name := logstream.Patterns[0].String()
+	//lstreamName, err := cfg.Get(name, "HostName")
 	//if err != nil {
 	//continue
 	//}
@@ -30,29 +30,29 @@ func makeConfigHosts() []core.ConfigHost {
 	//continue
 	//}
 
-	//if name == "" || hostName == "" || port == "" || user == "" {
+	//if name == "" || lstreamName == "" || port == "" || user == "" {
 	//continue
 	//}
 
 	//hc := core.ConfigHost{
 	//Name: name,
-	//Addr: fmt.Sprintf("%s:%s", hostName, port),
+	//Addr: fmt.Sprintf("%s:%s", lstreamName, port),
 	//User: user,
 	//}
 
-	//hosts = append(hosts, hc)
+	//lstreams = append(lstreams, hc)
 	//}
 
-	//return hosts
+	//return lstreams
 	//} else {
-	//hosts := []core.ConfigHost{}
+	//lstreams := []core.ConfigHost{}
 
-	//hosts = append(hosts, core.ConfigHost{
+	//lstreams = append(lstreams, core.ConfigHost{
 	//Name: fmt.Sprintf("dummynode-01:22"),
 	//Addr: "127.0.0.1:22",
 	//User: "ubuntu",
 	//})
 
-	//return hosts
+	//return lstreams
 	//}
 }

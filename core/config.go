@@ -10,15 +10,15 @@ import (
 )
 
 type Config struct {
-	LogSubjects map[string]ConfigLogSubject `yaml:"log_subjects"`
+	LogStreams map[string]ConfigLogStreams `yaml:"log_streams"`
 }
 
-type ConfigLogSubject struct {
+type ConfigLogStreams struct {
 	// Name is an arbitrary string which will be included in log messages as the
-	// "source" context tag; it must unique identify the ConfigLogSubject.
+	// "source" context tag; it must unique identify the ConfigLogStreams.
 	Name string `yaml:"name"`
 
-	Host     ConfigHost  `yaml:"host"`
+	Host     ConfigHost  `yaml:"logstream"`
 	Jumphost *ConfigHost `yaml:"jumphost"`
 
 	LogFileLast string `yaml:"log_file_last"`
@@ -28,7 +28,7 @@ type ConfigLogSubject struct {
 type ConfigHost struct {
 	// Addr is the address to connect to, in the same format which is used by
 	// net.Dial. To copy-paste some docs from net.Dial: the address has the form
-	// "host:port". The host must be a literal IP address, or a host name that
+	// "logstream:port". The logstream must be a literal IP address, or a logstream name that
 	// can be resolved to IP addresses. The port must be a literal port number or
 	// a service name.
 	//
@@ -43,13 +43,13 @@ func (ch *ConfigHost) Key() string {
 }
 
 // TODO: it should take a predefined config, to support globs
-func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
+func parseConfigHost(s string) ([]*ConfigLogStreams, error) {
 	parts, err := shellescape.Parse(s)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
-	var phost *parsedHost
+	var plstream *parsedLStream
 	var jhconf *ConfigHost
 	var logFileLast, logFilePrev string
 
@@ -62,7 +62,7 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 
 		switch curFlag {
 		case "-J", "--jumphost":
-			jhparsed, err := parseHostStr(part)
+			jhparsed, err := parseLStreamStr(part)
 			if err != nil {
 				return nil, errors.Annotatef(err, "parsing %q as a jumphost", part)
 			}
@@ -84,24 +84,24 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 
 		case "":
 			var err error
-			phost, err = parseHostStr(part)
+			plstream, err = parseLStreamStr(part)
 			if err != nil {
-				return nil, errors.Annotatef(err, "parsing %q as a host", part)
+				return nil, errors.Annotatef(err, "parsing %q as a logstream", part)
 			}
 
-			if len(phost.colonParts) > 0 {
-				logFileLast = phost.colonParts[0]
+			if len(plstream.colonParts) > 0 {
+				logFileLast = plstream.colonParts[0]
 			} else {
 				logFileLast = "/var/log/syslog"
 			}
 
-			if len(phost.colonParts) > 1 {
-				logFilePrev = phost.colonParts[1]
+			if len(plstream.colonParts) > 1 {
+				logFilePrev = plstream.colonParts[1]
 			} else {
 				logFilePrev = logFileLast + ".1"
 			}
 
-			if len(phost.colonParts) > 2 {
+			if len(plstream.colonParts) > 2 {
 				return nil, errors.Errorf("%q: too many colons", part)
 			}
 		default:
@@ -111,17 +111,17 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 		curFlag = ""
 	}
 
-	if phost == nil {
-		return nil, errors.Errorf("no host specified in %q", s)
+	if plstream == nil {
+		return nil, errors.Errorf("no logstream specified in %q", s)
 	}
 
-	return []*ConfigLogSubject{
+	return []*ConfigLogStreams{
 		{
 			Name: s,
 
 			Host: ConfigHost{
-				Addr: fmt.Sprintf("%s:%s", phost.hostname, phost.port),
-				User: phost.user,
+				Addr: fmt.Sprintf("%s:%s", plstream.hostname, plstream.port),
+				User: plstream.user,
 			},
 			Jumphost: jhconf,
 
@@ -131,7 +131,7 @@ func parseConfigHost(s string) ([]*ConfigLogSubject, error) {
 	}, nil
 }
 
-type parsedHost struct {
+type parsedLStream struct {
 	hostname string
 	user     string
 	port     string
@@ -139,8 +139,8 @@ type parsedHost struct {
 	colonParts []string
 }
 
-func parseHostStr(s string) (*parsedHost, error) {
-	// Parsing the host descriptor like
+func parseLStreamStr(s string) (*parsedLStream, error) {
+	// Parsing the logstream descriptor like
 	// "user@hostname:/path/to/logfile:/path/to/logfile.1"
 
 	// Parse user, if present
@@ -176,7 +176,7 @@ func parseHostStr(s string) (*parsedHost, error) {
 		colonParts = parts[2:]
 	}
 
-	return &parsedHost{
+	return &parsedLStream{
 		hostname:   parts[0],
 		user:       username,
 		port:       port,
@@ -210,10 +210,10 @@ func parseHostStr(s string) (*parsedHost, error) {
 	//}
 
 	//if len(parts) > 4 {
-	//return nil, errors.Errorf("malformed host descriptor: too many colons")
+	//return nil, errors.Errorf("malformed logstream descriptor: too many colons")
 	//}
 
-	//return &parsedHost{
+	//return &parsedLStream{
 	//addr:        fmt.Sprintf("%s:%s", hostname, port),
 	//user:        username,
 	//logFileLast: logFileLast,

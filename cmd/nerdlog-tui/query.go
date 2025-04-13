@@ -5,10 +5,10 @@ import (
 	"github.com/juju/errors"
 )
 
-// QueryFull contains everything that defines a query: the hosts filter, time range,
+// QueryFull contains everything that defines a query: the logstreams filter, time range,
 // and the query to filter logs.
 type QueryFull struct {
-	HostsFilter string
+	LStreams string
 	Time        string
 	Query       string
 
@@ -20,7 +20,7 @@ var execName = "nerdlog"
 // numShellParts defines how many shell parts should be in the
 // shell-command-marshalled form. It looks like this:
 //
-//	nerdlog --hosts <value> --time <value> --query <value>
+//	nerdlog --lstreams <value> --time <value> --query <value>
 //
 // Therefore, there are 7 parts.
 var numShellParts = 1 + 3*2
@@ -47,7 +47,7 @@ func (qf *QueryFull) MarshalShellCmdParts() []string {
 	parts := make([]string, 0, numShellParts)
 
 	parts = append(parts, execName)
-	parts = append(parts, "--hosts", qf.HostsFilter)
+	parts = append(parts, "--lstreams", qf.LStreams)
 	parts = append(parts, "--time", qf.Time)
 	parts = append(parts, "--query", qf.Query)
 	parts = append(parts, "--selquery", string(qf.SelectQuery))
@@ -56,7 +56,7 @@ func (qf *QueryFull) MarshalShellCmdParts() []string {
 }
 
 // UnmarshalShellCmdParts unmarshals shell command parts to the receiver
-// QueryFull.  Note that no checks are performed as to whether HostsFilter,
+// QueryFull.  Note that no checks are performed as to whether LStreams,
 // Time or Query are actually valid strings.
 func (qf *QueryFull) UnmarshalShellCmdParts(parts []string) error {
 	if len(parts) < numShellParts {
@@ -71,13 +71,13 @@ func (qf *QueryFull) UnmarshalShellCmdParts(parts []string) error {
 
 	parts = parts[1:]
 
-	var hostsSet, timeSet, querySet, selectQuerySet bool
+	var lstreamsSet, timeSet, querySet, selectQuerySet bool
 
 	for ; len(parts) >= 2; parts = parts[2:] {
 		switch parts[0] {
-		case "--hosts":
-			qf.HostsFilter = parts[1]
-			hostsSet = true
+		case "--lstreams":
+			qf.LStreams = parts[1]
+			lstreamsSet = true
 		case "--time":
 			qf.Time = parts[1]
 			timeSet = true
@@ -90,8 +90,8 @@ func (qf *QueryFull) UnmarshalShellCmdParts(parts []string) error {
 		}
 	}
 
-	if !hostsSet {
-		return errors.Errorf("--hosts is missing")
+	if !lstreamsSet {
+		return errors.Errorf("--lstreams is missing")
 	}
 
 	if !timeSet {

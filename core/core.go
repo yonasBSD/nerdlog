@@ -27,7 +27,7 @@ type QueryLogsParams struct {
 	DontAddHistoryItem bool
 }
 
-// LogResp is a log response from a single host
+// LogResp is a log response from a single logstream
 type LogResp struct {
 	// MinuteStats is a map from the unix timestamp (in seconds) to the stats for
 	// the minute starting at this timestamp.
@@ -42,7 +42,7 @@ type LogResp struct {
 	Errs []error
 }
 
-// LogRespTotal is a log response from a HostsManager. It's merged from
+// LogRespTotal is a log response from a LStreamsManager. It's merged from
 // multiple LogResp's and it also contains some extra field(s), e.g. LoadedEarlier.
 type LogRespTotal struct {
 	// If LoadedEarlier is true, it means we've just loaded more logs instead of replacing

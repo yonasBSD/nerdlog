@@ -42,7 +42,7 @@ type MainViewParams struct {
 	// logs.
 	OnLogQuery OnLogQueryCallback
 
-	OnHostsFilterChange OnHostsFilterChange
+	OnLStreamsChange OnLStreamsChange
 
 	OnDisconnectRequest OnDisconnectRequest
 	OnReconnectRequest  OnReconnectRequest
@@ -88,7 +88,7 @@ type MainView struct {
 	statusLineLeft  *tview.TextView
 	statusLineRight *tview.TextView
 
-	hostsFilter string
+	lstreamsSpec string
 
 	// from, to represent the selected time range
 	from, to TimeOrDur
@@ -124,12 +124,12 @@ type MainView struct {
 	// there, we'll call doQuery().
 	doQueryParamsOnceConnected *doQueryParams
 
-	// If sendHostsFilterChangeOnNextQuery, then the next time the user wants to
+	// If sendLStreamsChangeOnNextQuery, then the next time the user wants to
 	// make a query (just the awk query, without the timeframe and logstreams),
 	// we'll first update the logstreams, and only then make the query.
-	sendHostsFilterChangeOnNextQuery bool
+	sendLStreamsChangeOnNextQuery bool
 
-	curHMState *core.HostsManagerState
+	curHMState *core.LStreamsManagerState
 	curLogResp *core.LogRespTotal
 	// statsFrom and statsTo represent the first and last element present
 	// in curLogResp.MinuteStats. Note that this range might be smaller than
@@ -152,7 +152,7 @@ type CmdOpts struct {
 }
 
 type OnLogQueryCallback func(params core.QueryLogsParams)
-type OnHostsFilterChange func(hostsFilter string) error
+type OnLStreamsChange func(lstreamsSpec string) error
 type OnDisconnectRequest func()
 type OnReconnectRequest func()
 type OnCmdCallback func(cmd string, opts CmdOpts)
@@ -223,23 +223,23 @@ func NewMainView(params *MainViewParams) *MainView {
 			mv.setQuery(mv.queryInput.GetText())
 			mv.bumpTimeRange(false)
 
-			if mv.sendHostsFilterChangeOnNextQuery {
+			if mv.sendLStreamsChangeOnNextQuery {
 				// Before making a query, we need to update the logstreams first.
 
-				mv.sendHostsFilterChangeOnNextQuery = false
-				if err := mv.params.OnHostsFilterChange(mv.hostsFilter); err != nil {
-					// It shouldn't happen really, since if we already had some mv.hostsFilter,
+				mv.sendLStreamsChangeOnNextQuery = false
+				if err := mv.params.OnLStreamsChange(mv.lstreamsSpec); err != nil {
+					// It shouldn't happen really, since if we already had some mv.lstreamsSpec,
 					// it means it must have already passed the checks and can't be invalid,
 					// but just in case, handle this error as well.
 					mv.showMessagebox(
 						"err",
-						"Broken hosts filter",
-						fmt.Sprintf("Resetting the hosts filter, since the current one '%q' is wrong: %s", mv.hostsFilter, err.Error()),
+						"Broken logstreams filter",
+						fmt.Sprintf("Resetting the logstreams filter, since the current one '%q' is wrong: %s", mv.lstreamsSpec, err.Error()),
 						&MessageboxParams{
 							BackgroundColor: tcell.ColorDarkRed,
 						},
 					)
-					mv.setHostsFilter("")
+					mv.setLStreams("")
 					return nil
 				}
 
@@ -876,15 +876,15 @@ func (mv *MainView) applyQueryEditData(data QueryFull, dqp doQueryParams) error 
 	mv.setQuery(data.Query)
 	mv.setTimeRange(ftr.From, ftr.To)
 
-	mv.params.Logger.Infof("Applying hosts: %s", data.HostsFilter)
-	err = mv.params.OnHostsFilterChange(data.HostsFilter)
+	mv.params.Logger.Infof("Applying lstreams: %s", data.LStreams)
+	err = mv.params.OnLStreamsChange(data.LStreams)
 	if err != nil {
-		return errors.Annotate(err, "hosts")
+		return errors.Annotate(err, "lstreams")
 	}
 
 	mv.setSelectQuery(sqp)
 
-	mv.setHostsFilter(data.HostsFilter)
+	mv.setLStreams(data.LStreams)
 
 	mv.bumpStatusLineLeft()
 
@@ -892,11 +892,11 @@ func (mv *MainView) applyQueryEditData(data QueryFull, dqp doQueryParams) error 
 
 	// We don't actually initiate a query here, but we set this
 	// doQueryParamsOnceConnected flag, so that next time we receive a status
-	// update (which will happen since we called OnHostsFilterChange above), if
+	// update (which will happen since we called OnLStreamsChange above), if
 	// Connected is true there, we'll do the query.
 	mv.doQueryParamsOnceConnected = &dqp
 
-	mv.sendHostsFilterChangeOnNextQuery = false
+	mv.sendLStreamsChangeOnNextQuery = false
 
 	return nil
 }
@@ -905,20 +905,20 @@ func (mv *MainView) GetUIPrimitive() tview.Primitive {
 	return mv.rootPages
 }
 
-func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
-	mv.params.Logger.Verbose1f("Applying HM state: %+v", hmState)
+func (mv *MainView) applyHMState(lsmanState *core.LStreamsManagerState) {
+	mv.params.Logger.Verbose1f("Applying HM state: %+v", lsmanState)
 
-	mv.curHMState = hmState
+	mv.curHMState = lsmanState
 	var overlayMsg string
 
-	if !mv.curHMState.Connected && !mv.curHMState.NoMatchingHosts {
+	if !mv.curHMState.Connected && !mv.curHMState.NoMatchingLStreams {
 		var sb strings.Builder
 
-		sb.WriteString("Connecting to hosts...")
+		sb.WriteString("Connecting to lstreams...")
 
-		for host, connDetails := range hmState.ConnDetailsByHost {
+		for logstream, connDetails := range lsmanState.ConnDetailsByLStream {
 			sb.WriteString("\n")
-			sb.WriteString(fmt.Sprintf("%s: %s", host, connDetails.Err))
+			sb.WriteString(fmt.Sprintf("%s: %s", logstream, connDetails.Err))
 		}
 
 		overlayMsg = sb.String()
@@ -927,17 +927,17 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 
 		sb.WriteString("Updating search results...")
 
-		// If we have info about hosts busy stage, show the slowest one.
-		if len(hmState.BusyStageByHost) > 0 {
-			type hostWBusyStage struct {
-				host  string
+		// If we have info about lstreams busy stage, show the slowest one.
+		if len(lsmanState.BusyStageByLStream) > 0 {
+			type lstreamWBusyStage struct {
+				logstream  string
 				stage core.BusyStage
 			}
 
-			vs := make([]hostWBusyStage, 0, len(hmState.BusyStageByHost))
-			for host, stage := range hmState.BusyStageByHost {
-				vs = append(vs, hostWBusyStage{
-					host:  host,
+			vs := make([]lstreamWBusyStage, 0, len(lsmanState.BusyStageByLStream))
+			for logstream, stage := range lsmanState.BusyStageByLStream {
+				vs = append(vs, lstreamWBusyStage{
+					logstream:  logstream,
 					stage: stage,
 				})
 			}
@@ -951,7 +951,7 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 					return vs[i].stage.Percentage < vs[j].stage.Percentage
 				}
 
-				return vs[i].host < vs[j].host
+				return vs[i].logstream < vs[j].logstream
 			})
 
 			slowest := vs[0]
@@ -962,7 +962,7 @@ func (mv *MainView) applyHMState(hmState *core.HostsManagerState) {
 				sb.WriteString(fmt.Sprintf(" (%d%%)", slowest.stage.Percentage))
 			}
 
-			sb.WriteString(" - " + slowest.host)
+			sb.WriteString(" - " + slowest.logstream)
 			sb.WriteString("[-]")
 		}
 
@@ -1272,23 +1272,23 @@ func (mv *MainView) formatLogs() {
 func (mv *MainView) bumpStatusLineLeft() {
 	sb := strings.Builder{}
 
-	hmState := mv.curHMState
-	if hmState == nil {
+	lsmanState := mv.curHMState
+	if lsmanState == nil {
 		// We haven't received a single HMState update, so just use the zero value.
-		hmState = &core.HostsManagerState{}
+		lsmanState = &core.LStreamsManagerState{}
 	}
 
-	if !hmState.Connected && !hmState.NoMatchingHosts {
+	if !lsmanState.Connected && !lsmanState.NoMatchingLStreams {
 		sb.WriteString("conn ")
-	} else if hmState.Busy {
+	} else if lsmanState.Busy {
 		sb.WriteString("busy ")
 	} else {
 		sb.WriteString("idle ")
 	}
 
-	numIdle := len(hmState.HostsByState[core.HostAgentStateConnectedIdle])
-	numBusy := len(hmState.HostsByState[core.HostAgentStateConnectedBusy])
-	numOther := hmState.NumHosts - numIdle - numBusy
+	numIdle := len(lsmanState.LStreamsByState[core.LStreamClientStateConnectedIdle])
+	numBusy := len(lsmanState.LStreamsByState[core.LStreamClientStateConnectedBusy])
+	numOther := lsmanState.NumLStreams - numIdle - numBusy
 
 	sb.WriteString(getStatuslineNumStr("🖳", numIdle, "green"))
 	sb.WriteString(" ")
@@ -1297,7 +1297,7 @@ func (mv *MainView) bumpStatusLineLeft() {
 	sb.WriteString(getStatuslineNumStr("🖳", numOther, "red"))
 
 	sb.WriteString(" | ")
-	sb.WriteString(mv.hostsFilter)
+	sb.WriteString(mv.lstreamsSpec)
 
 	mv.statusLineLeft.SetText(sb.String())
 }
@@ -1505,8 +1505,8 @@ func (mv *MainView) SetTimeRange(from, to TimeOrDur) {
 	})
 }
 
-func (mv *MainView) setHostsFilter(s string) {
-	mv.hostsFilter = s
+func (mv *MainView) setLStreams(s string) {
+	mv.lstreamsSpec = s
 }
 
 type doQueryParams struct {
@@ -1685,7 +1685,7 @@ func (mv *MainView) getQueryFull() QueryFull {
 	return QueryFull{
 		Time:        ftr.String(),
 		Query:       mv.query,
-		HostsFilter: mv.hostsFilter,
+		LStreams: mv.lstreamsSpec,
 		SelectQuery: mv.selectQuery.Marshal(),
 	}
 }
@@ -1724,7 +1724,7 @@ func (mv *MainView) openQueryEditView() {
 
 func (mv *MainView) disconnect() {
 	mv.curLogResp = nil
-	mv.sendHostsFilterChangeOnNextQuery = true
+	mv.sendLStreamsChangeOnNextQuery = true
 	mv.params.OnDisconnectRequest()
 }
 
@@ -1763,7 +1763,7 @@ func (mv *MainView) handleQueryError(err error) {
 
 						// TODO: would be useful to implement force-override right from this dialog,
 						// but keep in mind it should work both when we just send a new query,
-						// and when the "full" query changes (with hosts, timeline etc).
+						// and when the "full" query changes (with lstreams, timeline etc).
 						// It's non-essential though, so for now I ignore it.
 
 						//case "Override":
@@ -1789,7 +1789,7 @@ func (mv *MainView) handleQueryError(err error) {
 // reconnect initiates reconnection to all the log streams. If repeatQuery
 // is true, then after reconnecting, the current query will be repeated, too.
 func (mv *MainView) reconnect(repeatQuery bool) {
-	mv.sendHostsFilterChangeOnNextQuery = false
+	mv.sendLStreamsChangeOnNextQuery = false
 
 	if repeatQuery {
 		mv.doQueryParamsOnceConnected = &doQueryParams{}

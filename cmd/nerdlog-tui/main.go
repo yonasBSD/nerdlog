@@ -14,7 +14,7 @@ const inputTimeLayoutMMHH = "15:04"
 
 var (
 	flagTime        = pflag.StringP("time", "t", "", "Time range in the same format as accepted by the UI. Examples: '1h', 'Mar27 12:00'")
-	flagHosts       = pflag.StringP("hosts", "h", "", "Hosts to connect to, as comma-separated glob patterns, e.g. 'foo-*,bar-*'")
+	flagLStreams       = pflag.StringP("lstreams", "h", "", "Logstreams to connect to, as comma-separated glob patterns, e.g. 'foo-*,bar-*'")
 	flagQuery       = pflag.StringP("query", "q", "", "Initial query to execute, using awk syntax")
 	flagSelectQuery = pflag.StringP("selquery", "s", "", "SELECT-like query to specify which fields to show, like 'time STICKY, message, source, level_name AS level, *'")
 )
@@ -23,7 +23,7 @@ func main() {
 	pflag.Parse()
 
 	initialTime := "-1h"
-	initialHosts := "localhost"
+	initialLStreams := "localhost"
 	initialQuery := ""
 	initialSelectQuery := DefaultSelectQuery
 	connectRightAway := false
@@ -33,8 +33,8 @@ func main() {
 		connectRightAway = true
 	}
 
-	if *flagHosts != "" {
-		initialHosts = *flagHosts
+	if *flagLStreams != "" {
+		initialLStreams = *flagLStreams
 		connectRightAway = true
 	}
 
@@ -51,7 +51,7 @@ func main() {
 	initialQueryData := QueryFull{
 		Time:        initialTime,
 		Query:       initialQuery,
-		HostsFilter: initialHosts,
+		LStreams: initialLStreams,
 		SelectQuery: initialSelectQuery,
 	}
 

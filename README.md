@@ -95,7 +95,7 @@ UI consists of a few key elements:
 - Query input: just a filter for logs (awk syntax). Empty filter obviously means no filter, and some examples of valid filters are:
   - Simple regexp: `/foo bar/`
   - Regexps with complex conditions: `( /foo bar/ || /other stuff/ ) && !/baz/`
-- Edit button: opens a complete query edit form: it contains the same query input as in the main window, but it also has inputs for hosts filter and time range. The form itself has enough details described right there so you won't have problems using it:
+- Edit button: opens a complete query edit form: it contains the same query input as in the main window, but it also has inputs for logstreams filter and time range. The form itself has enough details described right there so you won't have problems using it:
 
   ![Query Edit Form](images/nerdlog_query_edit_form.png)
 
@@ -116,10 +116,10 @@ UI consists of a few key elements:
   Every line shows the timestamp and the message, and it can also be scrolled to the right to show the context tags parsed from a log line.
 
 - Status line. On the left side, there are a few computer icons with numbers:
-  - Green: number of hosts which we're fully connected to and which are idle
-  - Orange: number of hosts which we're fully connected to and which are executing a query
-  - Red: number of hosts which we're trying to connect to
-  - Gray: number of hosts found in the config but filtered out by the current hosts filter
+  - Green: number of lstreams which we're fully connected to and which are idle
+  - Orange: number of lstreams which we're fully connected to and which are executing a query
+  - Red: number of lstreams which we're trying to connect to
+  - Gray: number of lstreams found in the config but filtered out by the current logstreams filter
 
   And on the right side, there are 3 numbers like `1201 / 1455 / 2948122`. The rightmost number (2948122) is the total number of log messages that matched the query and the timerange (and included in the timeline histogram above). The next number (1455) is the number of actual log lines currently loaded in the nerdlog app, and the leftmost (1201) is just the cursor within those available logs.
 
@@ -140,7 +140,7 @@ If you know Vim though, you'll feel right at home in nerdlog too since it suppor
 
 When in an input field (command line, query input, etc), you can go through input history using `Up` / `Down` or `Ctrl+P` / `Ctrl+N`.
 
-In the query edit form (the Edit button on the UI, or the `:e[dit]` command), the `Ctrl+K` / `Ctrl+J` iterates "full" query history (affecting not only one field like query, but all of them: time range, hosts filter, query).
+In the query edit form (the Edit button on the UI, or the `:e[dit]` command), the `Ctrl+K` / `Ctrl+J` iterates "full" query history (affecting not only one field like query, but all of them: time range, logstreams filter, query).
 
 ## Commands
 
@@ -148,7 +148,7 @@ In addition to the UI which is self-discoverable, there is a vim-like command li
 with a few commands supported.
 
 `:xc[lip]` Copies to clipboard a command string which would open nerdlog with
-the current hosts filter, time range and query. This can be done from the Menu too (Menu -> Copy query command)
+the current logstreams filter, time range and query. This can be done from the Menu too (Menu -> Copy query command)
 
 This is the equivalent of URL sharing for web-based logging tools: when you'd
 normally copy the graylog URL and paste it in slack somewhere, with nerdlog you
@@ -157,7 +157,7 @@ can do the same by sharing this string.
 The string would look like this:
 
 ```
-nerdlog --hosts 'localhost' --time -3h --query '/something/'
+nerdlog --lstreams 'localhost' --time -3h --query '/something/'
 ```
 
 And it can be used in either the shell (which would open a new instance of
@@ -181,7 +181,7 @@ If filename is omitted, `/tmp/last_nerdlog` is used.
 
 Currently supported options are:
 
-- `numlines`: the number of log messages loaded from every host on every
+- `numlines`: the number of log messages loaded from every logstream on every
   request. Default: 250.
 
 `:q[uit]` Quit the app.

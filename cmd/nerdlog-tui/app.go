@@ -22,24 +22,24 @@ type nerdlogApp struct {
 	// to nil.
 	tviewApp *tview.Application
 
-	hm       *core.HostsManager
+	lsman       *core.LStreamsManager
 	mainView *MainView
 
 	// cmdLineHistory is the command line history
 	cmdLineHistory *clhistory.CLHistory
 
 	// queryBLHistory is the history of queries, as shell strings like this:
-	// - nerdlog --hosts 'localhost' --time -10h --query '/something/'
-	// - nerdlog --hosts 'localhost' --time -2h --query '/something/'
+	// - nerdlog --lstreams 'localhost' --time -10h --query '/something/'
+	// - nerdlog --lstreams 'localhost' --time -2h --query '/something/'
 	queryBLHistory *blhistory.BLHistory
 	// queryCLHistory is tracking the same data as queryBLHistory (queries like
-	// nerdlog --hosts .....), but it's command-line-like, and it can be
+	// nerdlog --lstreams .....), but it's command-line-like, and it can be
 	// navigated on the query edit form.
 	queryCLHistory *clhistory.CLHistory
 
 	lastQueryFull QueryFull
 
-	// lastLogResp contains the last response from HostsManager.
+	// lastLogResp contains the last response from LStreamsManager.
 	lastLogResp *core.LogRespTotal
 }
 
@@ -114,10 +114,10 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 				}
 			}
 
-			app.hm.QueryLogs(params)
+			app.lsman.QueryLogs(params)
 		},
-		OnHostsFilterChange: func(hostsFilter string) error {
-			err := app.hm.SetHostsFilter(hostsFilter)
+		OnLStreamsChange: func(lstreamsSpec string) error {
+			err := app.lsman.SetLStreams(lstreamsSpec)
 			if err != nil {
 				return errors.Trace(err)
 			}
@@ -125,10 +125,10 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 			return nil
 		},
 		OnDisconnectRequest: func() {
-			app.hm.Disconnect()
+			app.lsman.Disconnect()
 		},
 		OnReconnectRequest: func() {
-			app.hm.Reconnect()
+			app.lsman.Reconnect()
 		},
 		OnCmd: func(cmd string, opts CmdOpts) {
 			cmdCh <- cmdWithOpts{
@@ -143,8 +143,8 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 		Logger: logger,
 	})
 
-	// NOTE: initHostsManager has to be called _after_ app.mainView is initialized.
-	app.initHostsManager("", logger)
+	// NOTE: initLStreamsManager has to be called _after_ app.mainView is initialized.
+	app.initLStreamsManager("", logger)
 
 	if !params.connectRightAway {
 		app.mainView.params.App.SetFocus(app.mainView.logsTable)
@@ -169,18 +169,18 @@ func (app *nerdlogApp) runTViewApp() error {
 	return err
 }
 
-// NOTE: initHostsManager has to be called _after_ app.mainView is initialized.
-func (app *nerdlogApp) initHostsManager(initialHosts string, logger *log.Logger) {
-	updatesCh := make(chan core.HostsManagerUpdate, 128)
+// NOTE: initLStreamsManager has to be called _after_ app.mainView is initialized.
+func (app *nerdlogApp) initLStreamsManager(initialLStreams string, logger *log.Logger) {
+	updatesCh := make(chan core.LStreamsManagerUpdate, 128)
 	go func() {
 		// We don't want to necessarily update UI on _every_ state update, since
 		// they might be getting a lot of those messages due to those progress
 		// percentage updates; so we just remember the last state, and only update
 		// the UI once we don't have more messages yet.
-		var lastState *core.HostsManagerState
+		var lastState *core.LStreamsManagerState
 		var logResps []*core.LogRespTotal // TODO: perhaps we should also only keep the last one?
 
-		handleUpdate := func(upd core.HostsManagerUpdate) {
+		handleUpdate := func(upd core.LStreamsManagerUpdate) {
 			switch {
 			case upd.State != nil:
 				lastState = upd.State
@@ -188,7 +188,7 @@ func (app *nerdlogApp) initHostsManager(initialHosts string, logger *log.Logger)
 				logResps = append(logResps, upd.LogResp)
 
 			default:
-				panic("empty hosts manager update")
+				panic("empty lstreams manager update")
 			}
 		}
 
@@ -237,11 +237,11 @@ func (app *nerdlogApp) initHostsManager(initialHosts string, logger *log.Logger)
 
 	envUser := os.Getenv("USER")
 
-	app.hm = core.NewHostsManager(core.HostsManagerParams{
+	app.lsman = core.NewLStreamsManager(core.LStreamsManagerParams{
 		Logger: logger,
 
 		PredefinedConfigHosts: makeConfigHosts(),
-		InitialHosts:          initialHosts,
+		InitialLStreams:          initialLStreams,
 
 		ClientID: envUser,
 
@@ -277,9 +277,9 @@ func (app *nerdlogApp) printMsg(msg string) {
 }
 
 func (app *nerdlogApp) Close() {
-	app.hm.Close()
+	app.lsman.Close()
 }
 
 func (app *nerdlogApp) Wait() {
-	app.hm.Wait()
+	app.lsman.Wait()
 }
