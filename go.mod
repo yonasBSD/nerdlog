@@ -6,6 +6,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
 	github.com/gobwas/glob v0.2.3
 	github.com/juju/errors v0.0.0-20220324005906-d8c5072c94ab
+	github.com/kevinburke/ssh_config v1.2.0
 	github.com/mattn/go-runewidth v0.0.13
 	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
 	github.com/rivo/uniseg v0.2.0

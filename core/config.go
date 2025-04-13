@@ -26,7 +26,10 @@ type ConfigLogStream struct {
 	// ["/var/log/syslog", "/var/log/syslog.1"]. The [0]th item is the latest log
 	// file [1]st is the previous one, etc.
 	//
-	// It must contain at least a single item, otherwise LogStream is invalid.
+	// During the final usage (after resolving everything), it must contain at
+	// least a single item, otherwise LogStream is invalid. However in the configs,
+	// it's optional (and eventually, if empty, will be set to default values by
+	// the LStreamsResolver).
 	LogFiles []string `yaml:"log_files"`
 }
 

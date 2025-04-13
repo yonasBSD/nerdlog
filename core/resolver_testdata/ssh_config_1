@@ -1,0 +1,65 @@
+Host *
+  AddKeysToAgent yes
+  IdentityFile ~/.ssh/id_rsa
+
+Host sshfoo-01
+  User user-foo-from-ssh-config-01
+  HostName host-foo-from-ssh-config-01.com
+  Port 3001
+
+Host sshfoo-02
+  User user-foo-from-ssh-config-02
+  HostName host-foo-from-ssh-config-02.com
+  Port 3002
+
+# This one must be ignored by our code
+Host sshfoo-*
+  User someuser
+  HostName somehost
+  Port 3000
+
+Host sshbar-01
+  User user-bar-from-ssh-config-01
+  HostName host-bar-from-ssh-config-01.com
+  Port 3001
+
+Host sshbar-02
+  User user-bar-from-ssh-config-02
+  HostName host-bar-from-ssh-config-02.com
+  Port 3002
+
+Host sshrealhost.com
+  User user-from-ssh-config
+  Port 4001
+
+Host sshnoport-01
+  User user-noport-from-ssh-config-01
+  HostName host-noport-from-ssh-config-01.com
+
+Host foo-01
+  User user-foo-from-ssh-config-01
+  HostName host-foo-from-ssh-config-01.com
+  Port 5001
+
+Host foo-02
+  User user-foo-from-ssh-config-02
+  HostName host-foo-from-ssh-config-02.com
+  Port 5002
+
+Host host-bar-from-nerdlog-config-01.com
+  User user-bar-from-ssh-config-01
+  Port 6001
+
+Host host-bar-from-nerdlog-config-02.com
+  User user-bar-from-ssh-config-02
+  Port 6002
+
+Host baz-01
+  User user-baz-from-ssh-config-01
+  HostName host-baz-from-ssh-config-01.com
+  Port 7001
+
+Host baz-02
+  User user-baz-from-ssh-config-02
+  HostName host-baz-from-ssh-config-02.com
+  Port 7002

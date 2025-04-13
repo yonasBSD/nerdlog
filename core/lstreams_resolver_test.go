@@ -1,10 +1,27 @@
 package core
 
 import (
+	"bytes"
+	_ "embed"
+	"fmt"
 	"testing"
 
+	"github.com/kevinburke/ssh_config"
 	"github.com/stretchr/testify/assert"
 )
+
+//go:embed resolver_testdata/ssh_config_1
+var testSSHConfig1Str []byte
+var testSSHConfig1 *ssh_config.Config
+
+func init() {
+	buf := bytes.NewBuffer(testSSHConfig1Str)
+	var err error
+	testSSHConfig1, err = ssh_config.Decode(buf)
+	if err != nil {
+		panic(fmt.Sprintf("embedded ssh_config_1 is broken: %s", err.Error()))
+	}
+}
 
 var testConfigLogStreams1 = ConfigLogStreams(map[string]ConfigLogStream{
 	"myhost-01": ConfigLogStream{
@@ -47,6 +64,18 @@ var testConfigLogStreams1 = ConfigLogStreams(map[string]ConfigLogStream{
 		Hostname: "host-bar-from-nerdlog-config-02.com",
 		User:     "user-bar-from-nerdlog-config-02",
 	},
+
+	"baz-01": ConfigLogStream{
+		LogFiles: []string{"/from/nerdlog/config/bazlog"},
+	},
+
+	"baz-02": ConfigLogStream{
+		LogFiles: []string{"/from/nerdlog/config/bazlog"},
+	},
+
+	"realhost.com": ConfigLogStream{
+		User: "user-from-nerdlog-config",
+	},
 })
 
 type resolverTestCase struct {
@@ -56,6 +85,7 @@ type resolverTestCase struct {
 	osUser string
 
 	configLogStreams ConfigLogStreams
+	sshConfig        *ssh_config.Config
 
 	// input is the logstream spec string that we're feeding to Resolve()
 	input string
@@ -70,6 +100,7 @@ func runResolverTestCase(t *testing.T, tc resolverTestCase) {
 	resolver := NewLStreamsResolver(LStreamsResolverParams{
 		CurOSUser:        tc.osUser,
 		ConfigLogStreams: tc.configLogStreams,
+		SSHConfig:        tc.sshConfig,
 	})
 
 	gotStreams, err := resolver.Resolve(tc.input)
@@ -618,6 +649,53 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 		},
 
 		{
+			name:   "real host, hostname is not overridden",
+			osUser: "osuser",
+
+			configLogStreams: testConfigLogStreams1,
+			input:            "realhost.com",
+
+			wantStreams: map[string]LogStream{
+				"realhost.com": {
+					Name: "realhost.com",
+					Host: ConfigHost{
+						Addr: "realhost.com:22",
+						User: "user-from-nerdlog-config",
+					},
+					LogFiles: []string{"/var/log/syslog", "/var/log/syslog.1"},
+				},
+			},
+		},
+
+		{
+			name:   "single glob, logfiles from nerdlog config",
+			osUser: "osuser",
+
+			configLogStreams: testConfigLogStreams1,
+
+			input: "baz-*",
+
+			wantStreams: map[string]LogStream{
+				"baz-01": {
+					Name: "baz-01",
+					Host: ConfigHost{
+						Addr: "baz-01:22",
+						User: "osuser",
+					},
+					LogFiles: []string{"/from/nerdlog/config/bazlog", "/from/nerdlog/config/bazlog.1"},
+				},
+				"baz-02": {
+					Name: "baz-02",
+					Host: ConfigHost{
+						Addr: "baz-02:22",
+						User: "osuser",
+					},
+					LogFiles: []string{"/from/nerdlog/config/bazlog", "/from/nerdlog/config/bazlog.1"},
+				},
+			},
+		},
+
+		{
 			name:   "glob doesn't match anything",
 			osUser: "osuser",
 
@@ -625,6 +703,267 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			input:            "mismatching-*",
 
 			wantErr: "parsing entry #1 (mismatching-*): glob \"mismatching-*\" didn't match anything (having address \"mismatching-*:22\")",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runResolverTestCase(t, tt)
+		})
+	}
+}
+
+func TestLStreamsResolverGlobOnlySSHConfig(t *testing.T) {
+	tests := []resolverTestCase{
+		{
+			name:   "single glob, everything is taken from ssh config",
+			osUser: "osuser",
+
+			sshConfig: testSSHConfig1,
+			input:     "sshfoo-*",
+
+			wantStreams: map[string]LogStream{
+				"sshfoo-01": {
+					Name: "sshfoo-01",
+					Host: ConfigHost{
+						Addr: "host-foo-from-ssh-config-01.com:3001",
+						User: "user-foo-from-ssh-config-01",
+					},
+					LogFiles: []string{"/var/log/syslog", "/var/log/syslog.1"},
+				},
+				"sshfoo-02": {
+					Name: "sshfoo-02",
+					Host: ConfigHost{
+						Addr: "host-foo-from-ssh-config-02.com:3002",
+						User: "user-foo-from-ssh-config-02",
+					},
+					LogFiles: []string{"/var/log/syslog", "/var/log/syslog.1"},
+				},
+			},
+		},
+
+		{
+			name:   "two globs, everything is taken from ssh config",
+			osUser: "osuser",
+
+			sshConfig: testSSHConfig1,
+			input:     "sshfoo-*, sshbar-*",
+
+			wantStreams: map[string]LogStream{
+				"sshfoo-01": {
+					Name: "sshfoo-01",
+					Host: ConfigHost{
+						Addr: "host-foo-from-ssh-config-01.com:3001",
+						User: "user-foo-from-ssh-config-01",
+					},
+					LogFiles: []string{"/var/log/syslog", "/var/log/syslog.1"},
+				},
+				"sshfoo-02": {
+					Name: "sshfoo-02",
+					Host: ConfigHost{
+						Addr: "host-foo-from-ssh-config-02.com:3002",
+						User: "user-foo-from-ssh-config-02",
+					},
+					LogFiles: []string{"/var/log/syslog", "/var/log/syslog.1"},
+				},
+				"sshbar-01": {
+					Name: "sshbar-01",
+					Host: ConfigHost{
+						Addr: "host-bar-from-ssh-config-01.com:3001",
+						User: "user-bar-from-ssh-config-01",
+					},
+					LogFiles: []string{"/var/log/syslog", "/var/log/syslog.1"},
+				},
+				"sshbar-02": {
+					Name: "sshbar-02",
+					Host: ConfigHost{
+						Addr: "host-bar-from-ssh-config-02.com:3002",
+						User: "user-bar-from-ssh-config-02",
+					},
+					LogFiles: []string{"/var/log/syslog", "/var/log/syslog.1"},
+				},
+			},
+		},
+
+		{
+			name:   "single glob, log file is from the input, everything else is from ssh config",
+			osUser: "osuser",
+
+			sshConfig: testSSHConfig1,
+			input:     "sshfoo-*::/var/log/auth.log",
+
+			wantStreams: map[string]LogStream{
+				"sshfoo-01::/var/log/auth.log": {
+					Name: "sshfoo-01::/var/log/auth.log",
+					Host: ConfigHost{
+						Addr: "host-foo-from-ssh-config-01.com:3001",
+						User: "user-foo-from-ssh-config-01",
+					},
+					LogFiles: []string{"/var/log/auth.log", "/var/log/auth.log.1"},
+				},
+				"sshfoo-02::/var/log/auth.log": {
+					Name: "sshfoo-02::/var/log/auth.log",
+					Host: ConfigHost{
+						Addr: "host-foo-from-ssh-config-02.com:3002",
+						User: "user-foo-from-ssh-config-02",
+					},
+					LogFiles: []string{"/var/log/auth.log", "/var/log/auth.log.1"},
+				},
+			},
+		},
+
+		{
+			name:   "single glob, exact match",
+			osUser: "osuser",
+
+			sshConfig: testSSHConfig1,
+			input:     "sshfoo-02",
+
+			wantStreams: map[string]LogStream{
+				"sshfoo-02": {
+					Name: "sshfoo-02",
+					Host: ConfigHost{
+						Addr: "host-foo-from-ssh-config-02.com:3002",
+						User: "user-foo-from-ssh-config-02",
+					},
+					LogFiles: []string{"/var/log/syslog", "/var/log/syslog.1"},
+				},
+			},
+		},
+
+		{
+			name:   "single glob, exact match, host is the same",
+			osUser: "osuser",
+
+			sshConfig: testSSHConfig1,
+			input:     "sshrealhost.com",
+
+			wantStreams: map[string]LogStream{
+				"sshrealhost.com": {
+					Name: "sshrealhost.com",
+					Host: ConfigHost{
+						Addr: "sshrealhost.com:4001",
+						User: "user-from-ssh-config",
+					},
+					LogFiles: []string{"/var/log/syslog", "/var/log/syslog.1"},
+				},
+			},
+		},
+
+		{
+			name:   "single glob, no port in ssh config",
+			osUser: "osuser",
+
+			sshConfig: testSSHConfig1,
+			input:     "sshnoport-*",
+
+			wantStreams: map[string]LogStream{
+				"sshnoport-01": {
+					Name: "sshnoport-01",
+					Host: ConfigHost{
+						Addr: "host-noport-from-ssh-config-01.com:22",
+						User: "user-noport-from-ssh-config-01",
+					},
+					LogFiles: []string{"/var/log/syslog", "/var/log/syslog.1"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runResolverTestCase(t, tt)
+		})
+	}
+}
+
+func TestLStreamsResolverGlobBothNerdlogAndSSHConfigs(t *testing.T) {
+	tests := []resolverTestCase{
+		{
+			name:   "single glob, everything is taken from nerdlog config, even though it exists in ssh too",
+			osUser: "osuser",
+
+			configLogStreams: testConfigLogStreams1,
+			sshConfig:        testSSHConfig1,
+
+			input: "foo-*",
+
+			wantStreams: map[string]LogStream{
+				"foo-01": {
+					Name: "foo-01",
+					Host: ConfigHost{
+						Addr: "host-foo-from-nerdlog-config-01.com:2001",
+						User: "user-foo-from-nerdlog-config-01",
+					},
+					LogFiles: []string{"/from/nerdlog/config/foolog", "/from/nerdlog/config/foolog.1"},
+				},
+				"foo-02": {
+					Name: "foo-02",
+					Host: ConfigHost{
+						Addr: "host-foo-from-nerdlog-config-02.com:2002",
+						User: "user-foo-from-nerdlog-config-02",
+					},
+					LogFiles: []string{"/from/nerdlog/config/foolog", "/from/nerdlog/config/foolog.1"},
+				},
+			},
+		},
+
+		{
+			name:   "single glob, taken most taken from nerdlog config, port from ssh config",
+			osUser: "osuser",
+
+			configLogStreams: testConfigLogStreams1,
+			sshConfig:        testSSHConfig1,
+
+			input: "bar-*",
+
+			wantStreams: map[string]LogStream{
+				"bar-01": {
+					Name: "bar-01",
+					Host: ConfigHost{
+						Addr: "host-bar-from-nerdlog-config-01.com:6001",
+						User: "user-bar-from-nerdlog-config-01",
+					},
+					LogFiles: []string{"/var/log/syslog", "/var/log/syslog.1"},
+				},
+				"bar-02": {
+					Name: "bar-02",
+					Host: ConfigHost{
+						Addr: "host-bar-from-nerdlog-config-02.com:6002",
+						User: "user-bar-from-nerdlog-config-02",
+					},
+					LogFiles: []string{"/var/log/syslog", "/var/log/syslog.1"},
+				},
+			},
+		},
+
+		{
+			name:   "single glob, logfiles from nerdlog config, everything else from ssh config",
+			osUser: "osuser",
+
+			configLogStreams: testConfigLogStreams1,
+			sshConfig:        testSSHConfig1,
+
+			input: "baz-*",
+
+			wantStreams: map[string]LogStream{
+				"baz-01": {
+					Name: "baz-01",
+					Host: ConfigHost{
+						Addr: "host-baz-from-ssh-config-01.com:7001",
+						User: "user-baz-from-ssh-config-01",
+					},
+					LogFiles: []string{"/from/nerdlog/config/bazlog", "/from/nerdlog/config/bazlog.1"},
+				},
+				"baz-02": {
+					Name: "baz-02",
+					Host: ConfigHost{
+						Addr: "host-baz-from-ssh-config-02.com:7002",
+						User: "user-baz-from-ssh-config-02",
+					},
+					LogFiles: []string{"/from/nerdlog/config/bazlog", "/from/nerdlog/config/bazlog.1"},
+				},
+			},
 		},
 	}
 

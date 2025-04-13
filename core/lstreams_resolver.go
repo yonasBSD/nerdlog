@@ -7,6 +7,7 @@ import (
 	"github.com/dimonomid/nerdlog/shellescape"
 	"github.com/gobwas/glob"
 	"github.com/juju/errors"
+	"github.com/kevinburke/ssh_config"
 )
 
 type LStreamsResolver struct {
@@ -18,9 +19,12 @@ type LStreamsResolverParams struct {
 	// determining the user for a particular host connection.
 	CurOSUser string
 
+	// ConfigLogStreams is the nerdlog-specific config, typically coming from
+	// ~/.config/nerdlog/logstreams.yaml.
 	ConfigLogStreams ConfigLogStreams
 
-	// TODO: add ssh config
+	// SSHConfig is the general SSH config, typically coming from ~/.ssh/config
+	SSHConfig *ssh_config.Config
 }
 
 func NewLStreamsResolver(params LStreamsResolverParams) *LStreamsResolver {
@@ -236,7 +240,15 @@ func (r *LStreamsResolver) parseLogStreamSpecEntry(s string) ([]LogStream, error
 		return nil, errors.Annotatef(err, "expanding from nerdlog config")
 	}
 
-	// TODO: expand from ssh config as well
+	lsConfigFromSSHConfig, err := sshConfigToLSConfig(r.params.SSHConfig)
+	if err != nil {
+		return nil, errors.Annotatef(err, "parsing ssh config")
+	}
+
+	ret, err = expandFromLogStreamsConfig(ret, lsConfigFromSSHConfig)
+	if err != nil {
+		return nil, errors.Annotatef(err, "expanding from ssh config")
+	}
 
 	ret, err = setLogStreamsDefaults(ret, r.params.CurOSUser)
 	if err != nil {
@@ -316,6 +328,11 @@ func expandFromLogStreamsConfig(
 	logStreams []LogStream,
 	lsConfig ConfigLogStreams,
 ) ([]LogStream, error) {
+	// If there's no config, cut it short.
+	if lsConfig == nil {
+		return logStreams, nil
+	}
+
 	var ret []LogStream
 
 	for i, ls := range logStreams {
@@ -353,17 +370,15 @@ func expandFromLogStreamsConfig(
 			addrCopy := addr
 
 			// Always override the name with the key from the config.
-			//
-			// TODO: actually, if the original name is like
-			// "myhost-*:22:/var/log/syslog", ideally we want to just replace the *
-			// part... but for now not bothering about it.
-			//lsCopy.Name = matchedItem.Key
 			lsCopy.Name = strings.Replace(lsCopy.Name, globPattern, matchedItem.Key, -1)
 
-			// If the item from the config defines the host address, then use that
-			// instead of what what we've had (since what we've had might be a glob).
+			// Overwrite the host address (since what we've had might be a glob):
+			// either with the Hostname if it's specified explicitly, or if not, then
+			// with the item key.
 			if matchedItem.Hostname != "" {
 				addrCopy.host = matchedItem.Hostname
+			} else {
+				addrCopy.host = matchedItem.Key
 			}
 
 			// Everything else we'll only override if it's not specified already.
@@ -463,4 +478,47 @@ func portFromAddr(addr string) (string, error) {
 	}
 
 	return parts[1], nil
+}
+
+func sshConfigToLSConfig(sshConfig *ssh_config.Config) (ConfigLogStreams, error) {
+	if sshConfig == nil {
+		return nil, nil
+	}
+
+	ret := make(ConfigLogStreams, len(sshConfig.Hosts))
+
+	for _, host := range sshConfig.Hosts {
+		if len(host.Patterns) == 0 {
+			continue
+		}
+
+		name := host.Patterns[0].String()
+		if name == "" {
+			continue
+		}
+
+		// If it's a pattern, ignore it
+		// (there might be valid use cases where we'd want to use them, but
+		// not bothering for now)
+		if strings.ContainsAny(name, "*?[]") {
+			continue
+		}
+
+		hostname, _ := sshConfig.Get(name, "HostName")
+		port, _ := sshConfig.Get(name, "Port")
+		user, _ := sshConfig.Get(name, "User")
+
+		if hostname == "" && port == "" && user == "" {
+			// We can't get anything useful out of this entry anyway, so don't add it
+			continue
+		}
+
+		ret[name] = ConfigLogStream{
+			Hostname: hostname,
+			Port:     port,
+			User:     user,
+		}
+	}
+
+	return ret, nil
 }
