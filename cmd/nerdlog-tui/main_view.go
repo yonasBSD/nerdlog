@@ -968,16 +968,16 @@ func (mv *MainView) makeOverlayVisible() {
 	mv.overlayMsgViewIsMinimized = false
 	mv.overlayMsgView = mv.showMessagebox(
 		"overlay_msg", "", "", &MessageboxParams{
-			Buttons: []string{"Hide", "Cancel & Reconnect", "Cancel & Disconnect"},
+			Buttons: []string{"Hide", "Reconnect & Retry", "Disconnect & Cancel"},
 			OnButtonPressed: func(label string, idx int) {
 				switch label {
 				case "Hide":
 					mv.hideOverlayMsgBox()
 					mv.overlayMsgViewIsMinimized = true
 					mv.printOverlayMsgInCmdline(mv.overlayText)
-				case "Cancel & Reconnect":
-					mv.reconnect(false)
-				case "Cancel & Disconnect":
+				case "Reconnect & Retry":
+					mv.reconnect(true)
+				case "Disconnect & Cancel":
 					mv.disconnect()
 				}
 			},
