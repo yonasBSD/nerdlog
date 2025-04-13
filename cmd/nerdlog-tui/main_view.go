@@ -124,6 +124,11 @@ type MainView struct {
 	// there, we'll call doQuery().
 	doQueryParamsOnceConnected *doQueryParams
 
+	// If sendHostsFilterChangeOnNextQuery, then the next time the user wants to
+	// make a query (just the awk query, without the timeframe and logstreams),
+	// we'll first update the logstreams, and only then make the query.
+	sendHostsFilterChangeOnNextQuery bool
+
 	curHMState *core.HostsManagerState
 	curLogResp *core.LogRespTotal
 	// statsFrom and statsTo represent the first and last element present
@@ -217,7 +222,36 @@ func NewMainView(params *MainViewParams) *MainView {
 		case tcell.KeyEnter:
 			mv.setQuery(mv.queryInput.GetText())
 			mv.bumpTimeRange(false)
-			mv.doQuery(doQueryParams{})
+
+			if mv.sendHostsFilterChangeOnNextQuery {
+				// Before making a query, we need to update the logstreams first.
+
+				mv.sendHostsFilterChangeOnNextQuery = false
+				if err := mv.params.OnHostsFilterChange(mv.hostsFilter); err != nil {
+					// It shouldn't happen really, since if we already had some mv.hostsFilter,
+					// it means it must have already passed the checks and can't be invalid,
+					// but just in case, handle this error as well.
+					mv.showMessagebox(
+						"err",
+						"Broken hosts filter",
+						fmt.Sprintf("Resetting the hosts filter, since the current one '%q' is wrong: %s", mv.hostsFilter, err.Error()),
+						&MessageboxParams{
+							BackgroundColor: tcell.ColorDarkRed,
+						},
+					)
+					mv.setHostsFilter("")
+					return nil
+				}
+
+				// Now that the logstreams are updated, schedule the query once the
+				// connections are ready.
+				mv.doQueryParamsOnceConnected = &doQueryParams{}
+			} else {
+				// All the logstreams are supposed to be ready, so just do the query
+				// right away.
+				mv.doQuery(doQueryParams{})
+			}
+
 			mv.queryInputApplyStyle()
 			return nil
 
@@ -861,6 +895,8 @@ func (mv *MainView) applyQueryEditData(data QueryFull, dqp doQueryParams) error 
 	// update (which will happen since we called OnHostsFilterChange above), if
 	// Connected is true there, we'll do the query.
 	mv.doQueryParamsOnceConnected = &dqp
+
+	mv.sendHostsFilterChangeOnNextQuery = false
 
 	return nil
 }
@@ -1687,9 +1723,8 @@ func (mv *MainView) openQueryEditView() {
 }
 
 func (mv *MainView) disconnect() {
-	//mv.doQueryParamsOnceConnected = &doQueryParams{}
 	mv.curLogResp = nil
-	mv.setHostsFilter("")
+	mv.sendHostsFilterChangeOnNextQuery = true
 	mv.params.OnDisconnectRequest()
 }
 
@@ -1753,6 +1788,8 @@ func (mv *MainView) handleQueryError(err error) {
 // reconnect initiates reconnection to all the log streams. If repeatQuery
 // is true, then after reconnecting, the current query will be repeated, too.
 func (mv *MainView) reconnect(repeatQuery bool) {
+	mv.sendHostsFilterChangeOnNextQuery = false
+
 	if repeatQuery {
 		mv.doQueryParamsOnceConnected = &doQueryParams{}
 	} else {
