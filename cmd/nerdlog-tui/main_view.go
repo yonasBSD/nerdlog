@@ -1730,7 +1730,8 @@ func (mv *MainView) disconnect() {
 
 // handleQueryError shows the right messagebox based on the error cause.
 func (mv *MainView) handleQueryError(err error) {
-	if errors.Cause(err) == core.ErrBusyWithAnotherQuery {
+	if errors.Cause(err) == core.ErrBusyWithAnotherQuery ||
+		errors.Cause(err) == core.ErrNotYetConnected {
 		// In this particular error ("busy with another query"), show a dialog
 		// with the additional button "Details", which can be used to open the
 		// details of the query in progress.
@@ -1740,7 +1741,7 @@ func (mv *MainView) handleQueryError(err error) {
 		mv.showMessagebox(
 			msgID,
 			"Log query error",
-			"Busy with another query",
+			err.Error(),
 			&MessageboxParams{
 				Buttons: []string{"OK", "Details"},
 				OnButtonPressed: func(label string, idx int) {

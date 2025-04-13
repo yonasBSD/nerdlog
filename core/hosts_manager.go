@@ -13,6 +13,7 @@ import (
 )
 
 var ErrBusyWithAnotherQuery = errors.Errorf("busy with another query")
+var ErrNotYetConnected = errors.Errorf("not connected to all hosts yet")
 
 type HostsManager struct {
 	params HostsManagerParams
@@ -313,7 +314,7 @@ func (hm *HostsManager) run() {
 
 				if hm.numNotConnected > 0 {
 					hm.sendLogRespUpdate(&LogRespTotal{
-						Errs: []error{errors.Errorf("not connected to all hosts yet")},
+						Errs: []error{ErrNotYetConnected},
 					})
 					continue
 				}
