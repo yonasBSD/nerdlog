@@ -58,8 +58,8 @@ type LStreamsManager struct {
 }
 
 type LStreamsManagerParams struct {
-	// TODO: use it
-	PredefinedConfigHosts []ConfigHost
+	// ConfigLogStreams contains nerdlog-specific config.
+	ConfigLogStreams ConfigLogStreams
 
 	Logger *log.Logger
 
@@ -116,6 +116,8 @@ func (lsman *LStreamsManager) setLStreams(lstreamsStr string) error {
 
 	resolver := NewLStreamsResolver(LStreamsResolverParams{
 		CurOSUser: u.Username,
+
+		ConfigLogStreams: lsman.params.ConfigLogStreams,
 	})
 
 	parsedLogStreams, err := resolver.Resolve(lstreamsStr)

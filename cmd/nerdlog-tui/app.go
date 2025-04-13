@@ -144,7 +144,9 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 	})
 
 	// NOTE: initLStreamsManager has to be called _after_ app.mainView is initialized.
-	app.initLStreamsManager("", logger)
+	if err := app.initLStreamsManager("", homeDir, logger); err != nil {
+		return nil, errors.Trace(err)
+	}
 
 	if !params.connectRightAway {
 		app.mainView.params.App.SetFocus(app.mainView.logsTable)
@@ -170,7 +172,11 @@ func (app *nerdlogApp) runTViewApp() error {
 }
 
 // NOTE: initLStreamsManager has to be called _after_ app.mainView is initialized.
-func (app *nerdlogApp) initLStreamsManager(initialLStreams string, logger *log.Logger) {
+func (app *nerdlogApp) initLStreamsManager(
+	initialLStreams string,
+	homeDir string,
+	logger *log.Logger,
+) error {
 	updatesCh := make(chan core.LStreamsManagerUpdate, 128)
 	go func() {
 		// We don't want to necessarily update UI on _every_ state update, since
@@ -237,16 +243,30 @@ func (app *nerdlogApp) initLStreamsManager(initialLStreams string, logger *log.L
 
 	envUser := os.Getenv("USER")
 
+	var logstreamsCfg core.ConfigLogStreams
+	logstreamsCfgPath := filepath.Join(homeDir, ".config", "nerdlog", "logstreams.yaml")
+	_, statErr := os.Stat(logstreamsCfgPath)
+	if statErr == nil {
+		appLogstreamsCfg, err := LoadLogstreamsConfigFromFile(logstreamsCfgPath)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		logstreamsCfg = appLogstreamsCfg.LogStreams
+	}
+
 	app.lsman = core.NewLStreamsManager(core.LStreamsManagerParams{
 		Logger: logger,
 
-		PredefinedConfigHosts: makeConfigHosts(),
-		InitialLStreams:       initialLStreams,
+		ConfigLogStreams: logstreamsCfg,
+		InitialLStreams:  initialLStreams,
 
 		ClientID: envUser,
 
 		UpdatesCh: updatesCh,
 	})
+
+	return nil
 }
 
 func (app *nerdlogApp) handleCmdLine(cmdCh <-chan cmdWithOpts) {
