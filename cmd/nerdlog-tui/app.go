@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/dimonomid/nerdlog/blhistory"
@@ -218,9 +220,20 @@ func (app *nerdlogApp) initLStreamsManager(
 
 						for _, logResp := range logResps {
 							if len(logResp.Errs) > 0 {
-								// TODO: include other errors too, not only the first one
-								err := logResp.Errs[0]
-								app.mainView.handleQueryError(err)
+								var totalErr error
+								if len(logResp.Errs) == 1 {
+									totalErr = logResp.Errs[0]
+								} else {
+									var sb strings.Builder
+									sb.WriteString(fmt.Sprintf("%d errors:", len(logResp.Errs)))
+									for i, curErr := range logResp.Errs {
+										sb.WriteString("\n")
+										sb.WriteString(fmt.Sprintf("%d: %s", i+1, curErr.Error()))
+									}
+									totalErr = errors.New(sb.String())
+								}
+
+								app.mainView.handleQueryError(totalErr)
 								return
 							}
 

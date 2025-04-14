@@ -125,7 +125,7 @@ type connCtx struct {
 
 type BusyStage struct {
 	// Num is just a stage number. Its meaning depends on the kind of command the
-	// logstream is executing, but a general rule is that this number starts from 1
+	// host is executing, but a general rule is that this number starts from 1
 	// and then increases, as the process goes on, so we can compare different
 	// nodes and e.g. find the slowest one.
 	Num int
@@ -543,7 +543,18 @@ func (lsc *LStreamClient) run() {
 						continue
 					}
 
-					// Current command is done
+					// Current command is done.
+
+					// NOTE: it's tricky to get the exit code from the command we just
+					// ran, because when querying logs, we're piping it to gzip, and
+					// there's no good shell-independent way to get status code from the
+					// first command in the pipe (as opposed to the last one).
+					//
+					// So here we don't even try. Instead, we have a command-dependent
+					// logic to check for errors; e.g. for querying logs, we check stderr
+					// for lines starting from "error:", and appending these to resp.Errs.
+					// And here (right below), we'll check all these errors that we
+					// accumulated.
 
 					switch {
 					case lsc.curCmdCtx.cmd.bootstrap != nil:
@@ -564,13 +575,9 @@ func (lsc *LStreamClient) run() {
 						resp := lsc.curCmdCtx.queryLogsCtx.Resp
 
 						var err error
-						if len(resp.Errs) > 0 {
-							//if len(resp.Errs) == 1 {
-							//err = resp.Errs[0]
-							//} else {
-							//err = errors.Errorf("%s and %d more errors", resp.Errs[0], len(resp.Errs))
-							//}
-
+						if len(resp.Errs) == 1 {
+							err = resp.Errs[0]
+						} else if len(resp.Errs) > 0 {
 							ss := []string{}
 							for _, e := range resp.Errs {
 								ss = append(ss, e.Error())
@@ -606,43 +613,57 @@ func (lsc *LStreamClient) run() {
 			// when it's printed by the nerdlog_agent.sh.
 			switch lsc.state {
 			case LStreamClientStateConnectedBusy:
+
 				switch {
-				case strings.HasPrefix(line, "p:"):
-					// "p:" means process
-					processLine := strings.TrimPrefix(line, "p:")
+				case lsc.curCmdCtx.cmd.queryLogs != nil:
+					respCtx := lsc.curCmdCtx.queryLogsCtx
+					resp := respCtx.Resp
 
 					switch {
-					case strings.HasPrefix(processLine, "stage:"):
-						stageLine := strings.TrimPrefix(processLine, "stage:")
-						parts := strings.Split(stageLine, ":")
-						if len(parts) < 2 {
-							fmt.Println("received malformed p:stage line:", line)
-							continue
+					case strings.HasPrefix(line, "p:"):
+						// "p:" means process
+						processLine := strings.TrimPrefix(line, "p:")
+
+						switch {
+						case strings.HasPrefix(processLine, "stage:"):
+							stageLine := strings.TrimPrefix(processLine, "stage:")
+							parts := strings.Split(stageLine, ":")
+							if len(parts) < 2 {
+								fmt.Println("received malformed p:stage line:", line)
+								continue
+							}
+
+							num, err := strconv.Atoi(parts[0])
+							if err != nil {
+								fmt.Println("received malformed p:stage line:", line)
+								continue
+							}
+
+							lsc.busyStage = BusyStage{
+								Num:   num,
+								Title: parts[1],
+							}
+							lsc.sendBusyStageUpdate()
+
+						case strings.HasPrefix(processLine, "p:"):
+							// second "p:" means percentage
+
+							percentage, err := strconv.Atoi(strings.TrimPrefix(processLine, "p:"))
+							if err != nil {
+								fmt.Println("received malformed p:p line:", line)
+								continue
+							}
+
+							lsc.busyStage.Percentage = percentage
+							lsc.sendBusyStageUpdate()
 						}
 
-						num, err := strconv.Atoi(parts[0])
-						if err != nil {
-							fmt.Println("received malformed p:stage line:", line)
-							continue
-						}
-
-						lsc.busyStage = BusyStage{
-							Num:   num,
-							Title: parts[1],
-						}
-						lsc.sendBusyStageUpdate()
-
-					case strings.HasPrefix(processLine, "p:"):
-						// second "p:" means percentage
-
-						percentage, err := strconv.Atoi(strings.TrimPrefix(processLine, "p:"))
-						if err != nil {
-							fmt.Println("received malformed p:p line:", line)
-							continue
-						}
-
-						lsc.busyStage.Percentage = percentage
-						lsc.sendBusyStageUpdate()
+					case strings.HasPrefix(line, "error:"):
+						// The agent script printed an error; it means that the whole
+						// execution will be considered failed once it's done. For now we
+						// just add the error to the resulting response.
+						errMsg := strings.TrimPrefix(line, "error:")
+						resp.Errs = append(resp.Errs, errors.New(errMsg))
 					}
 				}
 			}
