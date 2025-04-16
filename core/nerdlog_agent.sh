@@ -72,6 +72,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+set -- "${positional_args[@]}" # restore positional parameters
+
 # Either use the provided current year and month (for tests), or get the actual ones.
 if [[ "$CUR_YEAR" == "" ]]; then
   CUR_YEAR="$(date +'%Y')"
@@ -81,7 +83,28 @@ if [[ "$CUR_MONTH" == "" ]]; then
   CUR_MONTH="$(date +'%m')"
 fi
 
-set -- "${positional_args[@]}" # restore positional parameters
+command="$1"
+if [[ "${command}" == "" ]]; then
+  echo "error:command is required" 1>&2
+  exit 1
+fi
+
+case "${command}" in
+  query)
+    shift
+    # Will be handled below.
+    ;;
+
+  # TODO: some other commands like env_info
+
+  *)
+    echo "error:invalid command ${command}" 1>&2
+    exit 1
+esac
+
+# What follows is the handler for the "query" command.
+
+user_pattern=$1
 
 # Just a hack to account for cases when /var/log/syslog.1 doesn't exist:
 # create an empty file and pretend that it's an empty log file.
@@ -94,8 +117,6 @@ fi
 logfile_prev_size=$(stat -c%s $logfile_prev)
 logfile_last_size=$(stat -c%s $logfile_last)
 total_size=$((logfile_prev_size+logfile_last_size))
-
-user_pattern=$1
 
 if [[ "$refresh_index" == "1" ]]; then
   rm -f $cachefile
@@ -380,14 +401,14 @@ if [[ "$from" != "" || "$to" != "" ]]; then
       elif [[ "$from_result" == "found" ]]; then
         echo "debug:the from ${from} is found: $from_linenr ($from_bytenr)" 1>&2
         if [[ "$from_bytenr" == "" || "$from_linenr" == "" ]]; then
-          echo "error: from_result is found but from_bytenr and/or from_linenr is empty" 1>&2
+          echo "error:from_result is found but from_bytenr and/or from_linenr is empty" 1>&2
           exit 1
         fi
       elif [[ "$from_result" == "after" ]]; then
         echo "debug:the from ${from} is after the latest log we have, will return nothing" 1>&2
         is_outside_of_range=1
       else
-        echo "error: invalid from_result: $from_result" 1>&2
+        echo "error:invalid from_result: $from_result" 1>&2
         exit 1
       fi
     fi
@@ -400,14 +421,14 @@ if [[ "$from" != "" || "$to" != "" ]]; then
       elif [[ "$to_result" == "found" ]]; then
         echo "debug:the to ${to} is found: $to_linenr ($to_bytenr)" 1>&2
         if [[ "$to_bytenr" == "" || "$to_linenr" == "" ]]; then
-          echo "error: to_result is found but to_bytenr and/or to_linenr is empty" 1>&2
+          echo "error:to_result is found but to_bytenr and/or to_linenr is empty" 1>&2
           exit 1
         fi
       elif [[ "$to_result" == "before" ]]; then
         echo "debug:the to ${to} is before the first log we have, will return nothing" 1>&2
         is_outside_of_range=1
       else
-        echo "error: invalid to_result: $to_result" 1>&2
+        echo "error:invalid to_result: $to_result" 1>&2
         exit 1
       fi
     fi

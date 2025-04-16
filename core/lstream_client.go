@@ -1123,6 +1123,7 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		parts = append(
 			parts,
 			"bash", lsc.getLStreamNerdlogAgentPath(),
+			"query",
 			"--cache-file", lsc.getLStreamIndexFilePath(),
 			"--max-num-lines", strconv.Itoa(cmdCtx.cmd.queryLogs.maxNumLines),
 			"--logfile-last", lsc.params.LogStream.LogFileLast(),
