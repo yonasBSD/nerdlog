@@ -1098,8 +1098,12 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		cmdCtx.bootstrapCtx = &lstreamCmdCtxBootstrap{}
 
 		lsc.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > " + lsc.getLStreamNerdlogAgentPath() + "\n" + nerdlogAgentSh + "EOF\n"))
-		lsc.conn.stdinBuf.Write([]byte(`echo "host_timezone:$(timedatectl show --property=Timezone --value)"` + "\n"))
-		lsc.conn.stdinBuf.Write([]byte("if [[ $? == 0 ]]; then echo 'bootstrap ok'; else echo 'bootstrap failed'; fi\n"))
+		lsc.conn.stdinBuf.Write([]byte("if [[ $? != 0 ]]; then echo 'bootstrap failed'; fi\n"))
+
+		lsc.conn.stdinBuf.Write([]byte("bash " + lsc.getLStreamNerdlogAgentPath() + " host_info\n"))
+		lsc.conn.stdinBuf.Write([]byte("if [[ $? != 0 ]]; then echo 'bootstrap failed'; fi\n"))
+
+		lsc.conn.stdinBuf.Write([]byte("echo 'bootstrap ok'\n"))
 
 	case cmdCtx.cmd.ping != nil:
 		cmdCtx.pingCtx = &lstreamCmdCtxPing{}

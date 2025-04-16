@@ -95,7 +95,10 @@ case "${command}" in
     # Will be handled below.
     ;;
 
-  # TODO: some other commands like env_info
+  host_info)
+    # TODO: support the case where timedatectl is not available
+    echo "host_timezone:$(timedatectl show --property=Timezone --value)"
+    ;;
 
   *)
     echo "error:invalid command ${command}" 1>&2
