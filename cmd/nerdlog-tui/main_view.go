@@ -647,6 +647,7 @@ func NewMainView(params *MainViewParams) *MainView {
 		rdv.Show()
 	}).SetSelectionChangedFunc(func(row, column int) {
 		mv.bumpStatusLineRight()
+		mv.bumpHistogramExternalCursor(row)
 	})
 
 	/*
@@ -1321,6 +1322,23 @@ func (mv *MainView) bumpStatusLineRight() {
 	} else {
 		mv.statusLineRight.SetText("-")
 	}
+}
+
+func (mv *MainView) bumpHistogramExternalCursor(row int) {
+	if row == rowIdxLoadOlder {
+		row += 1
+	}
+
+	firstCell := mv.logsTable.GetCell(row, 0)
+	if firstCell == nil {
+		return
+	}
+
+	msg, ok := firstCell.GetReference().(core.LogMsg)
+	if !ok {
+		return
+	}
+	mv.histogram.SetExternalCursor(int(msg.Time.Unix()))
 }
 
 func newTableCellHeader(text string) *tview.TableCell {

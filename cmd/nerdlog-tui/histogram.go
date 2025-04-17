@@ -79,6 +79,8 @@ type Histogram struct {
 	selectionStart int
 
 	fldData *fieldData
+
+	externalCursor int
 }
 
 func NewHistogram() *Histogram {
@@ -145,6 +147,12 @@ func (h *Histogram) SetDataBinsSnapper(snapDataBinsInChartDot func(dataBinsInCha
 
 func (h *Histogram) SetXMarker(getXMarks func(from, to int, numChars int) []int) *Histogram {
 	h.getXMarks = getXMarks
+
+	return h
+}
+
+func (h *Histogram) SetExternalCursor(externalCursor int) *Histogram {
+	h.externalCursor = externalCursor
 
 	return h
 }
@@ -274,6 +282,12 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 		}
 		tview.Print(screen, valToPrint, totalMarkOffset, y, width-totalMarkOffset, tview.AlignLeft, tcell.ColorGreen)
 	}
+
+	// Draw a pointer to the external cursor.
+	// TODO: implement in a better way.
+	extCursorCoord := h.valToCoord(h.externalCursor)
+	extCursorOffset := extCursorCoord / 2
+	tview.Print(screen, "^", x+fldMarginLeft+extCursorOffset, y+height-1, width, tview.AlignLeft, tcell.ColorRed)
 }
 
 func (h *Histogram) getDataBinsInChartBar() int {
