@@ -615,7 +615,7 @@ func (lsc *LStreamClient) run() {
 			case LStreamClientStateConnectedBusy:
 
 				switch {
-				case lsc.curCmdCtx.cmd.queryLogs != nil:
+				case lsc.curCmdCtx != nil && lsc.curCmdCtx.cmd.queryLogs != nil:
 					respCtx := lsc.curCmdCtx.queryLogsCtx
 					resp := respCtx.Resp
 
