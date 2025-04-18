@@ -533,7 +533,7 @@ NR % 100 == 0 {
 }
 '$awk_pattern'
 {
-  stats[$1 $2 "-" substr($3,1,5)]++;
+  stats[substr($0,1,12)]++;
 
   '$lines_until_check'
 
