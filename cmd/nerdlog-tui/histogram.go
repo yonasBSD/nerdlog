@@ -80,7 +80,8 @@ type Histogram struct {
 
 	fldData *fieldData
 
-	externalCursor int
+	externalCursor        int
+	externalCursorVisible bool
 }
 
 func NewHistogram() *Histogram {
@@ -157,6 +158,18 @@ func (h *Histogram) SetExternalCursor(externalCursor int) *Histogram {
 	return h
 }
 
+func (h *Histogram) HideExternalCursor() *Histogram {
+	h.externalCursorVisible = false
+
+	return h
+}
+
+func (h *Histogram) ShowExternalCursor() *Histogram {
+	h.externalCursorVisible = true
+
+	return h
+}
+
 func (h *Histogram) Draw(screen tcell.Screen) {
 	h.Box.DrawForSubclass(screen, h)
 	x, y, width, height := h.GetInnerRect()
@@ -201,8 +214,17 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 
 	h.curMarks = h.getXMarks(h.from, h.to, width-fldMarginLeft)
 
+	// Print the ruler under the histogram.
 	sb := strings.Builder{}
 	numRunes := 0
+
+	// rulerBuffer contains the "ruler" line that we'll print right below the
+	// histogram, but without the formating directives such as [yellow] etc.
+	//
+	// We only need it to be able to get the character at a given location in
+	// that ruler; too bad tview doesn't support this functionality directly,
+	// by providing methods like tview.GetRune and/or tview.GetString.
+	rulerBuffer := RuneBuffer{}
 
 	for _, mark := range h.curMarks {
 		markStr := h.xFormat(mark)
@@ -228,7 +250,9 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 		numRunes += len(clearTviewFormatting(markStr))
 	}
 
-	tview.Print(screen, sb.String(), x+fldMarginLeft, y+height-1, width-fldMarginLeft, tview.AlignLeft, tcell.ColorWhite)
+	rulerStr := sb.String()
+	tview.Print(screen, rulerStr, x+fldMarginLeft, y+height-1, width-fldMarginLeft, tview.AlignLeft, tcell.ColorWhite)
+	rulerBuffer.WriteAt(x+fldMarginLeft, clearTviewFormatting(rulerStr))
 
 	// If we're in the focus, then also draw the cursor and maybe selection marks.
 	if h.HasFocus() {
@@ -284,10 +308,33 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 	}
 
 	// Draw a pointer to the external cursor.
-	// TODO: implement in a better way.
-	extCursorCoord := h.valToCoord(h.externalCursor)
-	extCursorOffset := extCursorCoord / 2
-	tview.Print(screen, "^", x+fldMarginLeft+extCursorOffset, y+height-1, width, tview.AlignLeft, tcell.ColorRed)
+	if h.externalCursorVisible {
+		// TODO: implement in a better way.
+		extCursorCoord := h.valToCoord(h.externalCursor)
+		extCursorOffset := extCursorCoord / 2
+
+		extCursorPos := x + fldMarginLeft + extCursorOffset
+		extCursorRune, _ := rulerBuffer.Rune(extCursorPos)
+
+		// TODO: the original idea was to have an empty string here, so that below
+		// we'll have a tag [:red] which means, "don't change fg color and set bg
+		// color to red", but for some reason it doesn't work this way, and the fg
+		// color is also reset to red, effectively we have just a red rectangle.
+		// Idk why is that, but for now always just setting fg color to white since
+		// it's good enough.
+		extCursorColor := "white"
+		if extCursorRune == ' ' {
+			extCursorRune = '^'
+			extCursorColor = "white"
+		}
+
+		tview.Print(
+			screen,
+			fmt.Sprintf("[%s:red]%s[-:-]", extCursorColor, string(extCursorRune)),
+			extCursorPos, y+height-1,
+			width, tview.AlignLeft, tcell.ColorRed,
+		)
+	}
 }
 
 func (h *Histogram) getDataBinsInChartBar() int {
@@ -843,6 +890,11 @@ func (h *Histogram) valToCoord(v int) int {
 	return (v - h.from) / h.getDataBinsInChartBar() * h.getChartBarWidth() / h.binSize
 }
 
+// clearTviewFormatting removes formatting directives like [red], [-] etc.
+// So e.g. "This word is [red]red[-]" becomes "This word is red".
+//
+// TODO: ideally polish it and submit as a PR to tview, so that it's provided
+// by the library itself, just like Escape.
 func clearTviewFormatting(input string) string {
 	var output strings.Builder
 	inTag := false
@@ -889,4 +941,12 @@ func clearTviewFormatting(input string) string {
 	}
 
 	return output.String()
+}
+
+func highlightRune(s string, index int, prefix, suffix string) string {
+	runes := []rune(s)
+	if index < 0 || index >= len(runes) {
+		return s // Index out of bounds, return original string
+	}
+	return string(runes[:index]) + prefix + string(runes[index]) + suffix + string(runes[index+1:])
 }

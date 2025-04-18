@@ -555,9 +555,11 @@ func NewMainView(params *MainViewParams) *MainView {
 	//mv.logsTable.SetEvaluateAllRows(true)
 	mv.logsTable.SetFocusFunc(func() {
 		mv.logsTable.SetSelectable(true, false)
+		mv.histogram.ShowExternalCursor()
 	})
 	mv.logsTable.SetBlurFunc(func() {
 		mv.logsTable.SetSelectable(false, false)
+		mv.histogram.HideExternalCursor()
 	})
 
 	mv.logsTable.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
