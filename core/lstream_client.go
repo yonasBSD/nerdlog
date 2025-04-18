@@ -1093,7 +1093,19 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		lsc.conn.stdinBuf.Write([]byte("  cat <<- 'EOF' > " + lsc.getLStreamNerdlogAgentPath() + "\n" + nerdlogAgentSh + "EOF\n"))
 		lsc.conn.stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
 
-		lsc.conn.stdinBuf.Write([]byte("  bash " + lsc.getLStreamNerdlogAgentPath() + " logstream_info\n"))
+		var parts []string
+		parts = append(
+			parts,
+			"bash", lsc.getLStreamNerdlogAgentPath(),
+			"logstream_info",
+			"--logfile-last", lsc.params.LogStream.LogFileLast(),
+		)
+
+		if logFilePrev, ok := lsc.params.LogStream.LogFilePrev(); ok {
+			parts = append(parts, "--logfile-prev", logFilePrev)
+		}
+
+		lsc.conn.stdinBuf.Write([]byte(strings.Join(parts, " ") + "\n"))
 		lsc.conn.stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
 
 		lsc.conn.stdinBuf.Write([]byte("  echo 'bootstrap ok'\n"))

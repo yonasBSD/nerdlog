@@ -21,7 +21,7 @@ func (b *RuneBuffer) WriteAt(index int, s string) {
 }
 
 func (b *RuneBuffer) Rune(index int) (rune, bool) {
-	if index < len(b.data) {
+	if index >= 0 && index < len(b.data) {
 		return b.data[index], true
 	}
 	return ' ', false

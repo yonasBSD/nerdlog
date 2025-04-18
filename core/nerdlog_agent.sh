@@ -107,15 +107,30 @@ case "${command}" in
 
   logstream_info)
     # TODO: support the case where timedatectl is not available
-    host_timezone=$(timedatectl show --property=Timezone --value) || exit 1
+    host_timezone="$(timedatectl show --property=Timezone --value)" || exit 1
     echo "host_timezone:$host_timezone"
+
+
+    if [ ! -e ${logfile_last} ] || [ ! -r ${logfile_last} ]; then
+      echo "error:${logfile_last} does not exist or is not readable"
+      exit 1
+    fi
+
+    if [ ! -e ${logfile_prev} ] || [ ! -r ${logfile_prev} ]; then
+      echo "error:${logfile_prev} does not exist or is not readable"
+      exit 1
+    fi
 
     # Print a bunch of example log lines, so that the client can autodetect the
     # format.
-    echo "example_log_line:$(tail -n 1 ${logfile_last})"
-    echo "example_log_line:$(head -n 1 ${logfile_last})"
-    echo "example_log_line:$(tail -n 1 ${logfile_prev})"
-    echo "example_log_line:$(head -n 1 ${logfile_prev})"
+    if [ -s ${logfile_last} ]; then
+      echo "example_log_line:$(tail -n 1 ${logfile_last})"
+      echo "example_log_line:$(head -n 1 ${logfile_last})"
+    fi
+    if [ -s ${logfile_prev} ]; then
+      echo "example_log_line:$(tail -n 1 ${logfile_prev})"
+      echo "example_log_line:$(head -n 1 ${logfile_prev})"
+    fi
 
     exit 0
     ;;
