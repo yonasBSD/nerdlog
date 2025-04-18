@@ -21,3 +21,4 @@ m:1050:Mar 12 10:38:23 myhost auth[1783]: <debug> User login successful
 m:1051:Mar 12 10:45:36 myhost lpr[6125]: <err> Service request queued
 m:1052:Mar 12 10:53:36 myhost ftp[4422]: <warning> Configuration reload successful
 m:1053:Mar 12 10:56:46 myhost cron[3690]: <alert> Memory leak detected
+exit_code:0

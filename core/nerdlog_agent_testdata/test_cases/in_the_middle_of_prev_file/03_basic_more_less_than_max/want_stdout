@@ -21,3 +21,4 @@ m:134:Mar  9 23:41:35 myhost cron[313]: <crit> Process started
 m:135:Mar  9 23:42:07 myhost uucp[3229]: <alert> Disk format completed
 m:136:Mar  9 23:43:58 myhost lpr[4421]: <emerg> Insufficient privileges
 m:137:Mar  9 23:45:15 myhost news[7029]: <warning> System time drift detected
+exit_code:0

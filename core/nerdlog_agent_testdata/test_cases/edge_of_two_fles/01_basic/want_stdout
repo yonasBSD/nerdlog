@@ -20,3 +20,4 @@ m:291:Mar 10 10:20:46 myhost lpr[891]: <warning> User session timed out
 m:292:Mar 10 10:24:32 myhost user[8515]: <warning> Cache cleared
 m:293:Mar 10 10:27:26 myhost kern[2205]: <crit> Session token expired
 m:294:Mar 10 10:27:26 myhost cron[9005]: <notice> File transfer completed
+exit_code:0

@@ -137,6 +137,7 @@ func runTestCase(t *testing.T, nerdlogAgentShFname, testCasesDir, testName strin
 	cmdArgs := append(
 		[]string{
 			nerdlogAgentShFname,
+			"query",
 			"--logfile-last", logfileLast,
 			"--logfile-prev", logfilePrev,
 			"--cache-file", indexFname,

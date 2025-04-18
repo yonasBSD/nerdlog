@@ -19,3 +19,4 @@ m:283:Mar 10 09:35:23 myhost syslog[3626]: <debug> Application crash reported
 m:284:Mar 10 09:39:31 myhost auth[8464]: <info> User session started
 m:285:Mar 10 09:44:56 myhost news[3840]: <err> System health check completed
 m:286:Mar 10 09:53:11 myhost news[816]: <alert> System configuration restored
+exit_code:0

@@ -10,3 +10,4 @@ s:Mar11-08:21,1
 s:Mar10-18:01,1
 m:432:Mar 10 16:35:56 myhost daemon[7460]: <info> Backup completed
 m:447:Mar 10 17:37:49 myhost news[3166]: <debug> Backup completed
+exit_code:0

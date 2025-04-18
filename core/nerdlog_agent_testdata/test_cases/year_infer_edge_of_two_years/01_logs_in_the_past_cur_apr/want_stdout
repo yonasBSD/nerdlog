@@ -31,3 +31,4 @@ m:144:Jan  1 00:17:17 myhost user[3135]: <alert> Application crash reported
 m:145:Jan  1 00:17:17 myhost ftp[8324]: <notice> Error handling request
 m:146:Jan  1 00:22:38 myhost ftp[864]: <emerg> Server shutting down
 m:147:Jan  1 00:29:08 myhost lpr[3704]: <info> Configuration applied successfully
+exit_code:0

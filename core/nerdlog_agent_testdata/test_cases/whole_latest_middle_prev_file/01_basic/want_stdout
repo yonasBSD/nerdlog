@@ -40,3 +40,4 @@ m:32:Mar 10 10:38:25 myhost mail[8342]: <emerg> User account disabled
 m:33:Mar 10 10:45:04 myhost authpriv[7892]: <err> Memory usage high
 m:34:Mar 10 10:51:01 myhost user[3758]: <crit> System running low on resources
 m:35:Mar 10 10:57:37 myhost news[5185]: <alert> Insufficient privileges
+exit_code:0

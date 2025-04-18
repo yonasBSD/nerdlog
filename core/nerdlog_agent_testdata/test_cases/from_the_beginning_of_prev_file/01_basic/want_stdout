@@ -18,3 +18,4 @@ m:8:Mar  9 15:35:19 myhost authpriv[7019]: <alert> Disk usage critical
 m:9:Mar  9 15:36:33 myhost authpriv[7830]: <crit> Certificate expiration warning
 m:10:Mar  9 15:44:23 myhost lpr[3187]: <alert> Service initialization failed
 m:11:Mar  9 15:52:34 myhost lpr[3574]: <notice> Disk space low
+exit_code:0

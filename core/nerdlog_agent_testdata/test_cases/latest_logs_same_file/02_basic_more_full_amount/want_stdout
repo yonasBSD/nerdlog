@@ -21,3 +21,4 @@ m:1042:Mar 12 10:10:15 myhost authpriv[3500]: <notice> System clock synchronized
 m:1043:Mar 12 10:10:15 myhost authpriv[3500]: <notice> System clock synchronized
 m:1044:Mar 12 10:14:06 myhost mail[173]: <warning> User session ended
 m:1045:Mar 12 10:16:00 myhost ftp[8866]: <emerg> User session started
+exit_code:0

@@ -17,3 +17,4 @@ m:1029:Mar 12 09:42:44 myhost news[1075]: <warning> System configuration restore
 m:1030:Mar 12 09:42:44 myhost user[3514]: <alert> Service initialization failed
 m:1031:Mar 12 09:42:46 myhost syslog[2812]: <info> Database query failed
 m:1032:Mar 12 09:52:46 myhost user[7102]: <alert> Insufficient privileges
+exit_code:0

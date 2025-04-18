@@ -7,3 +7,4 @@ s:Mar12-03:10,1
 s:Mar11-13:56,1
 s:Mar10-18:01,1
 m:432:Mar 10 16:35:56 myhost daemon[7460]: <info> Backup completed
+exit_code:0

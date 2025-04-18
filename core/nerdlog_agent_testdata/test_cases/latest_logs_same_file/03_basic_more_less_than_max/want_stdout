@@ -18,3 +18,4 @@ m:1034:Mar 12 10:03:46 myhost syslog[2812]: <info> Database query failed
 m:1035:Mar 12 10:10:05 myhost authpriv[3500]: <notice> System clock synchronized
 m:1036:Mar 12 10:10:05 myhost authpriv[3500]: <notice> System clock synchronized
 m:1037:Mar 12 10:10:05 myhost authpriv[3500]: <notice> System clock synchronized
+exit_code:0

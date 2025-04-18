@@ -41,3 +41,4 @@ m:12:Mar 10 09:31:23 myhost authpriv[5771]: <debug> User session ended
 m:13:Mar 10 09:31:23 myhost authpriv[2976]: <emerg> Cache cleared
 m:14:Mar 10 09:35:23 myhost kern[3027]: <alert> SMTP server connection error
 m:15:Mar 10 09:35:23 myhost syslog[3626]: <debug> Application crash reported
+exit_code:0
