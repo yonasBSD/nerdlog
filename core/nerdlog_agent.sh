@@ -110,7 +110,6 @@ case "${command}" in
     host_timezone="$(timedatectl show --property=Timezone --value)" || exit 1
     echo "host_timezone:$host_timezone"
 
-
     if [ ! -e ${logfile_last} ] || [ ! -r ${logfile_last} ]; then
       echo "error:${logfile_last} does not exist or is not readable"
       exit 1
@@ -124,12 +123,16 @@ case "${command}" in
     # Print a bunch of example log lines, so that the client can autodetect the
     # format.
     if [ -s ${logfile_last} ]; then
-      echo "example_log_line:$(tail -n 1 ${logfile_last})"
-      echo "example_log_line:$(head -n 1 ${logfile_last})"
+      last_line="$(tail -n 1 ${logfile_last})" || exit 1
+      first_line="$(head -n 1 ${logfile_last})" || exit 1
+      echo "example_log_line:$last_line"
+      echo "example_log_line:$first_line"
     fi
     if [ -s ${logfile_prev} ]; then
-      echo "example_log_line:$(tail -n 1 ${logfile_prev})"
-      echo "example_log_line:$(head -n 1 ${logfile_prev})"
+      last_line="$(tail -n 1 ${logfile_prev})" || exit 1
+      first_line="$(head -n 1 ${logfile_prev})" || exit 1
+      echo "example_log_line:$last_line"
+      echo "example_log_line:$first_line"
     fi
 
     exit 0
@@ -144,12 +147,12 @@ esac
 
 user_pattern=$1
 
-logfile_prev_size=$(stat -c%s $logfile_prev)
-logfile_last_size=$(stat -c%s $logfile_last)
-total_size=$((logfile_prev_size+logfile_last_size))
+logfile_prev_size=$(stat -c%s $logfile_prev) || exit 1
+logfile_last_size=$(stat -c%s $logfile_last) || exit 1
+total_size=$((logfile_prev_size+logfile_last_size)) || exit 1
 
 if [[ "$refresh_index" == "1" ]]; then
-  rm -f $cachefile
+  rm -f $cachefile || exit 1
 fi
 
 # NOTE: we only show percentages with 5% increments, to save on traffic and
@@ -392,12 +395,12 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   logfile_prev_cur_modtile=$(stat -c %y $logfile_prev)
   if [[ "$logfile_prev_stored_modtime" != "$logfile_prev_cur_modtile" ]]; then
     echo "debug:logfile has changed: stored '$logfile_prev_stored_modtime', actual '$logfile_prev_cur_modtile', deleting it" 1>&2
-    rm -f $cachefile
+    rm -f $cachefile || exit 1
   fi
 
   if ! get_prevlog_lines_from_cache > /dev/null; then
     echo "debug:broken cache file (no prevlog lines), deleting it" 1>&2
-    rm -f $cachefile
+    rm -f $cachefile || exit 1
   fi
 
   refresh_and_retry=0
@@ -405,7 +408,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   # First try to find it in cache without refreshing the cache
 
   if [[ "$from" != "" ]]; then
-    read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from)
+    read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from) || exit 1
     if [[ "$from_result" != "found" ]]; then
       echo "debug:the from ${from} isn't found, gonna refresh the cache" 1>&2
       refresh_and_retry=1
@@ -413,7 +416,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   fi
 
   if [[ "$to" != "" ]]; then
-    read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to)
+    read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to) || exit 1
     if [[ "$to_result" != "found" ]]; then
       echo "debug:the to ${to} isn't found, gonna refresh the cache" 1>&2
       refresh_and_retry=1
@@ -421,10 +424,10 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   fi
 
   if [[ "$refresh_and_retry" == 1 ]]; then
-    refresh_cache
+    refresh_cache || exit 1
 
     if [[ "$from" != "" ]]; then
-      read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from)
+      read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from) || exit 1
 
       if [[ "$from_result" == "before" ]]; then
         echo "debug:the from ${from} isn't found, will use the beginning" 1>&2
@@ -444,7 +447,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
     fi
 
     if [[ "$to" != "" ]]; then
-      read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to)
+      read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to) || exit 1
 
       if [[ "$to_result" == "after" ]]; then
         echo "debug:the to ${to} isn't found, will use the end" 1>&2
@@ -467,7 +470,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
 else
   if ! [ -s $cachefile ]; then
     echo "debug:neither --from or --to are given, but index doesn't exist at all, gonna rebuild" 1>&2
-    refresh_cache
+    refresh_cache || exit 1
   fi
 fi
 
