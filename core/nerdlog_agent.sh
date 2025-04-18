@@ -191,18 +191,18 @@ function refresh_cache { # {{{
     curYear = '${CUR_YEAR}';
     curMonth = '${CUR_MONTH}';
 
-    yearByMonthName["Jan"] = inferYear(1, curYear, curMonth) "";
-    yearByMonthName["Feb"] = inferYear(2, curYear, curMonth) "";
-    yearByMonthName["Mar"] = inferYear(3, curYear, curMonth) "";
-    yearByMonthName["Apr"] = inferYear(4, curYear, curMonth) "";
-    yearByMonthName["May"] = inferYear(5, curYear, curMonth) "";
-    yearByMonthName["Jun"] = inferYear(6, curYear, curMonth) "";
-    yearByMonthName["Jul"] = inferYear(7, curYear, curMonth) "";
-    yearByMonthName["Aug"] = inferYear(8, curYear, curMonth) "";
-    yearByMonthName["Sep"] = inferYear(9, curYear, curMonth) "";
-    yearByMonthName["Oct"] = inferYear(10, curYear, curMonth) "";
-    yearByMonthName["Nov"] = inferYear(11, curYear, curMonth) "";
-    yearByMonthName["Dec"] = inferYear(12, curYear, curMonth) "";
+    yearByMonth["01"] = inferYear(1, curYear, curMonth) "";
+    yearByMonth["02"] = inferYear(2, curYear, curMonth) "";
+    yearByMonth["03"] = inferYear(3, curYear, curMonth) "";
+    yearByMonth["04"] = inferYear(4, curYear, curMonth) "";
+    yearByMonth["05"] = inferYear(5, curYear, curMonth) "";
+    yearByMonth["06"] = inferYear(6, curYear, curMonth) "";
+    yearByMonth["07"] = inferYear(7, curYear, curMonth) "";
+    yearByMonth["08"] = inferYear(8, curYear, curMonth) "";
+    yearByMonth["09"] = inferYear(9, curYear, curMonth) "";
+    yearByMonth["10"] = inferYear(10, curYear, curMonth) "";
+    yearByMonth["11"] = inferYear(11, curYear, curMonth) "";
+    yearByMonth["12"] = inferYear(12, curYear, curMonth) "";
   '
 
   # Add new entries to cache, if needed
@@ -236,16 +236,6 @@ function inferYear(logMonth, curYear, curMonth) {
     return curYear
 }
 
-function syslogFieldsToIndexTimestr(monthStr, day, hhmmss) {
-  month = monthByName[monthStr];
-  year = yearByMonthName[monthStr];
-  hour = substr(hhmmss, 1, 2);
-  min = substr(hhmmss, 4, 2);
-  day = (length(day) == 1) ? "0" day : day;
-
-  return year "-" month "-" day "-" hour ":" min
-}
-
 function printIndexLine(outfile, timestr, linenr, bytenr) {
   print "idx\t" timestr "\t" linenr "\t" bytenr >> outfile;
 }
@@ -263,7 +253,13 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
 
   scriptSetCurTimestr='
     bytenr_cur = bytenr_next - length($0) - 1;
-    curTimestr = syslogFieldsToIndexTimestr($1, $2, $3);
+
+    month = monthByName[$1];
+    year = yearByMonth[month];
+    day = (length($2) == 1) ? "0" $2 : $2;
+    hhmm = substr($3, 1, 5);
+
+    curTimestr = year "-" month "-" day "-" hhmm;
   '
   scriptSetLastTimestrEtc='
     lastTimestr = curTimestr;
