@@ -226,6 +226,16 @@ func (lsman *LStreamsManager) run() {
 				lsman.params.Logger.Verbose1f("ConnDetails for %s: %+v", upd.Name, *upd.ConnDetails)
 				lsman.lscConnDetails[upd.Name] = *upd.ConnDetails
 				lsman.sendStateUpdate()
+			} else if upd.BootstrapDetails != nil {
+				lsman.params.Logger.Verbose1f("BootstrapDetails for %s: %+v", upd.Name, *upd.BootstrapDetails)
+
+				upd := LStreamsManagerUpdate{
+					BootstrapIssue: &BootstrapIssue{
+						LStreamName: upd.Name,
+						Err:         upd.BootstrapDetails.Err,
+					},
+				}
+				lsman.params.UpdatesCh <- upd
 			} else if upd.BusyStage != nil {
 				lsman.lscBusyStages[upd.Name] = *upd.BusyStage
 				lsman.sendStateUpdate()
@@ -416,6 +426,7 @@ func (lsman *LStreamsManager) run() {
 			}
 
 		case resp := <-lsman.respCh:
+			lsman.params.Logger.Verbose1f("Got a response from %v: %+v", resp.hostname, resp)
 
 			switch {
 			case lsman.curQueryLogsCtx != nil:
@@ -584,6 +595,8 @@ type LStreamsManagerUpdate struct {
 
 	State   *LStreamsManagerState
 	LogResp *LogRespTotal
+
+	BootstrapIssue *BootstrapIssue
 }
 
 type LStreamsManagerState struct {
@@ -609,6 +622,11 @@ type LStreamsManagerState struct {
 
 	// TearingDown contains logstream names whic are in the process of teardown.
 	TearingDown []string
+}
+
+type BootstrapIssue struct {
+	LStreamName string
+	Err         string
 }
 
 func (lsman *LStreamsManager) updateLStreamsByState() {

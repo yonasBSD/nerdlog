@@ -38,8 +38,6 @@ type LogResp struct {
 	// NumMsgsTotal is the total number of messages in the time range (and
 	// included in MinuteStats). This number is usually larger than len(Logs).
 	NumMsgsTotal int
-
-	Errs []error
 }
 
 // LogRespTotal is a log response from a LStreamsManager. It's merged from

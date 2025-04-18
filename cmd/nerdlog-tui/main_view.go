@@ -1808,6 +1808,15 @@ func (mv *MainView) handleQueryError(err error) {
 	}
 }
 
+// handleBootstrapError
+func (mv *MainView) handleBootstrapError(err error) {
+	mv.showMessagebox("err", "Bootstrap error", err.Error(), &MessageboxParams{
+		Width:           999,
+		Height:          999,
+		BackgroundColor: tcell.ColorDarkRed,
+	})
+}
+
 // reconnect initiates reconnection to all the log streams. If repeatQuery
 // is true, then after reconnecting, the current query will be repeated, too.
 func (mv *MainView) reconnect(repeatQuery bool) {

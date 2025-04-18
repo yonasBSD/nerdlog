@@ -1,5 +1,7 @@
 #/bin/bash
 
+trap 'echo "exit_code:$?"' EXIT
+
 # Arguments:
 #
 # --from, --to: time in the format "2006-01-02-15:04".
@@ -83,6 +85,14 @@ if [[ "$CUR_MONTH" == "" ]]; then
   CUR_MONTH="$(date +'%m')"
 fi
 
+# Just a hack to account for cases when /var/log/syslog.1 doesn't exist:
+# create an empty file and pretend that it's an empty log file.
+if [ ! -e "$logfile_prev"  ]; then
+  logfile_prev="/tmp/nerdlog-empty-file"
+  rm -f $logfile_prev
+  touch $logfile_prev
+fi
+
 command="$1"
 if [[ "${command}" == "" ]]; then
   echo "error:command is required" 1>&2
@@ -95,9 +105,19 @@ case "${command}" in
     # Will be handled below.
     ;;
 
-  host_info)
+  logstream_info)
     # TODO: support the case where timedatectl is not available
-    echo "host_timezone:$(timedatectl show --property=Timezone --value)"
+    host_timezone=$(timedatectl show --property=Timezone --value) || exit 1
+    echo "host_timezone:$host_timezone"
+
+    # Print a bunch of example log lines, so that the client can autodetect the
+    # format.
+    echo "example_log_line:$(tail -n 1 ${logfile_last})"
+    echo "example_log_line:$(head -n 1 ${logfile_last})"
+    echo "example_log_line:$(tail -n 1 ${logfile_prev})"
+    echo "example_log_line:$(head -n 1 ${logfile_prev})"
+
+    exit 0
     ;;
 
   *)
@@ -108,14 +128,6 @@ esac
 # What follows is the handler for the "query" command.
 
 user_pattern=$1
-
-# Just a hack to account for cases when /var/log/syslog.1 doesn't exist:
-# create an empty file and pretend that it's an empty log file.
-if [ ! -e "$logfile_prev"  ]; then
-  logfile_prev="/tmp/nerdlog-empty-file"
-  rm -f $logfile_prev
-  touch $logfile_prev
-fi
 
 logfile_prev_size=$(stat -c%s $logfile_prev)
 logfile_last_size=$(stat -c%s $logfile_last)
@@ -615,6 +627,10 @@ fi
 
 # Now execute all those commands, and feed those logs to the awk script
 # which will analyze them and produce the final output.
-for cmd in "${cmds[@]}"; do eval $cmd; done | awk -b "$awk_script" -
+for cmd in "${cmds[@]}"; do eval $cmd || exit 1; done | awk -b "$awk_script" -
+
+if ! [[ ${PIPESTATUS[@]} =~ ^(0[[:space:]]*)+$ ]]; then
+  exit 1
+fi
 
 echo "p:stage:$STAGE_DONE:done" 1>&2

@@ -80,6 +80,10 @@ type LStreamClient struct {
 	// location is loaded based on the timezone. If failed, it'll be UTC.
 	location *time.Location
 
+	// exampleLogLines are the lines that we received during logstream bootstrap.
+	// We'll try to do log format autodetection based on that.
+	exampleLogLines []string
+
 	numConnAttempts int
 
 	state     LStreamClientState
@@ -142,6 +146,11 @@ type ConnDetails struct {
 	Err string
 }
 
+type BootstrapDetails struct {
+	// Err is an error message from the last bootstrap attempt.
+	Err string
+}
+
 func (c *connCtx) getStdoutLinesCh() chan string {
 	if c == nil {
 		return nil
@@ -166,8 +175,9 @@ type LStreamClientUpdate struct {
 
 	State *LStreamClientUpdateState
 
-	ConnDetails *ConnDetails
-	BusyStage   *BusyStage
+	ConnDetails      *ConnDetails
+	BootstrapDetails *BootstrapDetails
+	BusyStage        *BusyStage
 
 	// If TornDown is true, it means it's the last update from that client.
 	TornDown bool
@@ -376,15 +386,35 @@ func (lsc *LStreamClient) run() {
 
 			switch lsc.state {
 			case LStreamClientStateConnectedBusy:
-				if lsc.curCmdCtx == nil {
+				cmdCtx := lsc.curCmdCtx
+
+				if cmdCtx == nil {
 					// We received some line before printing any command, must be
 					// just standard welcome message, but we're not interested in that.
 					continue
 				}
 
+				if lsc.checkCommandDone(line, cmdCtx, false) {
+					continue
+				}
+
+				if lsc.checkResetOutput(line, cmdCtx, false) {
+					continue
+				}
+
+				if lsc.checkError(line, cmdCtx) {
+					continue
+				}
+
+				if lsc.checkExitCode(line, cmdCtx) {
+					continue
+				}
+
 				switch {
-				case lsc.curCmdCtx.cmd.bootstrap != nil:
+				case cmdCtx.cmd.bootstrap != nil:
 					tzPrefix := "host_timezone:"
+					logLinePrefix := "example_log_line:"
+
 					if strings.HasPrefix(line, tzPrefix) {
 						tz := strings.TrimPrefix(line, tzPrefix)
 						lsc.params.Logger.Verbose1f("Got logstream timezone: %s\n", tz)
@@ -398,20 +428,25 @@ func (lsc *LStreamClient) run() {
 							lsc.timezone = tz
 							lsc.location = location
 						}
-					}
+					} else if strings.HasPrefix(line, logLinePrefix) {
+						exampleLogLine := strings.TrimPrefix(line, logLinePrefix)
+						lsc.params.Logger.Verbose1f("Got example log line: %s\n", exampleLogLine)
 
-					if line == "bootstrap ok" {
-						lsc.curCmdCtx.bootstrapCtx.receivedSuccess = true
+						lsc.exampleLogLines = append(lsc.exampleLogLines, exampleLogLine)
+					} else if line == "bootstrap ok" {
+						cmdCtx.bootstrapCtx.receivedSuccess = true
 					} else if line == "bootstrap failed" {
-						lsc.curCmdCtx.bootstrapCtx.receivedFailure = true
+						cmdCtx.bootstrapCtx.receivedFailure = true
+					} else {
+						cmdCtx.unhandledStdout = append(cmdCtx.unhandledStdout, line)
 					}
 
-				case lsc.curCmdCtx.cmd.ping != nil:
+				case cmdCtx.cmd.ping != nil:
 					// Nothing special to do
+					cmdCtx.unhandledStdout = append(cmdCtx.unhandledStdout, line)
 
-				case lsc.curCmdCtx.cmd.queryLogs != nil:
-					// TODO: collect all the info into lsc.curCmdCtx.queryLogsCtx
-					respCtx := lsc.curCmdCtx.queryLogsCtx
+				case cmdCtx.cmd.queryLogs != nil:
+					respCtx := cmdCtx.queryLogsCtx
 					resp := respCtx.Resp
 
 					switch {
@@ -419,13 +454,13 @@ func (lsc *LStreamClient) run() {
 						parts := strings.Split(strings.TrimPrefix(line, "s:"), ",")
 						if len(parts) < 2 {
 							err := errors.Errorf("malformed mstats %q: expected at least 2 parts", line)
-							resp.Errs = append(resp.Errs, err)
+							cmdCtx.errs = append(cmdCtx.errs, err)
 							continue
 						}
 
 						t, err := time.ParseInLocation(queryLogsMstatsTimeLayout, parts[0], lsc.location)
 						if err != nil {
-							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing mstats"))
+							cmdCtx.errs = append(cmdCtx.errs, errors.Annotatef(err, "parsing mstats"))
 							continue
 						}
 
@@ -434,7 +469,7 @@ func (lsc *LStreamClient) run() {
 
 						n, err := strconv.Atoi(parts[1])
 						if err != nil {
-							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing mstats"))
+							cmdCtx.errs = append(cmdCtx.errs, errors.Annotatef(err, "parsing mstats"))
 							continue
 						}
 
@@ -446,7 +481,7 @@ func (lsc *LStreamClient) run() {
 						msg := strings.TrimPrefix(line, "logfile:")
 						idx := strings.IndexRune(msg, ':')
 						if idx <= 0 {
-							resp.Errs = append(resp.Errs, errors.Errorf("parsing logfile msg: no number of lines %q", line))
+							cmdCtx.errs = append(cmdCtx.errs, errors.Errorf("parsing logfile msg: no number of lines %q", line))
 							continue
 						}
 
@@ -454,7 +489,7 @@ func (lsc *LStreamClient) run() {
 						logNumberOfLinesStr := msg[idx+1:]
 						logNumberOfLines, err := strconv.Atoi(logNumberOfLinesStr)
 						if err != nil {
-							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing logfile msg: invalid number in %q", line))
+							cmdCtx.errs = append(cmdCtx.errs, errors.Annotatef(err, "parsing logfile msg: invalid number in %q", line))
 							continue
 						}
 
@@ -468,7 +503,7 @@ func (lsc *LStreamClient) run() {
 						msg := strings.TrimPrefix(line, "m:")
 						idx := strings.IndexRune(msg, ':')
 						if idx <= 0 {
-							resp.Errs = append(resp.Errs, errors.Errorf("parsing log msg: no line number in %q", line))
+							cmdCtx.errs = append(cmdCtx.errs, errors.Errorf("parsing log msg: no line number in %q", line))
 							continue
 						}
 
@@ -477,7 +512,7 @@ func (lsc *LStreamClient) run() {
 
 						logLinenoCombined, err := strconv.Atoi(logLinenoStr)
 						if err != nil {
-							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing log msg: invalid line number in %q", line))
+							cmdCtx.errs = append(cmdCtx.errs, errors.Annotatef(err, "parsing log msg: invalid line number in %q", line))
 							continue
 						}
 
@@ -497,7 +532,7 @@ func (lsc *LStreamClient) run() {
 
 						parseRes, err := parseLine(lsc.location, msg, respCtx.lastTime)
 						if err != nil {
-							resp.Errs = append(resp.Errs, errors.Annotatef(err, "parsing log msg: no time in %q", line))
+							cmdCtx.errs = append(cmdCtx.errs, errors.Annotatef(err, "parsing log msg: no time in %q", line))
 							continue
 						}
 
@@ -522,76 +557,12 @@ func (lsc *LStreamClient) run() {
 
 						// NOTE: the "p:" lines (process-related) are in stderr and thus
 						// are handled below. Why they are in stderr, see comments there.
-					}
-				}
-
-				if strings.HasPrefix(line, "command_done:") {
-					parts := strings.Split(line, ":")
-					if len(parts) != 2 {
-						fmt.Println("received malformed command_done line:", line)
-						continue
-					}
-
-					rxIdx, err := strconv.Atoi(parts[1])
-					if err != nil {
-						fmt.Println("received malformed command_done line:", line)
-						continue
-					}
-
-					if rxIdx != lsc.curCmdCtx.idx {
-						fmt.Printf("received unexpected index with command_done: waiting for %d, got %d\n", lsc.curCmdCtx.idx, rxIdx)
-						continue
-					}
-
-					// Current command is done.
-
-					// NOTE: it's tricky to get the exit code from the command we just
-					// ran, because when querying logs, we're piping it to gzip, and
-					// there's no good shell-independent way to get status code from the
-					// first command in the pipe (as opposed to the last one).
-					//
-					// So here we don't even try. Instead, we have a command-dependent
-					// logic to check for errors; e.g. for querying logs, we check stderr
-					// for lines starting from "error:", and appending these to resp.Errs.
-					// And here (right below), we'll check all these errors that we
-					// accumulated.
-
-					switch {
-					case lsc.curCmdCtx.cmd.bootstrap != nil:
-						lsc.sendCmdResp(nil, nil)
-						if lsc.curCmdCtx.bootstrapCtx.receivedSuccess {
-							lsc.changeState(LStreamClientStateConnectedIdle)
-						} else {
-							// TODO: proper disconnection
-							fmt.Println("bootstrap not successful")
-							lsc.changeState(LStreamClientStateDisconnected)
-						}
-
-					case lsc.curCmdCtx.cmd.ping != nil:
-						lsc.sendCmdResp(nil, nil)
-						lsc.changeState(LStreamClientStateConnectedIdle)
-
-					case lsc.curCmdCtx.cmd.queryLogs != nil:
-						resp := lsc.curCmdCtx.queryLogsCtx.Resp
-
-						var err error
-						if len(resp.Errs) == 1 {
-							err = resp.Errs[0]
-						} else if len(resp.Errs) > 0 {
-							ss := []string{}
-							for _, e := range resp.Errs {
-								ss = append(ss, e.Error())
-							}
-
-							err = errors.Errorf("%d errors: %s", len(resp.Errs), strings.Join(ss, "; "))
-						}
-
-						lsc.sendCmdResp(resp, err)
-						lsc.changeState(LStreamClientStateConnectedIdle)
-
 					default:
-						panic(fmt.Sprintf("unhandled cmd %+v", lsc.curCmdCtx.cmd))
+						cmdCtx.unhandledStdout = append(cmdCtx.unhandledStdout, line)
 					}
+
+				default:
+					panic("invalid cmdCtx.cmd: no subcontext")
 				}
 			}
 
@@ -613,12 +584,31 @@ func (lsc *LStreamClient) run() {
 			// when it's printed by the nerdlog_agent.sh.
 			switch lsc.state {
 			case LStreamClientStateConnectedBusy:
+				cmdCtx := lsc.curCmdCtx
+
+				if cmdCtx == nil {
+					// We received some line before printing any command, just ignore that.
+					continue
+				}
+
+				if lsc.checkCommandDone(line, cmdCtx, true) {
+					continue
+				}
+
+				if lsc.checkResetOutput(line, cmdCtx, true) {
+					continue
+				}
+
+				if lsc.checkError(line, cmdCtx) {
+					continue
+				}
 
 				switch {
-				case lsc.curCmdCtx != nil && lsc.curCmdCtx.cmd.queryLogs != nil:
-					respCtx := lsc.curCmdCtx.queryLogsCtx
-					resp := respCtx.Resp
-
+				case cmdCtx.cmd.bootstrap != nil:
+					cmdCtx.unhandledStderr = append(cmdCtx.unhandledStderr, line)
+				case cmdCtx.cmd.ping != nil:
+					cmdCtx.unhandledStderr = append(cmdCtx.unhandledStderr, line)
+				case cmdCtx.cmd.queryLogs != nil:
 					switch {
 					case strings.HasPrefix(line, "p:"):
 						// "p:" means process
@@ -656,15 +646,15 @@ func (lsc *LStreamClient) run() {
 
 							lsc.busyStage.Percentage = percentage
 							lsc.sendBusyStageUpdate()
+						default:
+							cmdCtx.unhandledStderr = append(cmdCtx.unhandledStderr, line)
 						}
-
-					case strings.HasPrefix(line, "error:"):
-						// The agent script printed an error; it means that the whole
-						// execution will be considered failed once it's done. For now we
-						// just add the error to the resulting response.
-						errMsg := strings.TrimPrefix(line, "error:")
-						resp.Errs = append(resp.Errs, errors.New(errMsg))
+					default:
+						cmdCtx.unhandledStderr = append(cmdCtx.unhandledStderr, line)
 					}
+
+				default:
+					panic("invalid cmdCtx.cmd: no subcontext")
 				}
 			}
 
@@ -1097,19 +1087,25 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 	case cmdCtx.cmd.bootstrap != nil:
 		cmdCtx.bootstrapCtx = &lstreamCmdCtxBootstrap{}
 
-		lsc.conn.stdinBuf.Write([]byte("cat <<- 'EOF' > " + lsc.getLStreamNerdlogAgentPath() + "\n" + nerdlogAgentSh + "EOF\n"))
-		lsc.conn.stdinBuf.Write([]byte("if [[ $? != 0 ]]; then echo 'bootstrap failed'; fi\n"))
+		lsc.conn.stdinBuf.Write([]byte("echo reset_output\n"))
+		lsc.conn.stdinBuf.Write([]byte("echo reset_output 1>&2\n"))
+		lsc.conn.stdinBuf.Write([]byte("("))
+		lsc.conn.stdinBuf.Write([]byte("  cat <<- 'EOF' > " + lsc.getLStreamNerdlogAgentPath() + "\n" + nerdlogAgentSh + "EOF\n"))
+		lsc.conn.stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
 
-		lsc.conn.stdinBuf.Write([]byte("bash " + lsc.getLStreamNerdlogAgentPath() + " host_info\n"))
-		lsc.conn.stdinBuf.Write([]byte("if [[ $? != 0 ]]; then echo 'bootstrap failed'; fi\n"))
+		lsc.conn.stdinBuf.Write([]byte("  bash " + lsc.getLStreamNerdlogAgentPath() + " logstream_info\n"))
+		lsc.conn.stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
 
-		lsc.conn.stdinBuf.Write([]byte("echo 'bootstrap ok'\n"))
+		lsc.conn.stdinBuf.Write([]byte("  echo 'bootstrap ok'\n"))
+		lsc.conn.stdinBuf.Write([]byte(")\n"))
+		lsc.conn.stdinBuf.Write([]byte("echo exit_code:$?\n"))
 
 	case cmdCtx.cmd.ping != nil:
 		cmdCtx.pingCtx = &lstreamCmdCtxPing{}
 
 		cmd := "whoami\n"
 		lsc.conn.stdinBuf.Write([]byte(cmd))
+		lsc.conn.stdinBuf.Write([]byte("echo exit_code:$?\n"))
 
 	case cmdCtx.cmd.queryLogs != nil:
 		cmdCtx.queryLogsCtx = &lstreamCmdCtxQueryLogs{
@@ -1162,11 +1158,19 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 
 		lsc.conn.stdinBuf.Write([]byte(cmd))
 
+		// NOTE: we don't print the "exit_code:" here, because we can't reliably
+		// do that across all possible shells, due to gzipping: the agent script
+		// is not the last one in the pipeline.
+		//
+		// Instead, the agent script itself has a trap which prints this line for
+		// us.
+
 	default:
 		panic(fmt.Sprintf("invalid command %+v", cmdCtx.cmd))
 	}
 
 	lsc.conn.stdinBuf.Write([]byte(fmt.Sprintf("echo 'command_done:%d'\n", cmdCtx.idx)))
+	lsc.conn.stdinBuf.Write([]byte(fmt.Sprintf("echo 'command_done:%d' 1>&2\n", cmdCtx.idx)))
 
 	lsc.changeState(LStreamClientStateConnectedBusy)
 }
@@ -1211,9 +1215,123 @@ func (lsc *LStreamClient) checkIfDisconnected() {
 	}
 }
 
-func logError(err error) {
-	// TODO: log them to some file instead
-	fmt.Println("ERROR:", err.Error())
+func (lsc *LStreamClient) checkCommandDone(
+	line string, cmdCtx *lstreamCmdCtx, isStderr bool,
+) bool {
+	if !strings.HasPrefix(line, "command_done:") {
+		return false
+	}
+
+	_, err := parseCommandDoneLine(line, cmdCtx.idx)
+	if err != nil {
+		lsc.params.Logger.Errorf("Got malformed command_done line: %s (%s)", line, err.Error())
+		return true
+	}
+
+	if isStderr {
+		cmdCtx.stderrDone = true
+	} else {
+		cmdCtx.stdoutDone = true
+	}
+
+	lsc.handleCommandResultsIfDone(cmdCtx)
+	return true
+}
+
+func (lsc *LStreamClient) checkError(
+	line string, cmdCtx *lstreamCmdCtx,
+) bool {
+	if !strings.HasPrefix(line, "error:") {
+		return false
+	}
+
+	// The agent script printed an error; it means that the whole execution will
+	// be considered failed once it's done. For now we just add the error to the
+	// resulting response.
+	errMsg := strings.TrimPrefix(line, "error:")
+	cmdCtx.errs = append(cmdCtx.errs, errors.New(errMsg))
+
+	return true
+}
+
+func (lsc *LStreamClient) checkExitCode(
+	line string, cmdCtx *lstreamCmdCtx,
+) bool {
+	if !strings.HasPrefix(line, "exit_code:") {
+		return false
+	}
+
+	cmdCtx.exitCode = strings.TrimPrefix(line, "exit_code:")
+	lsc.params.Logger.Verbose1f("Received exit code: %q", cmdCtx.exitCode)
+	return true
+}
+
+func (lsc *LStreamClient) checkResetOutput(
+	line string, cmdCtx *lstreamCmdCtx, isStderr bool,
+) bool {
+	if line != "reset_output" {
+		return false
+	}
+
+	if isStderr {
+		cmdCtx.unhandledStderr = nil
+	} else {
+		cmdCtx.unhandledStdout = nil
+	}
+
+	return true
+}
+
+// handleCommandResultsIfDone should be called whenever the previously ran
+// command is done.
+func (lsc *LStreamClient) handleCommandResultsIfDone(cmdCtx *lstreamCmdCtx) {
+	if !cmdCtx.stdoutDone || !cmdCtx.stderrDone {
+		return
+	}
+
+	// Command is done.
+
+	switch {
+	case cmdCtx.cmd.bootstrap != nil:
+		if cmdCtx.bootstrapCtx.receivedSuccess && len(cmdCtx.errs) == 0 {
+			lsc.changeState(LStreamClientStateConnectedIdle)
+		} else {
+			// There was no "bootstrap ok" marker
+
+			err := summaryCmdError(cmdCtx)
+			// If error is nil (which means, there were no "error:" printed, and
+			// bootstrap exited with 0 code, but since there was also no "bootstrap
+			// ok" marker, this is very weird), then still generate an error saying
+			// that there was no "bootstrap ok" message.
+			if err == nil {
+				err = errorFromStdoutStderr(
+					"there was no 'bootstrap ok' message",
+					cmdCtx.unhandledStdout,
+					cmdCtx.unhandledStderr,
+				)
+			}
+
+			lsc.sendUpdate(&LStreamClientUpdate{
+				BootstrapDetails: &BootstrapDetails{
+					Err: err.Error(),
+				},
+			})
+
+			lsc.changeState(LStreamClientStateDisconnected)
+		}
+
+	case cmdCtx.cmd.ping != nil:
+		lsc.sendCmdResp(nil, nil)
+		lsc.changeState(LStreamClientStateConnectedIdle)
+
+	case cmdCtx.cmd.queryLogs != nil:
+		resp := cmdCtx.queryLogsCtx.Resp
+		lsc.sendCmdResp(resp, summaryCmdError(cmdCtx))
+		lsc.changeState(LStreamClientStateConnectedIdle)
+
+	default:
+		panic(fmt.Sprintf("unhandled cmd %+v", cmdCtx.cmd))
+	}
 }
 
 // InferYear infers year from the month of the given timestamp, and the current
@@ -1509,5 +1627,87 @@ func parseLineStructured(
 		decreasedTimestamp: decreasedTimestamp,
 		msg:                msg,
 		ctxMap:             ctxMap,
+	}, nil
+}
+
+func combineErrors(errs []error) error {
+	var err error
+	if len(errs) == 1 {
+		err = errs[0]
+	} else if len(errs) > 0 {
+		ss := []string{}
+		for _, e := range errs {
+			ss = append(ss, e.Error())
+		}
+
+		err = errors.Errorf("%d errors: %s", len(errs), strings.Join(ss, "; "))
+	}
+
+	return err
+}
+
+func errorFromStdoutStderr(prefix string, stdout []string, stderr []string) error {
+	var sb strings.Builder
+
+	sb.WriteString(prefix)
+	sb.WriteString("\n")
+
+	if len(stdout) > 0 {
+		sb.WriteString("stdout:\n")
+		for _, line := range stdout {
+			sb.WriteString(line)
+			sb.WriteString("\n")
+		}
+	}
+
+	if len(stderr) > 0 {
+		if sb.Len() > 0 {
+			sb.WriteString("------\n")
+		}
+		sb.WriteString("stderr:\n")
+		for _, line := range stderr {
+			sb.WriteString(line)
+			sb.WriteString("\n")
+		}
+	}
+
+	return errors.New(sb.String())
+}
+
+func summaryCmdError(cmdCtx *lstreamCmdCtx) error {
+	if len(cmdCtx.errs) > 0 {
+		return combineErrors(cmdCtx.errs)
+	} else if cmdCtx.exitCode != "0" {
+		return errorFromStdoutStderr(
+			fmt.Sprintf("agent exited with non-zero code '%s'", cmdCtx.exitCode),
+			cmdCtx.unhandledStdout,
+			cmdCtx.unhandledStderr,
+		)
+	} else {
+		return nil
+	}
+}
+
+type commandDoneDetails struct {
+	idx int
+}
+
+func parseCommandDoneLine(line string, expectedIdx int) (*commandDoneDetails, error) {
+	parts := strings.Split(line, ":")
+	if len(parts) != 2 {
+		return nil, errors.Errorf("expected two parts, got %d", len(parts))
+	}
+
+	rxIdx, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return nil, errors.Annotatef(err, "parsing idx as integer")
+	}
+
+	if rxIdx != expectedIdx {
+		return nil, errors.Errorf("received unexpected index with command_done: waiting for %d, got %d", expectedIdx, rxIdx)
+	}
+
+	return &commandDoneDetails{
+		idx: rxIdx,
 	}, nil
 }

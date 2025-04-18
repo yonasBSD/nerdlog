@@ -22,6 +22,29 @@ type lstreamCmdCtx struct {
 	bootstrapCtx *lstreamCmdCtxBootstrap
 	pingCtx      *lstreamCmdCtxPing
 	queryLogsCtx *lstreamCmdCtxQueryLogs
+
+	// Initially, stdoutDoneIdx and stderrDoneIdx are set to false. Once we
+	// receive the "command_done" marker from either stdout or stderr, we set the
+	// corresponding bool here to true. Once both are set, we consider the
+	// command execution done, and parse the results.
+	stdoutDone bool
+	stderrDone bool
+
+	// errs contains all errors accumulated during command execution. This
+	// includes errors printed by the nerdlog_agent.sh (lines starting from
+	// "error:", on either stderr or stdout), as well as any errors generated
+	// on the Go side, e.g. failure to parse some other output.
+	errs []error
+
+	exitCode string
+
+	// unhandledStdout and unhandledStderr contain the lines which the Go app did
+	// not make sense of. These are usually ignored, but if the the
+	// nerdlog_agent.sh returns an error code, and there are no specific errors
+	// printed (lines with the "error:" prefix), then we'll print all these
+	// as an error message.
+	unhandledStdout []string
+	unhandledStderr []string
 }
 
 type lstreamCmdRes struct {

@@ -188,6 +188,7 @@ func (app *nerdlogApp) initLStreamsManager(
 		// the UI once we don't have more messages yet.
 		var lastState *core.LStreamsManagerState
 		var logResps []*core.LogRespTotal // TODO: perhaps we should also only keep the last one?
+		var bootstrapErrors []error
 
 		handleUpdate := func(upd core.LStreamsManagerUpdate) {
 			switch {
@@ -195,6 +196,11 @@ func (app *nerdlogApp) initLStreamsManager(
 				lastState = upd.State
 			case upd.LogResp != nil:
 				logResps = append(logResps, upd.LogResp)
+			case upd.BootstrapIssue != nil:
+				bootstrapErrors = append(
+					bootstrapErrors,
+					errors.Errorf("%s: %s", upd.BootstrapIssue.LStreamName, upd.BootstrapIssue.Err),
+				)
 
 			default:
 				panic("empty lstreams manager update")
@@ -212,7 +218,9 @@ func (app *nerdlogApp) initLStreamsManager(
 				// The tviewApp might be nil here if the TUI app has finished, but we're
 				// still receiving updates during the teardown; so if that's the case,
 				// just don't update the TUI.
-				if app.tviewApp != nil && (lastState != nil || len(logResps) > 0) {
+				if app.tviewApp != nil &&
+					(lastState != nil || len(logResps) > 0 || len(bootstrapErrors) > 0) {
+
 					app.tviewApp.QueueUpdateDraw(func() {
 						if lastState != nil {
 							app.mainView.applyHMState(lastState)
@@ -220,30 +228,22 @@ func (app *nerdlogApp) initLStreamsManager(
 
 						for _, logResp := range logResps {
 							if len(logResp.Errs) > 0 {
-								var totalErr error
-								if len(logResp.Errs) == 1 {
-									totalErr = logResp.Errs[0]
-								} else {
-									var sb strings.Builder
-									sb.WriteString(fmt.Sprintf("%d errors:", len(logResp.Errs)))
-									for i, curErr := range logResp.Errs {
-										sb.WriteString("\n")
-										sb.WriteString(fmt.Sprintf("%d: %s", i+1, curErr.Error()))
-									}
-									totalErr = errors.New(sb.String())
-								}
-
-								app.mainView.handleQueryError(totalErr)
+								app.mainView.handleQueryError(combineErrors(logResp.Errs))
 								return
 							}
 
 							app.mainView.applyLogs(logResp)
 							app.lastLogResp = logResp
 						}
+
+						if len(bootstrapErrors) > 0 {
+							app.mainView.handleBootstrapError(combineErrors(bootstrapErrors))
+						}
 					})
 
 					lastState = nil
 					logResps = nil
+					bootstrapErrors = nil
 				}
 
 				// The same select again, but without the default case.
@@ -336,4 +336,21 @@ func (app *nerdlogApp) Close() {
 
 func (app *nerdlogApp) Wait() {
 	app.lsman.Wait()
+}
+
+func combineErrors(errs []error) error {
+	var totalErr error
+	if len(errs) == 1 {
+		totalErr = errs[0]
+	} else {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintf("%d errors:", len(errs)))
+		for i, curErr := range errs {
+			sb.WriteString("\n")
+			sb.WriteString(fmt.Sprintf("%d: %s", i+1, curErr.Error()))
+		}
+		totalErr = errors.New(sb.String())
+	}
+
+	return totalErr
 }
