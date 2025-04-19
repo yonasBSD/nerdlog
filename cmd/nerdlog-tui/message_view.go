@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -17,6 +19,9 @@ type MessageViewParams struct {
 
 	// Width and Height are 40 and 10 by default
 	Width, Height int
+
+	// By default, tview.AlignLeft (because it happens to be 0)
+	Align int
 
 	NoFocus bool
 
@@ -35,6 +40,46 @@ type MessageView struct {
 	focusers []tview.Primitive
 }
 
+// getMaxLineLength returns the length of the longest line in the given string.
+func getMaxLineLength(s string) int {
+	maxLen := 0
+	start := 0
+
+	for i, c := range s {
+		if c == '\n' {
+			lineLen := i - start
+			if lineLen > maxLen {
+				maxLen = lineLen
+			}
+			start = i + 1
+		}
+	}
+
+	// Handle the last line if it doesn't end with a newline
+	if len(s)-start > maxLen {
+		maxLen = len(s) - start
+	}
+
+	return maxLen
+}
+
+// getNumLines returns the number of lines that are needed to draw the given
+// text.
+func getNumLines(s string, screenWidth int) int {
+	if screenWidth <= 0 {
+		return 0
+	}
+
+	lines := strings.Split(s, "\n")
+	numLines := 0
+	for _, line := range lines {
+		// Divide line length by screen width and round up
+		lineLen := len(line)
+		numLines += (lineLen + screenWidth - 1) / screenWidth
+	}
+	return numLines
+}
+
 func NewMessageView(
 	mainView *MainView, params *MessageViewParams,
 ) *MessageView {
@@ -43,19 +88,26 @@ func NewMessageView(
 		mainView: mainView,
 	}
 
+	// extraWidth covers padding and border
+	extraWidth := 4
+	// extraHeight covers padding, border and buttons
+	extraHeight := 6
+
 	if msgv.params.Width == 0 {
-		msgv.params.Width = 40
+		// Set it to fit the longest line (if the terminal window allows),
+		// plus the padding and the border.
+		msgv.params.Width = getMaxLineLength(params.Message) + extraWidth
 	}
 
 	if msgv.params.Height == 0 {
-		msgv.params.Height = 10
+		msgv.params.Height = extraHeight + getNumLines(params.Message, mainView.screenWidth-extraWidth)
 	}
 
 	msgv.msgboxFlex = tview.NewFlex().SetDirection(tview.FlexRow)
 
 	msgv.textView = tview.NewTextView()
 	msgv.textView.SetText(params.Message)
-	msgv.textView.SetTextAlign(tview.AlignCenter)
+	msgv.textView.SetTextAlign(msgv.params.Align)
 	msgv.textView.SetDynamicColors(true)
 
 	if msgv.params.BackgroundColor != tcell.ColorDefault {

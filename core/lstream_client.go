@@ -390,6 +390,10 @@ func (lsc *LStreamClient) run() {
 					continue
 				}
 
+				if lsc.checkDebug(line, cmdCtx) {
+					continue
+				}
+
 				if lsc.checkExitCode(line, cmdCtx) {
 					continue
 				}
@@ -584,6 +588,10 @@ func (lsc *LStreamClient) run() {
 				}
 
 				if lsc.checkError(line, cmdCtx) {
+					continue
+				}
+
+				if lsc.checkDebug(line, cmdCtx) {
 					continue
 				}
 
@@ -1248,6 +1256,18 @@ func (lsc *LStreamClient) checkError(
 	// resulting response.
 	errMsg := strings.TrimPrefix(line, "error:")
 	cmdCtx.errs = append(cmdCtx.errs, errors.New(errMsg))
+
+	return true
+}
+
+func (lsc *LStreamClient) checkDebug(
+	line string, cmdCtx *lstreamCmdCtx,
+) bool {
+	if !strings.HasPrefix(line, "debug:") {
+		return false
+	}
+
+	// TODO: save it somewhere. For now, it's ignored.
 
 	return true
 }

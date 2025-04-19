@@ -57,7 +57,13 @@ type MainViewParams struct {
 }
 
 type MainView struct {
-	params    MainViewParams
+	params MainViewParams
+
+	// screenWidth and screenHeight are set to the current screen size before
+	// every draw.
+	screenWidth  int
+	screenHeight int
+
 	rootPages *tview.Pages
 	logsTable *tview.Table
 
@@ -211,6 +217,14 @@ func NewMainView(params *MainViewParams) *MainView {
 	if err != nil {
 		panic(err.Error())
 	}
+
+	// Remember screen size before every draw.
+	mv.params.App.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
+		width, height := screen.Size()
+		mv.screenWidth = width
+		mv.screenHeight = height
+		return false
+	})
 
 	mv.rootPages = tview.NewPages()
 
@@ -1029,6 +1043,8 @@ func (mv *MainView) makeOverlayVisible() {
 			Width:   70,
 			Height:  8,
 
+			Align: tview.AlignCenter,
+
 			BackgroundColor: tcell.ColorDarkBlue,
 		},
 	)
@@ -1572,6 +1588,9 @@ type MessageboxParams struct {
 
 	Width, Height int
 
+	// By default, tview.AlignLeft (because it happens to be 0)
+	Align int
+
 	NoFocus bool
 
 	BackgroundColor tcell.Color
@@ -1615,6 +1634,8 @@ func (mv *MainView) showMessagebox(
 		Width:  params.Width,
 		Height: params.Height,
 
+		Align: params.Align,
+
 		NoFocus: params.NoFocus,
 
 		BackgroundColor: params.BackgroundColor,
@@ -1653,10 +1674,7 @@ func (mv *MainView) showOriginalMsg(msg core.LogMsg) {
 		tview.Escape(msg.OrigLine),
 	)
 
-	mv.showMessagebox("msg", "Message", s, &MessageboxParams{
-		Width:  120,
-		Height: 20,
-	})
+	mv.showMessagebox("msg", "Message", s, &MessageboxParams{})
 }
 
 func (mv *MainView) showModal(name string, primitive tview.Primitive, width, height int, focus bool) {
@@ -1792,8 +1810,6 @@ func (mv *MainView) handleQueryError(err error) {
 						//mv.reconnect(true)
 					}
 				},
-				Width:  40,
-				Height: 8,
 
 				BackgroundColor: tcell.ColorDarkRed,
 			},
@@ -1801,8 +1817,6 @@ func (mv *MainView) handleQueryError(err error) {
 	} else {
 		// In all other errors, open a regular dialog.
 		mv.showMessagebox("err", "Log query error", err.Error(), &MessageboxParams{
-			Width:           999,
-			Height:          999,
 			BackgroundColor: tcell.ColorDarkRed,
 		})
 	}
@@ -1811,8 +1825,6 @@ func (mv *MainView) handleQueryError(err error) {
 // handleBootstrapError
 func (mv *MainView) handleBootstrapError(err error) {
 	mv.showMessagebox("err", "Bootstrap error", err.Error(), &MessageboxParams{
-		Width:           999,
-		Height:          999,
 		BackgroundColor: tcell.ColorDarkRed,
 	})
 }
