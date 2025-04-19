@@ -1801,8 +1801,8 @@ func (mv *MainView) handleQueryError(err error) {
 	} else {
 		// In all other errors, open a regular dialog.
 		mv.showMessagebox("err", "Log query error", err.Error(), &MessageboxParams{
-			Width:           70,
-			Height:          10,
+			Width:           999,
+			Height:          999,
 			BackgroundColor: tcell.ColorDarkRed,
 		})
 	}
