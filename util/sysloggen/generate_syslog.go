@@ -160,8 +160,8 @@ func randomElement(list []string) string {
 	return list[rand.Intn(len(list))]
 }
 
-func generateSyslogEntry(ts time.Time) string {
-	timestamp := ts.Format("Jan _2 15:04:05")
+func generateSyslogEntry(ts time.Time, layout string) string {
+	timestamp := ts.Format(layout)
 	hostname := "myhost"
 	tag := randomElement(facilities)
 	severity := randomElement(severities)
@@ -182,6 +182,9 @@ func randomStep(params *Params) time.Duration {
 }
 
 type Params struct {
+	// If TimeLayout is empty, "Jan _2 15:04:05" will be used.
+	TimeLayout string
+
 	StartTime     time.Time
 	SecondLogTime time.Time
 
@@ -204,6 +207,10 @@ type Params struct {
 }
 
 func GenerateSyslog(params Params) error {
+	if params.TimeLayout == "" {
+		params.TimeLayout = "Jan _2 15:04:05"
+	}
+
 	rand.Seed(int64(params.RandomSeed))
 
 	curTime := params.StartTime
@@ -257,7 +264,7 @@ func GenerateSyslog(params Params) error {
 			defer file.Close()
 		}
 
-		logEntry := generateSyslogEntry(curTime)
+		logEntry := generateSyslogEntry(curTime, params.TimeLayout)
 		_, err := file.WriteString(logEntry + "\n")
 		if err != nil {
 			return errors.Annotatef(err, "writing to log file")

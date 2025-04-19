@@ -28,6 +28,9 @@ func main2() error {
 	}
 
 	err = sysloggen.GenerateSyslog(sysloggen.Params{
+		TimeLayout: "Jan _2 15:04:05",
+		//TimeLayout: "2006-01-02T15:04:05.000000-07:00",
+
 		StartTime:     t,
 		SecondLogTime: t2,
 
