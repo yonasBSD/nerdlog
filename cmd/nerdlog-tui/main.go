@@ -22,6 +22,13 @@ var (
 func main() {
 	pflag.Parse()
 
+	// As of today, the only way to connect to a logstream is to use ssh via agent,
+	// so check if the agent env var is present, and fail quickly if it's not.
+	if os.Getenv("SSH_AUTH_SOCK") == "" {
+		fmt.Fprintf(os.Stderr, "SSH_AUTH_SOCK env var is not present, which means ssh agent is not running, or at least is not accessible to Nerdlog. As of today, ssh agent is the only way for Nerdlog to connect to logstreams, so please start one, make sure that all the necessary keys are added to it, and retry.\n")
+		os.Exit(1)
+	}
+
 	initialTime := "-1h"
 	initialLStreams := "localhost"
 	initialQuery := ""
