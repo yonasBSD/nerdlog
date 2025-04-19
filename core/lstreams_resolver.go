@@ -428,11 +428,13 @@ func setLogStreamsDefaults(
 		}
 
 		if len(ls.LogFiles) == 0 {
-			ls.LogFiles = append(ls.LogFiles, "/var/log/syslog")
+			// Will be autodetected by the agent script.
+			ls.LogFiles = append(ls.LogFiles, "auto")
 		}
 
 		if len(ls.LogFiles) == 1 {
-			ls.LogFiles = append(ls.LogFiles, ls.LogFiles[0]+".1")
+			// Will be autodetected by the agent script.
+			ls.LogFiles = append(ls.LogFiles, "auto")
 		}
 
 		ret = append(ret, ls)

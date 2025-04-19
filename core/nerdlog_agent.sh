@@ -15,8 +15,8 @@ STAGE_DONE=4
 
 cachefile=/tmp/nerdlog_agent_cache
 
-logfile_prev=/var/log/syslog.1
-logfile_last=/var/log/syslog
+logfile_prev=auto
+logfile_last=auto
 
 positional_args=()
 
@@ -118,6 +118,21 @@ fi
 
 if [[ "$CUR_MONTH" == "" ]]; then
   CUR_MONTH="$(date +'%m')"
+fi
+
+if [[ "$logfile_last" == "auto" ]]; then
+  if [ -e /var/log/messages ]; then
+    logfile_last=/var/log/messages
+  elif [ -e /var/log/syslog ]; then
+    logfile_last=/var/log/syslog
+  else
+    echo "error:failed to autodetect log file" 1>&2
+    exit 1
+  fi
+fi
+
+if [[ "$logfile_prev" == "auto" ]]; then
+  logfile_prev="${logfile_last}.1"
 fi
 
 # Just a hack to account for cases when /var/log/syslog.1 doesn't exist:
