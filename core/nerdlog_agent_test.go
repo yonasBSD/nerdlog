@@ -575,6 +575,7 @@ func BenchmarkNerdlogAgentSmallLogNoIndex(b *testing.B) {
 	cmdArgs := append(
 		[]string{
 			nerdlogAgentShFname,
+			"query",
 			"--logfile-last", filepath.Join(logfilesDir, "syslog"),
 			"--logfile-prev", filepath.Join(logfilesDir, "syslog.1"),
 			"--cache-file", indexFname,
@@ -608,6 +609,7 @@ func BenchmarkNerdlogAgentSmallLogCompleteIndex(b *testing.B) {
 	cmdArgs := append(
 		[]string{
 			nerdlogAgentShFname,
+			"query",
 			"--logfile-last", filepath.Join(logfilesDir, "syslog"),
 			"--logfile-prev", filepath.Join(logfilesDir, "syslog.1"),
 			"--cache-file", indexFname,
@@ -649,6 +651,7 @@ func BenchmarkNerdlogAgentLargeLogSmallPortionNoIndex(b *testing.B) {
 	cmdArgs := append(
 		[]string{
 			nerdlogAgentShFname,
+			"query",
 			"--logfile-last", "/tmp/nerdlog_agent_test_output/randomlog_large",
 			"--logfile-prev", "/tmp/nerdlog_agent_test_output/randomlog_large.1",
 			"--cache-file", indexFname,
@@ -685,6 +688,7 @@ func BenchmarkNerdlogAgentLargeLogSmallPortionCompleteIndex(b *testing.B) {
 	cmdArgs := append(
 		[]string{
 			nerdlogAgentShFname,
+			"query",
 			"--logfile-last", "/tmp/nerdlog_agent_test_output/randomlog_large",
 			"--logfile-prev", "/tmp/nerdlog_agent_test_output/randomlog_large.1",
 			"--cache-file", indexFname,
@@ -726,6 +730,7 @@ func BenchmarkNerdlogAgentLargeLogTinyPortionCompleteIndex(b *testing.B) {
 	cmdArgs := append(
 		[]string{
 			nerdlogAgentShFname,
+			"query",
 			"--logfile-last", "/tmp/nerdlog_agent_test_output/randomlog_large",
 			"--logfile-prev", "/tmp/nerdlog_agent_test_output/randomlog_large.1",
 			"--cache-file", indexFname,
@@ -767,6 +772,7 @@ func BenchmarkNerdlogAgentHugeLogOneHourCompleteIndex(b *testing.B) {
 	cmdArgs := append(
 		[]string{
 			nerdlogAgentShFname,
+			"query",
 			"--logfile-last", "/tmp/nerdlog_agent_test_output/randomlog_huge",
 			"--logfile-prev", "/tmp/nerdlog_agent_test_output/randomlog_huge.1",
 			"--cache-file", indexFname,

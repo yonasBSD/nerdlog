@@ -256,7 +256,7 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
 
     month = monthByName[$1];
     year = yearByMonth[month];
-    day = (length($2) == 1) ? "0" $2 : $2;
+    day = (substr($0, 5, 1) == " ") ? "0" substr($0, 6, 1) : substr($0, 5, 2);
     hhmm = substr($3, 1, 5);
 
     curTimestr = year "-" month "-" day "-" hhmm;
@@ -404,7 +404,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   # First try to find it in cache without refreshing the cache
 
   if [[ "$from" != "" ]]; then
-    read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from) || exit 1
+    read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache "$from") || exit 1
     if [[ "$from_result" != "found" ]]; then
       echo "debug:the from ${from} isn't found, gonna refresh the cache" 1>&2
       refresh_and_retry=1
@@ -412,7 +412,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   fi
 
   if [[ "$to" != "" ]]; then
-    read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to) || exit 1
+    read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache "$to") || exit 1
     if [[ "$to_result" != "found" ]]; then
       echo "debug:the to ${to} isn't found, gonna refresh the cache" 1>&2
       refresh_and_retry=1
@@ -423,7 +423,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
     refresh_cache || exit 1
 
     if [[ "$from" != "" ]]; then
-      read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache $from) || exit 1
+      read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache "$from") || exit 1
 
       if [[ "$from_result" == "before" ]]; then
         echo "debug:the from ${from} isn't found, will use the beginning" 1>&2
@@ -443,7 +443,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
     fi
 
     if [[ "$to" != "" ]]; then
-      read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache $to) || exit 1
+      read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache "$to") || exit 1
 
       if [[ "$to_result" == "after" ]]; then
         echo "debug:the to ${to} isn't found, will use the end" 1>&2

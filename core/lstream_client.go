@@ -1096,13 +1096,13 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		var parts []string
 		parts = append(
 			parts,
-			"bash", lsc.getLStreamNerdlogAgentPath(),
+			"bash", shellQuote(lsc.getLStreamNerdlogAgentPath()),
 			"logstream_info",
-			"--logfile-last", lsc.params.LogStream.LogFileLast(),
+			"--logfile-last", shellQuote(lsc.params.LogStream.LogFileLast()),
 		)
 
 		if logFilePrev, ok := lsc.params.LogStream.LogFilePrev(); ok {
-			parts = append(parts, "--logfile-prev", logFilePrev)
+			parts = append(parts, "--logfile-prev", shellQuote(logFilePrev))
 		}
 
 		lsc.conn.stdinBuf.Write([]byte(strings.Join(parts, " ") + "\n"))
@@ -1134,31 +1134,31 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 
 		parts = append(
 			parts,
-			"bash", lsc.getLStreamNerdlogAgentPath(),
+			"bash", shellQuote(lsc.getLStreamNerdlogAgentPath()),
 			"query",
-			"--cache-file", lsc.getLStreamIndexFilePath(),
-			"--max-num-lines", strconv.Itoa(cmdCtx.cmd.queryLogs.maxNumLines),
-			"--logfile-last", lsc.params.LogStream.LogFileLast(),
+			"--cache-file", shellQuote(lsc.getLStreamIndexFilePath()),
+			"--max-num-lines", shellQuote(strconv.Itoa(cmdCtx.cmd.queryLogs.maxNumLines)),
+			"--logfile-last", shellQuote(lsc.params.LogStream.LogFileLast()),
 		)
 
 		if logFilePrev, ok := lsc.params.LogStream.LogFilePrev(); ok {
-			parts = append(parts, "--logfile-prev", logFilePrev)
+			parts = append(parts, "--logfile-prev", shellQuote(logFilePrev))
 		}
 
 		if !cmdCtx.cmd.queryLogs.from.IsZero() {
-			parts = append(parts, "--from", cmdCtx.cmd.queryLogs.from.In(lsc.location).Format(queryLogsArgsTimeLayout))
+			parts = append(parts, "--from", shellQuote(cmdCtx.cmd.queryLogs.from.In(lsc.location).Format(queryLogsArgsTimeLayout)))
 		}
 
 		if !cmdCtx.cmd.queryLogs.to.IsZero() {
-			parts = append(parts, "--to", cmdCtx.cmd.queryLogs.to.In(lsc.location).Format(queryLogsArgsTimeLayout))
+			parts = append(parts, "--to", shellQuote(cmdCtx.cmd.queryLogs.to.In(lsc.location).Format(queryLogsArgsTimeLayout)))
 		}
 
 		if cmdCtx.cmd.queryLogs.linesUntil > 0 {
-			parts = append(parts, "--lines-until", strconv.Itoa(cmdCtx.cmd.queryLogs.linesUntil))
+			parts = append(parts, "--lines-until", shellQuote(strconv.Itoa(cmdCtx.cmd.queryLogs.linesUntil)))
 		}
 
 		if cmdCtx.cmd.queryLogs.query != "" {
-			parts = append(parts, "'"+strings.Replace(cmdCtx.cmd.queryLogs.query, "'", "'\"'\"'", -1)+"'")
+			parts = append(parts, shellQuote(cmdCtx.cmd.queryLogs.query))
 		}
 
 		if useGzip {
@@ -1306,6 +1306,8 @@ func (lsc *LStreamClient) handleCommandResultsIfDone(cmdCtx *lstreamCmdCtx) {
 	switch {
 	case cmdCtx.cmd.bootstrap != nil:
 		if cmdCtx.bootstrapCtx.receivedSuccess && len(cmdCtx.errs) == 0 {
+			// Bootstrap script has ran successfully, let's now try to autodetect the
+			// envelope log format.
 			lsc.changeState(LStreamClientStateConnectedIdle)
 		} else {
 			// There was no "bootstrap ok" marker
@@ -1722,4 +1724,8 @@ func parseCommandDoneLine(line string, expectedIdx int) (*commandDoneDetails, er
 	return &commandDoneDetails{
 		idx: rxIdx,
 	}, nil
+}
+
+func shellQuote(s string) string {
+	return fmt.Sprintf("'%s'", strings.Replace(s, "'", "'\"'\"'", -1))
 }
