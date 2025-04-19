@@ -160,13 +160,23 @@ case "${command}" in
     host_timezone="$(timedatectl show --property=Timezone --value)" || exit 1
     echo "host_timezone:$host_timezone"
 
-    if [ ! -e ${logfile_last} ] || [ ! -r ${logfile_last} ]; then
-      echo "error:${logfile_last} does not exist or is not readable"
+    if [ ! -e ${logfile_last} ]; then
+      echo "error:${logfile_last} does not exist"
       exit 1
     fi
 
-    if [ ! -e ${logfile_prev} ] || [ ! -r ${logfile_prev} ]; then
-      echo "error:${logfile_prev} does not exist or is not readable"
+    if [ ! -r ${logfile_last} ]; then
+      echo "error:${logfile_last} exists but is not readable, check your permissions"
+      exit 1
+    fi
+
+    if [ ! -e ${logfile_prev} ]; then
+      echo "error:${logfile_prev} does not exist"
+      exit 1
+    fi
+
+    if [ ! -r ${logfile_prev} ]; then
+      echo "error:${logfile_prev} exists but is not readable, check your permissions"
       exit 1
     fi
 
