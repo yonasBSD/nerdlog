@@ -22,6 +22,14 @@ positional_args=()
 
 max_num_lines=100
 
+awktime_month='monthByName[substr($0, 1, 3)]'
+awktime_year='yearByMonth[month]'
+awktime_day='(substr($0, 5, 1) == " ") ? "0" substr($0, 6, 1) : substr($0, 5, 2)'
+awktime_hhmm='substr($0, 8, 5)'
+awktime_minute_key='substr($0, 1, 12)'
+# TODO: double check that if any of these is provided manually in a flag,
+# then all of them are provided manually.
+
 while [[ $# -gt 0 ]]; do
   case $1 in
     -c|--cache-file)
@@ -63,6 +71,33 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
+
+    --awktime-month)
+      awktime_month="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --awktime-year)
+      awktime_year="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --awktime-day)
+      awktime_day="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --awktime-hhmm)
+      awktime_hhmm="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --awktime-minute-key)
+      awktime_minute_key="$2"
+      shift # past argument
+      shift # past value
+      ;;
+
     -*|--*)
       echo "Unknown option $1" 1>&2
       exit 1
@@ -254,10 +289,10 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
   scriptSetCurTimestr='
     bytenr_cur = bytenr_next - length($0) - 1;
 
-    month = monthByName[$1];
-    year = yearByMonth[month];
-    day = (substr($0, 5, 1) == " ") ? "0" substr($0, 6, 1) : substr($0, 5, 2);
-    hhmm = substr($3, 1, 5);
+    month = '"$awktime_month"';
+    year = '"$awktime_year"';
+    day = '"$awktime_day"';
+    hhmm = '"$awktime_hhmm"';
 
     curTimestr = year "-" month "-" day "-" hhmm;
   '
@@ -269,7 +304,7 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
   script1='BEGIN { bytenr_next=1; lastPercent=0 }
 {
   bytenr_next += length($0)+1
-  curHHMM = substr($3, 1, 5);
+  curHHMM = '"$awktime_hhmm"';
 }'
 
   if [ -s $cachefile ]
@@ -533,7 +568,7 @@ NR % 100 == 0 {
 }
 '$awk_pattern'
 {
-  stats[substr($0,1,12)]++;
+  stats['"$awktime_minute_key"']++;
 
   '$lines_until_check'
 

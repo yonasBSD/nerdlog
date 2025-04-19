@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	_ "embed"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -14,7 +13,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unicode"
 
 	"github.com/juju/errors"
 	"golang.org/x/crypto/ssh"
@@ -43,28 +41,13 @@ const (
 	gzipEndMarker   = "gzip_end"
 )
 
-// It's pretty messy, but to keep things optimized for speed as much as we can,
-// we have to use different time formats.
-//
 // queryLogsArgsTimeLayout is used to format the --from and --to arguments for
-// nerdlog_agent.sh, and it must have leading zeros, since that's how awk's
-// strftime formats time and thus that's how the index file has it formatted and
-// --from, --to must match exactly. (strftime has %d, which has leading zeros,
-// and %e, which has leading spaces, but there are no options to have no
-// leading characters at all)
+// nerdlog_agent.sh.
 //
-// queryLogsMstatsTimeLayout is used to parse the "mstats" (message stats)
-// lines output by nerdlog_agent.sh, and it uses no leading spaces or zeros,
-// because we just operate with awk's "fields" of log lines there, and in
-// syslog, those fields are separated by whitespace; so in syslog we get like
-// "Apr  9" or "Apr 10", but in mstats we'll have "Apr-9" or "Apr-10".
-//
-// To avoid reformatting things manually and thus slowing them down, we just use
-// different formats.
+// TODO: make it dynamic; e.g. generating that day string like "02" requires
+// some extra logic in the agent script for the traditional syslog format
+// (which has it space-padded, not zero-padded).
 const queryLogsArgsTimeLayout = "2006-01-02-15:04"
-const queryLogsMstatsTimeLayout = "Jan _2 15:04"
-
-const syslogTimeLayout = "Jan _2 15:04:05"
 
 //go:embed nerdlog_agent.sh
 var nerdlogAgentSh string
@@ -83,6 +66,7 @@ type LStreamClient struct {
 	// exampleLogLines are the lines that we received during logstream bootstrap.
 	// We'll try to do log format autodetection based on that.
 	exampleLogLines []string
+	timeFormat      *TimeFormatDescr
 
 	numConnAttempts int
 
@@ -458,7 +442,7 @@ func (lsc *LStreamClient) run() {
 							continue
 						}
 
-						t, err := time.ParseInLocation(queryLogsMstatsTimeLayout, parts[0], lsc.location)
+						t, err := time.ParseInLocation(lsc.timeFormat.MinuteKeyLayout, parts[0], lsc.location)
 						if err != nil {
 							cmdCtx.errs = append(cmdCtx.errs, errors.Annotatef(err, "parsing mstats"))
 							continue
@@ -530,7 +514,7 @@ func (lsc *LStreamClient) run() {
 
 						origLine := msg
 
-						parseRes, err := parseLine(lsc.location, msg, respCtx.lastTime)
+						parseRes, err := lsc.parseLine(msg, respCtx.lastTime)
 						if err != nil {
 							cmdCtx.errs = append(cmdCtx.errs, errors.Annotatef(err, "parsing log msg: no time in %q", line))
 							continue
@@ -1157,6 +1141,8 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 			parts = append(parts, "--lines-until", shellQuote(strconv.Itoa(cmdCtx.cmd.queryLogs.linesUntil)))
 		}
 
+		parts = append(parts, agentQueryTimeFormatArgs(&lsc.timeFormat.AWKExpr)...)
+
 		if cmdCtx.cmd.queryLogs.query != "" {
 			parts = append(parts, shellQuote(cmdCtx.cmd.queryLogs.query))
 		}
@@ -1308,31 +1294,44 @@ func (lsc *LStreamClient) handleCommandResultsIfDone(cmdCtx *lstreamCmdCtx) {
 		if cmdCtx.bootstrapCtx.receivedSuccess && len(cmdCtx.errs) == 0 {
 			// Bootstrap script has ran successfully, let's now try to autodetect the
 			// envelope log format.
-			lsc.changeState(LStreamClientStateConnectedIdle)
-		} else {
-			// There was no "bootstrap ok" marker
-
-			err := summaryCmdError(cmdCtx)
-			// If error is nil (which means, there were no "error:" printed, and
-			// bootstrap exited with 0 code, but since there was also no "bootstrap
-			// ok" marker, this is very weird), then still generate an error saying
-			// that there was no "bootstrap ok" message.
-			if err == nil {
-				err = errorFromStdoutStderr(
-					"there was no 'bootstrap ok' message",
-					cmdCtx.unhandledStdout,
-					cmdCtx.unhandledStderr,
+			timeFormat, err := GetTimeFormatDescrFromLogLines(lsc.exampleLogLines)
+			if err != nil {
+				cmdCtx.errs = append(cmdCtx.errs, err)
+			} else {
+				// All good
+				lsc.params.Logger.Infof(
+					"Detected time format based on %d log lines: %q",
+					len(lsc.exampleLogLines),
+					timeFormat.TimestampLayout,
 				)
+				lsc.timeFormat = timeFormat
+				lsc.changeState(LStreamClientStateConnectedIdle)
+				return
 			}
-
-			lsc.sendUpdate(&LStreamClientUpdate{
-				BootstrapDetails: &BootstrapDetails{
-					Err: err.Error(),
-				},
-			})
-
-			lsc.changeState(LStreamClientStateDisconnected)
 		}
+
+		// There was an issue with bootstrapping.
+
+		err := summaryCmdError(cmdCtx)
+		// If error is nil (which means, there were no "error:" printed, and
+		// bootstrap exited with 0 code, but since there was also no "bootstrap
+		// ok" marker, this is very weird), then still generate an error saying
+		// that there was no "bootstrap ok" message.
+		if err == nil {
+			err = errorFromStdoutStderr(
+				"there was no 'bootstrap ok' message",
+				cmdCtx.unhandledStdout,
+				cmdCtx.unhandledStderr,
+			)
+		}
+
+		lsc.sendUpdate(&LStreamClientUpdate{
+			BootstrapDetails: &BootstrapDetails{
+				Err: err.Error(),
+			},
+		})
+
+		lsc.changeState(LStreamClientStateDisconnected)
 
 	case cmdCtx.cmd.ping != nil:
 		lsc.sendCmdResp(nil, nil)
@@ -1393,57 +1392,6 @@ func timeWithYear(t time.Time, year int) time.Time {
 	)
 }
 
-type parseSystemdMsgResult struct {
-	tsStr  string
-	ts1Len int
-
-	msg string
-}
-
-func parseSystemdMsg(msg string) (*parseSystemdMsgResult, error) {
-	ts1Len := 0
-	ns := 0
-	inWhitespace := false
-	for i, r := range msg {
-		if r != ' ' {
-			inWhitespace = false
-			continue
-		}
-
-		if inWhitespace {
-			continue
-		}
-
-		inWhitespace = true
-
-		ns++
-		if ns >= 3 {
-			ts1Len = i
-			break
-		}
-	}
-
-	if ts1Len == 0 {
-		return nil, errors.Errorf("parsing log msg: no time in %q", msg)
-	}
-
-	tsStr := msg[:ts1Len]
-	msg = msg[ts1Len+1:]
-	colonIdx := strings.IndexRune(msg, ':')
-	if colonIdx == -1 {
-		return nil, errors.Errorf("parsing log msg: no systemd colon")
-	}
-
-	msg = msg[colonIdx+1:]
-	msg = strings.TrimSpace(msg)
-
-	return &parseSystemdMsgResult{
-		tsStr:  tsStr,
-		ts1Len: ts1Len,
-		msg:    msg,
-	}, nil
-}
-
 type parseLineResult struct {
 	// time might or might not be populated: most of our messages contain an
 	// extra (more precise) timestamp, so in this case it'll be populated here,
@@ -1458,64 +1406,53 @@ type parseLineResult struct {
 	ctxMap map[string]string
 }
 
-func parseLine(loc *time.Location, msg string, lastTime time.Time) (*parseLineResult, error) {
-	sdmsg, err := parseSystemdMsg(msg)
-	if err != nil {
-		return nil, errors.Trace(err)
+func (lsc *LStreamClient) parseLine(msg string, lastTime time.Time) (*parseLineResult, error) {
+	timeLayout := lsc.timeFormat.TimestampLayout
+	timestampLen := len(timeLayout)
+
+	// If the layout ends with the offset like "Z07" or "Z07:00", but the
+	// actual timestamp string is in UTC and it ends with just "Z", we then
+	// need to remove that extra
+	zIdx := strings.Index(timeLayout, "Z07")
+	if zIdx >= 0 && len(msg) >= zIdx && msg[zIdx] == 'Z' {
+		// We have a Z in the timestamp, so there should be no offset after it.
+		timestampLen = zIdx + 1
 	}
 
-	msg = sdmsg.msg
-
-	if len(msg) > 0 && msg[0] == '{' {
-		res, err := parseLineStructured(loc, lastTime, sdmsg)
-		if err == nil {
-			return res, nil
-		}
-
-		// The message looked like it was in a structured format, but we failed
-		// to parse it, so fallback to the regular parsing
+	if len(msg) < timestampLen {
+		return nil, errors.Errorf("line %q is too short to have a timestamp", msg)
 	}
 
-	res, err := parseLineUnstructured(loc, lastTime, sdmsg)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	return res, nil
-}
-
-func parseLineUnstructured(
-	loc *time.Location, lastTime time.Time, sdmsg *parseSystemdMsgResult,
-) (*parseLineResult, error) {
-	tsStr := sdmsg.tsStr
-	msg := sdmsg.msg
-
-	// Logs often contain double timestamps: one from systemd and
-	// the next one from the app, so check if the second one exists
-	// indeed.
-	ts2Idx := strings.Index(msg, tsStr)
-	if ts2Idx >= 0 {
-		tmp := strings.IndexRune(msg[ts2Idx+sdmsg.ts1Len:], ' ')
-		if tmp > 0 {
-			ts2Len := sdmsg.ts1Len + tmp
-			tsStr = msg[ts2Idx : ts2Idx+ts2Len]
-			msg = msg[ts2Idx+ts2Len+1:]
-		}
-	}
-
-	// Now, tsStr contains the timestamp to parse, and msg contains
-	// everything after that timestamp.
-
-	t, err := time.ParseInLocation(syslogTimeLayout, tsStr, loc)
+	t, err := time.ParseInLocation(timeLayout, msg[:timestampLen], lsc.location)
 	if err != nil {
 		return nil, errors.Annotatef(err, "parsing log msg")
 	}
 
-	t = InferYear(t)
+	// If the location we get from the actual logs doesn't match what we have,
+	// trust the logs more.
+	//
+	// NOTE: this new timezone is still not fully effective until the next query,
+	// because even the request itself was likely done wrong. Also, if mstats are
+	// already parsed, their timestamp is also wrong (that one can technically be
+	// solved by printing mstats after logs). Maybe we should somehow show a
+	// warning that the timezone was overridden.
+	if t.Location() != lsc.location {
+		lsc.params.Logger.Infof(
+			"Log line timestamp has a different location: %s instead of %s; trusting logs more",
+			t.Location(), lsc.location,
+		)
+		lsc.location = t.Location()
+	}
+
+	if t.Year() == 0 {
+		t = InferYear(t)
+	}
 	t = t.UTC()
 
 	decreasedTimestamp := false
 
+	// TODO: right now it's useless, but this snippet will be useful once we
+	// implement customizable payload parsing (e.g. with Lua script).
 	if t.Before(lastTime) {
 		// Time has decreased: this might happen if the previous log line had
 		// a precise timestamp with microseconds, but the current line only has
@@ -1524,117 +1461,10 @@ func parseLineUnstructured(
 		t = lastTime
 		decreasedTimestamp = true
 	}
+
+	msg = msg[len(timeLayout):]
 
 	ctxMap := map[string]string{}
-
-	if false {
-		// Extract context tags from msg
-		lastEqIdx := strings.LastIndexByte(msg, '=')
-	tagsLoop:
-		for ; lastEqIdx >= 0; lastEqIdx = strings.LastIndexByte(msg, '=') {
-			val := msg[lastEqIdx+1:]
-			msg = msg[:lastEqIdx]
-			var key string
-
-			lastSpaceIdx := strings.LastIndexByte(msg, ' ')
-			if lastSpaceIdx >= 0 {
-				key = msg[lastSpaceIdx+1:]
-				msg = msg[:lastSpaceIdx]
-			} else {
-				key = msg
-				msg = ""
-			}
-
-			for _, r := range key {
-				if !unicode.IsLetter(r) && !unicode.IsNumber(r) && r != '_' && r != '-' {
-					continue tagsLoop
-				}
-			}
-
-			ctxMap[key] = val
-		}
-
-		// Another hack: often our messages contain a prefix like
-		// "[ foo.bar.baz.info ]", but this is redundant since
-		// "foo.bar.baz" is already present as a namespace, and "info"
-		// is present as level_name. So we check if such redundant prefix
-		// exists, and strip it.
-		if strings.HasPrefix(msg, "[ ") {
-			if idx := strings.Index(msg, " ] "); idx >= 0 {
-				if msg[2:idx] == ctxMap["namespace"]+"."+ctxMap["level_name"] {
-					// Prefix exists and is redundant, strip it.
-					msg = msg[idx+3:]
-				}
-			}
-		}
-	}
-
-	return &parseLineResult{
-		time:               t,
-		decreasedTimestamp: decreasedTimestamp,
-		msg:                msg,
-		ctxMap:             ctxMap,
-	}, nil
-}
-
-func parseLineStructured(
-	loc *time.Location, lastTime time.Time, sdmsg *parseSystemdMsgResult,
-) (*parseLineResult, error) {
-	tsStr := sdmsg.tsStr
-	msg := sdmsg.msg
-
-	var msgParsed struct {
-		Fields map[string]interface{}
-	}
-
-	if err := json.Unmarshal([]byte(msg), &msgParsed); err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	ctxMap := make(map[string]string, len(msgParsed.Fields))
-	for k, v := range msgParsed.Fields {
-		var vStr string
-		switch vTyped := v.(type) {
-		case string:
-			vStr = vTyped
-		default:
-			vStr = fmt.Sprintf("%v", v)
-		}
-
-		ctxMap[k] = vStr
-	}
-
-	if ts2Str, ok := ctxMap["time"]; ok {
-		tsStr = ts2Str
-		delete(ctxMap, "time")
-	}
-
-	// Now, tsStr contains the timestamp to parse, and msg contains
-	// everything after that timestamp.
-
-	t, err := time.ParseInLocation(syslogTimeLayout, tsStr, loc)
-	if err != nil {
-		return nil, errors.Annotatef(err, "parsing log msg")
-	}
-
-	t = InferYear(t)
-	t = t.UTC()
-
-	decreasedTimestamp := false
-
-	if t.Before(lastTime) {
-		// Time has decreased: this might happen if the previous log line had
-		// a precise timestamp with microseconds, but the current line only has
-		// a second precision. Then we just hackishly set the current timestamp
-		// to be the same.
-		t = lastTime
-		decreasedTimestamp = true
-	}
-
-	if msg2, ok := ctxMap["msg"]; ok {
-		msg = msg2
-		delete(ctxMap, "msg")
-	}
 
 	return &parseLineResult{
 		time:               t,
@@ -1728,4 +1558,14 @@ func parseCommandDoneLine(line string, expectedIdx int) (*commandDoneDetails, er
 
 func shellQuote(s string) string {
 	return fmt.Sprintf("'%s'", strings.Replace(s, "'", "'\"'\"'", -1))
+}
+
+func agentQueryTimeFormatArgs(awkExpr *TimeFormatAWKExpr) []string {
+	return []string{
+		"--awktime-month", shellQuote(awkExpr.Month),
+		"--awktime-year", shellQuote(awkExpr.Year),
+		"--awktime-day", shellQuote(awkExpr.Day),
+		"--awktime-hhmm", shellQuote(awkExpr.HHMM),
+		"--awktime-minute-key", shellQuote(awkExpr.MinuteKey),
+	}
 }
