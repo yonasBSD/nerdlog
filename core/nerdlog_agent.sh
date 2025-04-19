@@ -310,6 +310,10 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
     hhmm = '"$awktime_hhmm"';
 
     curTimestr = year "-" month "-" day "-" hhmm;
+    if (curTimestr < lastTimestr) {
+      print "error:timestamp decreased from " lastTimestr " to " curTimestr ", might be using inconsistent timestamp formats" > "/dev/stderr"
+      exit 1
+    }
   '
   scriptSetLastTimestrEtc='
     lastTimestr = curTimestr;
@@ -348,6 +352,11 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
     '"$scriptSetLastTimestrEtc"'
   }
   ' -
+    if [[ "$?" != 0 ]]; then
+      echo "debug:failed to index up, removing index file" 1>&2
+      rm $cachefile
+      exit 1
+    fi
   else
     echo "p:stage:$STAGE_INDEX_FULL:indexing from scratch" 1>&2
 
@@ -363,6 +372,11 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
   }
   END { print "prevlog_lines\t" NR >> "'$cachefile'" }
   ' $logfile_prev
+    if [[ "$?" != 0 ]]; then
+      echo "debug:failed to index from scratch $logfile_prev, removing index file" 1>&2
+      rm $cachefile
+      exit 1
+    fi
 
   # Before we start handling $logfile_last, gotta read the last idx line (which is
   # last-but-one line) and set it for the next script, otherwise there is a gap
@@ -380,6 +394,11 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
     '"$scriptSetLastTimestrEtc"'
   }
   ' $logfile_last
+    if [[ "$?" != 0 ]]; then
+      echo "debug:failed to index from scratch $logfile_last, removing index file" 1>&2
+      rm $cachefile
+      exit 1
+    fi
   fi
 } # }}}
 
