@@ -526,7 +526,7 @@ func (lsc *LStreamClient) run() {
 							continue
 						}
 
-						parseRes.ctxMap["source"] = lsc.params.LogStream.Name
+						parseRes.ctxMap["lstream"] = lsc.params.LogStream.Name
 
 						resp.Logs = append(resp.Logs, LogMsg{
 							Time:               parseRes.time,

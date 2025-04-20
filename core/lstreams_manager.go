@@ -776,8 +776,8 @@ func (lsman *LStreamsManager) mergeLogRespsAndSend() {
 			return ret.Logs[i].Time.Before(ret.Logs[j].Time)
 		}
 
-		// TODO: make it less hacky, store source somewhere outside of Context as well.
-		return ret.Logs[i].Context["source"] < ret.Logs[j].Context["source"]
+		// TODO: make it less hacky, store lstream somewhere outside of Context as well.
+		return ret.Logs[i].Context["lstream"] < ret.Logs[j].Context["lstream"]
 	})
 
 	// Cut all potentially incomplete logs, only leave timespan that we're sure

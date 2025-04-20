@@ -60,7 +60,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 		for _, logMsg := range app.lastLogResp.Logs {
 			fmt.Fprintf(lfile, "%s <ssh -t %s vim +%d %s>\n",
 				logMsg.OrigLine,
-				logMsg.Context["source"], logMsg.LogLinenumber, logMsg.LogFilename,
+				logMsg.Context["lstream"], logMsg.LogLinenumber, logMsg.LogFilename,
 			)
 		}
 

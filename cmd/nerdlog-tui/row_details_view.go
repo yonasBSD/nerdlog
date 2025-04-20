@@ -454,7 +454,7 @@ func NewRowDetailsView(
 				}
 			}
 
-			if rCtx.valExists && rCtx.field.Name != FieldNameTime && rCtx.field.Name != "source" {
+			if rCtx.valExists && rCtx.field.Name != FieldNameTime && rCtx.field.Name != "lstream" {
 				if !rCtx.filteredByTagAndValue {
 					rdv.tbl.AddOption("[ ] Filter logs with this tag+value pair", getToggleFilterByTagAndValue(rCtx.awkTagAndValue))
 				} else {

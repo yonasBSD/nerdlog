@@ -24,7 +24,7 @@ current time is used.
 var lstreamsLabelText = `Logstreams. Comma-separated strings of the format "[yellow][user@]myserver.com[:port[:/path/to/logfile]][-]".
 Examples: "[yellow]user@myserver.com[-]", or "[yellow]user@myserver.com:22:/var/log/syslog[-]"`
 
-var selectQueryLabelText = `Select field expression. Example: "[yellow]time STICKY, message, source, level_name AS level, *[-]".`
+var selectQueryLabelText = `Select field expression. Example: "[yellow]time STICKY, message, lstream, level_name AS level, *[-]".`
 
 type QueryEditViewParams struct {
 	// DoneFunc is called when the user submits the form. If it returns a non-nil

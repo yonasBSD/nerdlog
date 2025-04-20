@@ -23,7 +23,7 @@ func TestSelectQuery(t *testing.T) {
 
 	testCases := []testCase{
 		testCase{descr: "close to default one", // {{{
-			str: "time STICKY, message, source, level_name AS lvl, redacted_id_int AS ds",
+			str: "time STICKY, message, lstream, level_name AS lvl, redacted_id_int AS ds",
 			wantParsed: &SelectQueryParsed{
 				Fields: []SelectQueryField{
 					SelectQueryField{
@@ -36,8 +36,8 @@ func TestSelectQuery(t *testing.T) {
 						DisplayName: "message",
 					},
 					SelectQueryField{
-						Name:        "source",
-						DisplayName: "source",
+						Name:        "lstream",
+						DisplayName: "lstream",
 					},
 					SelectQueryField{
 						Name:        "level_name",
@@ -51,7 +51,7 @@ func TestSelectQuery(t *testing.T) {
 			},
 		}, // }}}
 		testCase{descr: "two sticky fields", // {{{
-			str: "time STICKY, message, source, level_name AS lvl STICKY, redacted_id_int AS ds",
+			str: "time STICKY, message, lstream, level_name AS lvl STICKY, redacted_id_int AS ds",
 			wantParsed: &SelectQueryParsed{
 				Fields: []SelectQueryField{
 					SelectQueryField{
@@ -64,8 +64,8 @@ func TestSelectQuery(t *testing.T) {
 						DisplayName: "message",
 					},
 					SelectQueryField{
-						Name:        "source",
-						DisplayName: "source",
+						Name:        "lstream",
+						DisplayName: "lstream",
 					},
 					// NOTE that in the actual app it will be moved to the front (right after time),
 					// but it's not done on the marshaling level, to avoid the remarshaled string
@@ -83,7 +83,7 @@ func TestSelectQuery(t *testing.T) {
 			},
 		}, // }}}
 		testCase{descr: "close to default one, with a wildcard", // {{{
-			str: "time STICKY, message, source, level_name AS lvl, redacted_id_int AS ds, *",
+			str: "time STICKY, message, lstream, level_name AS lvl, redacted_id_int AS ds, *",
 			wantParsed: &SelectQueryParsed{
 				Fields: []SelectQueryField{
 					SelectQueryField{
@@ -96,8 +96,8 @@ func TestSelectQuery(t *testing.T) {
 						DisplayName: "message",
 					},
 					SelectQueryField{
-						Name:        "source",
-						DisplayName: "source",
+						Name:        "lstream",
+						DisplayName: "lstream",
 					},
 					SelectQueryField{
 						Name:        "level_name",
@@ -119,8 +119,8 @@ func TestSelectQuery(t *testing.T) {
 			},
 		}, // }}}
 		testCase{descr: "no uppercase", // {{{
-			str:            "time sticky, message, source, level_name as lvl, redacted_id_int as ds",
-			strRemarshaled: "time STICKY, message, source, level_name AS lvl, redacted_id_int AS ds",
+			str:            "time sticky, message, lstream, level_name as lvl, redacted_id_int as ds",
+			strRemarshaled: "time STICKY, message, lstream, level_name AS lvl, redacted_id_int AS ds",
 			wantParsed: &SelectQueryParsed{
 				Fields: []SelectQueryField{
 					SelectQueryField{
@@ -133,8 +133,8 @@ func TestSelectQuery(t *testing.T) {
 						DisplayName: "message",
 					},
 					SelectQueryField{
-						Name:        "source",
-						DisplayName: "source",
+						Name:        "lstream",
+						DisplayName: "lstream",
 					},
 					SelectQueryField{
 						Name:        "level_name",
@@ -149,11 +149,11 @@ func TestSelectQuery(t *testing.T) {
 		}, // }}}
 
 		testCase{descr: "wildcard as a non-last item: error", // {{{
-			str:     "time STICKY, message, source, level_name AS lvl, *, redacted_id_int AS ds",
+			str:     "time STICKY, message, lstream, level_name AS lvl, *, redacted_id_int AS ds",
 			wantErr: "wildcard can only be the last item",
 		}, // }}}
 		testCase{descr: "more than one AS: error", // {{{
-			str:     "time STICKY, message, source, level_name AS foo AS bar, redacted_id_int as ds",
+			str:     "time STICKY, message, lstream, level_name AS foo AS bar, redacted_id_int as ds",
 			wantErr: "syntax error for field level_name: more than a single 'AS'",
 		}, // }}}
 		testCase{descr: "empty: error", // {{{

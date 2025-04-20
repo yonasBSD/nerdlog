@@ -1620,7 +1620,7 @@ func (mv *MainView) showOriginalMsg(msg core.LogMsg) {
 
 	s := fmt.Sprintf(
 		"ssh -t %s 'vim +\"set ft=messages\" +%d <(tail -n +%d %s | head -n %d)'\n\n%s",
-		msg.Context["source"], lnOffsetUp+1, lnBegin, msg.LogFilename, lnOffsetUp+lnOffsetDown,
+		msg.Context["lstream"], lnOffsetUp+1, lnBegin, msg.LogFilename, lnOffsetUp+lnOffsetDown,
 		tview.Escape(msg.OrigLine),
 	)
 
