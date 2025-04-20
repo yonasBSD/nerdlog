@@ -1243,30 +1243,16 @@ func (mv *MainView) formatLogs() {
 	for i, rowIdx := 0, 2; i < len(resp.Logs); i, rowIdx = i+1, rowIdx+1 {
 		msg := resp.Logs[i]
 
-		// TODO: make it configurable
+		// TODO: make the colors configurable
 		msgColor := tcell.ColorWhite
-		levelName := "info"
-		if ln, ok := msg.Context["level_name"]; ok {
-			levelName = ln
-		} else if strings.Contains(msg.Msg, "[D]") {
-			levelName = "debug"
-		} else if strings.Contains(msg.Msg, "[I]") {
-			levelName = "info"
-		} else if strings.Contains(msg.Msg, "[W]") {
-			levelName = "warn"
-		} else if strings.Contains(msg.Msg, "[E]") {
-			levelName = "error"
-		}
-
-		switch levelName {
-		case "debug":
+		switch msg.Level {
+		case core.LogLevelDebug:
+			msgColor = tcell.ColorLightBlue
+		case core.LogLevelInfo:
 			msgColor = tcell.ColorLightGreen
-		case "info":
-			// Same as default, but just to mention it explicitly
-			msgColor = tcell.ColorWhite
-		case "warn":
+		case core.LogLevelWarn:
 			msgColor = tcell.ColorYellow
-		case "error":
+		case core.LogLevelError:
 			msgColor = tcell.ColorPink
 		}
 

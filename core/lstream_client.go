@@ -518,32 +518,44 @@ func (lsc *LStreamClient) run() {
 							}
 						}
 
-						origLine := msg
-
-						parseRes, err := lsc.parseLine(msg, respCtx.lastTime)
-						if err != nil {
-							cmdCtx.errs = append(cmdCtx.errs, errors.Annotatef(err, "parsing log msg: no time in %q", line))
-							continue
-						}
-
-						parseRes.ctxMap["lstream"] = lsc.params.LogStream.Name
-
-						resp.Logs = append(resp.Logs, LogMsg{
-							Time:               parseRes.time,
-							DecreasedTimestamp: parseRes.decreasedTimestamp,
+						// Put together a basic LogMsg, for now with the raw message and
+						// without even the Time parsed, and then give it to parseLine,
+						// which will encirch it.
+						logMsg := LogMsg{
+							// Time will be set later
 
 							LogFilename:   logFilename,
 							LogLinenumber: logLineno,
 
 							CombinedLinenumber: logLinenoCombined,
 
-							Msg:     parseRes.msg,
-							Context: parseRes.ctxMap,
+							Msg: msg,
+							Context: map[string]string{
+								"lstream": lsc.params.LogStream.Name,
+							},
 
-							OrigLine: origLine,
-						})
+							OrigLine: msg,
+						}
 
-						respCtx.lastTime = parseRes.time
+						err = lsc.parseLine(&logMsg)
+						if err != nil {
+							cmdCtx.errs = append(cmdCtx.errs, errors.Annotatef(err, "parsing log msg %q", line))
+							continue
+						}
+
+						if logMsg.Time.Before(respCtx.lastTime) {
+							// Time has decreased: this might happen if the previous log line
+							// had a precise timestamp with microseconds (coming from the app
+							// level), but the current line only has a second precision
+							// (e.g. coming from rsyslog level). Then we just hackishly set the
+							// current timestamp to be the same.
+							logMsg.Time = respCtx.lastTime
+							logMsg.DecreasedTimestamp = true
+						}
+
+						resp.Logs = append(resp.Logs, logMsg)
+
+						respCtx.lastTime = logMsg.Time
 
 						// NOTE: the "p:" lines (process-related) are in stderr and thus
 						// are handled below. Why they are in stderr, see comments there.
@@ -1419,7 +1431,22 @@ type parseLineResult struct {
 	ctxMap map[string]string
 }
 
-func (lsc *LStreamClient) parseLine(msg string, lastTime time.Time) (*parseLineResult, error) {
+func (lsc *LStreamClient) parseLine(logMsg *LogMsg) error {
+	if err := lsc.parseLogMsgTimestamp(logMsg); err != nil {
+		return errors.Annotatef(err, "parsing time")
+	}
+
+	// TODO: offload the custom parsing to Lua
+	if err := lsc.parseLogMsgCustom(logMsg); err != nil {
+		return errors.Annotatef(err, "custom parsing")
+	}
+
+	return nil
+}
+
+func (lsc *LStreamClient) parseLogMsgTimestamp(logMsg *LogMsg) error {
+	msg := logMsg.Msg
+
 	timeLayout := lsc.timeFormat.TimestampLayout
 	timestampLen := len(timeLayout)
 
@@ -1433,12 +1460,12 @@ func (lsc *LStreamClient) parseLine(msg string, lastTime time.Time) (*parseLineR
 	}
 
 	if len(msg) < timestampLen {
-		return nil, errors.Errorf("line %q is too short to have a timestamp", msg)
+		return errors.Errorf("line %q is too short to have a timestamp", msg)
 	}
 
 	t, err := time.ParseInLocation(timeLayout, msg[:timestampLen], lsc.location)
 	if err != nil {
-		return nil, errors.Annotatef(err, "parsing log msg")
+		return errors.Annotatef(err, "parsing time in log msg")
 	}
 
 	// If the location we get from the actual logs doesn't match what we have,
@@ -1449,42 +1476,50 @@ func (lsc *LStreamClient) parseLine(msg string, lastTime time.Time) (*parseLineR
 	// already parsed, their timestamp is also wrong (that one can technically be
 	// solved by printing mstats after logs). Maybe we should somehow show a
 	// warning that the timezone was overridden.
-	if t.Location() != lsc.location {
-		lsc.params.Logger.Infof(
-			"Log line timestamp has a different location: %s instead of %s; trusting logs more",
-			t.Location(), lsc.location,
-		)
-		lsc.location = t.Location()
-	}
+
+	// TODO: uncomment when it's well tested; right now it doesn't work well
+	// because e.g. if the timezone is "America/New_York", but then in the logs
+	// we have "-05:00", which is a different timezone (not New York, but a fixed
+	// one), and so we'll always be overwriting this timezone here. Most of the
+	// time it's pretty much harmless, but on the edge of DST it will do the
+	// wrong thing.
+	//if t.Location() != lsc.location {
+	//lsc.params.Logger.Infof(
+	//"Log line timestamp has a different location: %s instead of %s; trusting logs more",
+	//t.Location(), lsc.location,
+	//)
+	//lsc.location = t.Location()
+	//}
 
 	if t.Year() == 0 {
 		t = InferYear(t)
 	}
 	t = t.UTC()
 
-	decreasedTimestamp := false
+	// Parsed the time successfully; update it in the LogMsg, and also remove the
+	// leading timestamp from the message.
+	msg = msg[len(timeLayout):]
+	logMsg.Time = t
+	logMsg.Msg = msg
 
-	// TODO: right now it's useless, but this snippet will be useful once we
-	// implement customizable payload parsing (e.g. with Lua script).
-	if t.Before(lastTime) {
-		// Time has decreased: this might happen if the previous log line had
-		// a precise timestamp with microseconds, but the current line only has
-		// a second precision. Then we just hackishly set the current timestamp
-		// to be the same.
-		t = lastTime
-		decreasedTimestamp = true
+	return nil
+}
+
+func (lsc *LStreamClient) parseLogMsgCustom(logMsg *LogMsg) error {
+	level := LogLevelUnknown
+	if strings.Contains(logMsg.Msg, "[D]") {
+		level = LogLevelDebug
+	} else if strings.Contains(logMsg.Msg, "[I]") {
+		level = LogLevelInfo
+	} else if strings.Contains(logMsg.Msg, "[W]") {
+		level = LogLevelWarn
+	} else if strings.Contains(logMsg.Msg, "[E]") {
+		level = LogLevelError
 	}
 
-	msg = msg[len(timeLayout):]
+	logMsg.Level = level
 
-	ctxMap := map[string]string{}
-
-	return &parseLineResult{
-		time:               t,
-		decreasedTimestamp: decreasedTimestamp,
-		msg:                msg,
-		ctxMap:             ctxMap,
-	}, nil
+	return nil
 }
 
 func combineErrors(errs []error) error {

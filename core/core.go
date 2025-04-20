@@ -83,6 +83,15 @@ type LogMsg struct {
 
 	Msg     string
 	Context map[string]string
+	Level   LogLevel
 
 	OrigLine string
 }
+
+type LogLevel string
+
+const LogLevelUnknown LogLevel = ""
+const LogLevelDebug LogLevel = "debug"
+const LogLevelInfo LogLevel = "info"
+const LogLevelWarn LogLevel = "warn"
+const LogLevelError LogLevel = "error"
