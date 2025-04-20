@@ -126,7 +126,7 @@ if [[ "$logfile_last" == "auto" ]]; then
   elif [ -e /var/log/syslog ]; then
     logfile_last=/var/log/syslog
   else
-    echo "error:failed to autodetect log file" 1>&2
+    echo "error:failed to autodetect log file: neither /var/log/messages nor /var/log/syslog are present. Specify the log file manually" 1>&2
     exit 1
   fi
 fi
