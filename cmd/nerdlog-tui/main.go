@@ -9,7 +9,7 @@ import (
 )
 
 // TODO: make multiple of them
-const inputTimeLayout = "Jan02 15:04"
+const inputTimeLayout = "Jan2 15:04"
 const inputTimeLayoutMMHH = "15:04"
 
 var (

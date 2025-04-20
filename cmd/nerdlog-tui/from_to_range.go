@@ -35,7 +35,7 @@ func ParseFromToRange(timezone *time.Location, s string) (FromToRange, error) {
 		toStr := flds[1]
 
 		// If there's no date, prepend date
-		if len(toStr) <= 5 {
+		if len(toStr) <= 5 && len(fromStr) > 5 {
 			toStr = fromStr[:5] + " " + toStr
 		}
 
