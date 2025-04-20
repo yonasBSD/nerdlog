@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -51,6 +52,8 @@ const queryLogsArgsTimeLayout = "2006-01-02-15:04"
 
 //go:embed nerdlog_agent.sh
 var nerdlogAgentSh string
+
+var syslogRegex = regexp.MustCompile(`^(\S+)\s+(\S+?)(?:\[(\d+)\])?:\s+(.*)`)
 
 type LStreamClient struct {
 	params LStreamClientParams
@@ -1436,10 +1439,18 @@ func (lsc *LStreamClient) parseLine(logMsg *LogMsg) error {
 		return errors.Annotatef(err, "parsing time")
 	}
 
+	// TODO: offload envelope parsing to Lua (and make it usable from
+	// the user Lua scripts as well).
+	if err := lsc.parseLogMsgEnvelopeDefault(logMsg); err != nil {
+		return errors.Annotatef(err, "parsing envelope")
+	}
+
 	// TODO: offload the custom parsing to Lua
-	if err := lsc.parseLogMsgCustom(logMsg); err != nil {
+	if err := lsc.parseLogMsgLevelDefault(logMsg); err != nil {
 		return errors.Annotatef(err, "custom parsing")
 	}
+
+	// TODO: invoke user Lua script, if present.
 
 	return nil
 }
@@ -1498,27 +1509,90 @@ func (lsc *LStreamClient) parseLogMsgTimestamp(logMsg *LogMsg) error {
 
 	// Parsed the time successfully; update it in the LogMsg, and also remove the
 	// leading timestamp from the message.
-	msg = msg[len(timeLayout):]
 	logMsg.Time = t
-	logMsg.Msg = msg
+	logMsg.Msg = strings.TrimSpace(msg[len(timeLayout):])
 
 	return nil
 }
 
-func (lsc *LStreamClient) parseLogMsgCustom(logMsg *LogMsg) error {
-	level := LogLevelUnknown
-	if strings.Contains(logMsg.Msg, "[D]") {
-		level = LogLevelDebug
-	} else if strings.Contains(logMsg.Msg, "[I]") {
-		level = LogLevelInfo
-	} else if strings.Contains(logMsg.Msg, "[W]") {
-		level = LogLevelWarn
-	} else if strings.Contains(logMsg.Msg, "[E]") {
-		level = LogLevelError
+// parseLogMsgEnvelopeDefault takes the LogMsg where the time was already
+// stripped from the Msg, so for syslog, it looks like this:
+//
+//	"myhost myprogram[1234]: Something happened"
+//
+// If the Msg indeed looks like a syslog message, it extracts the hostname,
+// program and pid from it, populates them in the Context, and updates the
+// message to contain the rest of the payload.
+//
+// If the Msg doesn't have this structure, parseLogMsgEnvelopeDefault is a
+// no-op.
+func (lsc *LStreamClient) parseLogMsgEnvelopeDefault(logMsg *LogMsg) error {
+	matches := syslogRegex.FindStringSubmatch(logMsg.Msg)
+	if len(matches) == 0 {
+		// Message doesn't match syslog pattern, no-op
+		// TODO: we might want to support more formats
+		return nil
 	}
 
-	logMsg.Level = level
+	// Extract fields from regex match
+	hostname := matches[1]
+	program := matches[2]
+	pid := matches[3]
+	rest := matches[4]
 
+	logMsg.Context["hostname"] = hostname
+	logMsg.Context["program"] = program
+	logMsg.Context["pid"] = pid
+
+	logMsg.Msg = rest
+	return nil
+}
+
+// parseLogMsgLevelDefault tries to guess what the level of the message could
+// be, based on commonly used patterns in the message like "error", "info",
+// "[E]", "[I]" etc.
+func (lsc *LStreamClient) parseLogMsgLevelDefault(logMsg *LogMsg) error {
+	msg := strings.ToLower(logMsg.Msg)
+
+	switch {
+	case strings.Contains(msg, "[f]"):
+		logMsg.Level = LogLevelError
+	case strings.Contains(msg, "[e]"):
+		logMsg.Level = LogLevelError
+	case strings.Contains(msg, "[w]"):
+		logMsg.Level = LogLevelWarn
+	case strings.Contains(msg, "[i]"):
+		logMsg.Level = LogLevelInfo
+	case strings.Contains(msg, "[d]"):
+		logMsg.Level = LogLevelDebug
+	default:
+		logMsg.Level = LogLevelUnknown
+	}
+
+	if logMsg.Level != LogLevelUnknown {
+		return nil
+	}
+
+	// Regex patterns for whole words or bracketed levels
+	patterns := []struct {
+		regex *regexp.Regexp
+		level LogLevel
+	}{
+		{regexp.MustCompile(`\bfatal\b`), LogLevelError},
+		{regexp.MustCompile(`\berror\b|\berro\b`), LogLevelError},
+		{regexp.MustCompile(`\bwarn(ing)?\b`), LogLevelWarn},
+		{regexp.MustCompile(`\binfo\b`), LogLevelInfo},
+		{regexp.MustCompile(`\bdebu(g)?\b`), LogLevelDebug},
+	}
+
+	for _, p := range patterns {
+		if p.regex.MatchString(msg) {
+			logMsg.Level = p.level
+			return nil
+		}
+	}
+
+	logMsg.Level = LogLevelUnknown
 	return nil
 }
 
