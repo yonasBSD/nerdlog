@@ -178,7 +178,7 @@ type LStreamClientParams struct {
 	Logger *log.Logger
 
 	// ClientID is just an arbitrary string (should be filename-friendly though)
-	// which will be appended to the nerdlog_agent.sh and its cache filenames.
+	// which will be appended to the nerdlog_agent.sh and its index filenames.
 	//
 	// Needed to make sure that different clients won't get conflicts over those
 	// files when using the tool concurrently on the same nodes.
@@ -1128,7 +1128,7 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 			parts,
 			"bash", shellQuote(lsc.getLStreamNerdlogAgentPath()),
 			"query",
-			"--cache-file", shellQuote(lsc.getLStreamIndexFilePath()),
+			"--index-file", shellQuote(lsc.getLStreamIndexFilePath()),
 			"--max-num-lines", shellQuote(strconv.Itoa(cmdCtx.cmd.queryLogs.maxNumLines)),
 			"--logfile-last", shellQuote(lsc.params.LogStream.LogFileLast()),
 		)

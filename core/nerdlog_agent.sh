@@ -13,7 +13,7 @@ STAGE_INDEX_APPEND=2
 STAGE_QUERYING=3
 STAGE_DONE=4
 
-cachefile=/tmp/nerdlog_agent_cache
+indexfile=/tmp/nerdlog_agent_index
 
 logfile_prev=auto
 logfile_last=auto
@@ -32,8 +32,8 @@ awktime_minute_key='substr($0, 1, 12)'
 
 while [[ $# -gt 0 ]]; do
   case $1 in
-    -c|--cache-file)
-      cachefile="$2"
+    -c|--index-file)
+      indexfile="$2"
       shift # past argument
       shift # past value
       ;;
@@ -224,7 +224,7 @@ logfile_last_size=$(stat -c%s $logfile_last) || exit 1
 total_size=$((logfile_prev_size+logfile_last_size)) || exit 1
 
 if [[ "$refresh_index" == "1" ]]; then
-  rm -f $cachefile || exit 1
+  rm -f $indexfile || exit 1
 fi
 
 # NOTE: we only show percentages with 5% increments, to save on traffic and
@@ -241,7 +241,7 @@ function printPercentage(numCur, numTotal) {
 }
 '
 
-function refresh_cache { # {{{
+function refresh_index { # {{{
   local last_linenr=0
   local last_bytenr=0
   local prevlog_bytes=$(get_prevlog_bytenr)
@@ -277,7 +277,7 @@ function refresh_cache { # {{{
     yearByMonth["12"] = inferYear(12, curYear, curMonth) "";
   '
 
-  # Add new entries to cache, if needed
+  # Add new entries to index, if needed
 
   # NOTE: syslogFieldsToIndexTimestr parses the traditional systemd timestamp
   # format, like this: "Apr  5 11:07:46". But in the recent versions of
@@ -348,13 +348,13 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
   curHHMM = '"$awktime_hhmm"';
 }'
 
-  if [ -s $cachefile ]
+  if [ -s $indexfile ]
   then
     echo "p:stage:$STAGE_INDEX_APPEND:indexing up" 1>&2
 
-    local lastTimestr="$(tail -n 1 $cachefile | cut -f2)"
-    local last_linenr="$(tail -n 1 $cachefile | cut -f3)"
-    local last_bytenr="$(tail -n 1 $cachefile | cut -f4)"
+    local lastTimestr="$(tail -n 1 $indexfile | cut -f2)"
+    local last_linenr="$(tail -n 1 $indexfile | cut -f3)"
+    local last_bytenr="$(tail -n 1 $indexfile | cut -f4)"
     local size_to_index=$((total_size-last_bytenr))
 
     echo debug:hey $lastTimestr 1>&2
@@ -369,34 +369,34 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
   '"$script1"'
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
-    printIndexLine("'$cachefile'", curTimestr, NR+'$(( last_linenr-1 ))', bytenr_cur+'$(( last_bytenr-1 ))');
+    printIndexLine("'$indexfile'", curTimestr, NR+'$(( last_linenr-1 ))', bytenr_cur+'$(( last_bytenr-1 ))');
     printPercentage(bytenr_cur, '$size_to_index');
     '"$scriptSetLastTimestrEtc"'
   }
   ' -
     if [[ "$?" != 0 ]]; then
       echo "debug:failed to index up, removing index file" 1>&2
-      rm $cachefile
+      rm $indexfile
       exit 1
     fi
   else
     echo "p:stage:$STAGE_INDEX_FULL:indexing from scratch" 1>&2
 
-    echo "prevlog_modtime	$(stat -c %y $logfile_prev)" > $cachefile
+    echo "prevlog_modtime	$(stat -c %y $logfile_prev)" > $indexfile
 
     awk -b "$awk_functions BEGIN { $awk_vars lastHHMM=\"\"; last3=\"\" }"'
   '"$script1"'
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
-    printIndexLine("'$cachefile'", curTimestr, NR, bytenr_cur);
+    printIndexLine("'$indexfile'", curTimestr, NR, bytenr_cur);
     printPercentage(bytenr_cur, '$total_size');
     '"$scriptSetLastTimestrEtc"'
   }
-  END { print "prevlog_lines\t" NR >> "'$cachefile'" }
+  END { print "prevlog_lines\t" NR >> "'$indexfile'" }
   ' $logfile_prev
     if [[ "$?" != 0 ]]; then
       echo "debug:failed to index from scratch $logfile_prev, removing index file" 1>&2
-      rm $cachefile
+      rm $indexfile
       exit 1
     fi
 
@@ -405,7 +405,7 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
   # in index before the first line in the $logfile_last.
   # TODO: make sure that if there are no logs in the $lotfile1, we don't screw up.
     local lastTimestr=""
-    local lastTimestrLine="$(tail -n 2 $cachefile | head -n 1)"
+    local lastTimestrLine="$(tail -n 2 $indexfile | head -n 1)"
     if [[ "$lastTimestrLine" =~ ^idx$'\t' ]]; then
       lastTimestr="$(echo "$lastTimestrLine" | cut -f2)"
     fi
@@ -415,14 +415,14 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
     bytenr = bytenr_cur+'$prevlog_bytes';
-    printIndexLine("'$cachefile'", curTimestr, NR+'$(get_prevlog_lines_from_cache)', bytenr);
+    printIndexLine("'$indexfile'", curTimestr, NR+'$(get_prevlog_lines_from_index)', bytenr);
     printPercentage(bytenr, '$total_size');
     '"$scriptSetLastTimestrEtc"'
   }
   ' $logfile_last
     if [[ "$?" != 0 ]]; then
       echo "debug:failed to index from scratch $logfile_last, removing index file" 1>&2
-      rm $cachefile
+      rm $indexfile
       exit 1
     fi
   fi
@@ -437,10 +437,10 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
 # and "after" obviously means that it's later than the latest log we have.
 #
 # One possible use is:
-#   read -r my_result my_linenr my_bytenr <<<$(get_linenr_and_bytenr_from_cache my_timestr)
+#   read -r my_result my_linenr my_bytenr <<<$(get_linenr_and_bytenr_from_index my_timestr)
 #
 # Now we can use those vars $my_result, $my_linenr and $my_bytenr
-function get_linenr_and_bytenr_from_cache() { # {{{
+function get_linenr_and_bytenr_from_index() { # {{{
   awk -F"\t" '
     BEGIN { isFirstIdx = 1; }
     $1 == "idx" {
@@ -459,17 +459,17 @@ function get_linenr_and_bytenr_from_cache() { # {{{
       }
     }
     END { print "after"; exit }
-  ' $cachefile
+  ' $indexfile
 } # }}}
 
-function get_prevlog_lines_from_cache() { # {{{
-  if ! awk -F"\t" 'BEGIN { found=0 } $1 == "prevlog_lines" { print $2; found = 1; exit } END { if (found == 0) { exit 1 } }' $cachefile ; then
+function get_prevlog_lines_from_index() { # {{{
+  if ! awk -F"\t" 'BEGIN { found=0 } $1 == "prevlog_lines" { print $2; found = 1; exit } END { if (found == 0) { exit 1 } }' $indexfile ; then
     return 1
   fi
 } # }}}
 
-function get_prevlog_modtime_from_cache() { # {{{
-  if ! awk -F"\t" 'BEGIN { found=0 } $1 == "prevlog_modtime" { print $2; found = 1; exit } END { if (found == 0) { exit 1 } }' $cachefile ; then
+function get_prevlog_modtime_from_index() { # {{{
+  if ! awk -F"\t" 'BEGIN { found=0 } $1 == "prevlog_modtime" { print $2; found = 1; exit } END { if (found == 0) { exit 1 } }' $indexfile ; then
     return 1
   fi
 } # }}}
@@ -481,39 +481,39 @@ function get_prevlog_bytenr() { # {{{
 is_outside_of_range=0
 if [[ "$from" != "" || "$to" != "" ]]; then
   # If indexfile exists, check if it's valid and relevant; if not, delete it.
-  if [ -e "$cachefile" ]; then
-    # Check timestamp in the first line of /tmp/nerdlog_agent_cache, and if
-    # $logfile_prev's modification time is newer, then delete whole cache
-    logfile_prev_stored_modtime="$(get_prevlog_modtime_from_cache)"
+  if [ -e "$indexfile" ]; then
+    # Check timestamp in the first line of /tmp/nerdlog_agent_index, and if
+    # $logfile_prev's modification time is newer, then delete whole index
+    logfile_prev_stored_modtime="$(get_prevlog_modtime_from_index)"
     logfile_prev_cur_modtile=$(stat -c %y $logfile_prev)
     if [[ "$logfile_prev_stored_modtime" != "$logfile_prev_cur_modtile" ]]; then
       echo "debug:logfile has changed: stored '$logfile_prev_stored_modtime', actual '$logfile_prev_cur_modtile', deleting index file" 1>&2
-      rm -f $cachefile || exit 1
+      rm -f $indexfile || exit 1
     fi
 
-    if ! get_prevlog_lines_from_cache > /dev/null; then
-      echo "debug:broken cache file (no prevlog lines), deleting it" 1>&2
-      rm -f $cachefile || exit 1
+    if ! get_prevlog_lines_from_index > /dev/null; then
+      echo "debug:broken index file (no prevlog lines), deleting it" 1>&2
+      rm -f $indexfile || exit 1
     fi
   fi
 
   refresh_and_retry=0
 
-  # First try to find it in cache without refreshing the cache
+  # First try to find it in index without refreshing the index
 
-  if [ -s "$cachefile" ]; then
+  if [ -s "$indexfile" ]; then
     if [[ "$from" != "" ]]; then
-        read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache "$from") || exit 1
+        read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_index "$from") || exit 1
         if [[ "$from_result" != "found" ]]; then
-          echo "debug:the from ${from} isn't found, gonna refresh the cache" 1>&2
+          echo "debug:the from ${from} isn't found, gonna refresh the index" 1>&2
           refresh_and_retry=1
         fi
     fi
 
     if [[ "$to" != "" ]]; then
-      read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache "$to") || exit 1
+      read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_index "$to") || exit 1
       if [[ "$to_result" != "found" ]]; then
-        echo "debug:the to ${to} isn't found, gonna refresh the cache" 1>&2
+        echo "debug:the to ${to} isn't found, gonna refresh the index" 1>&2
         refresh_and_retry=1
       fi
     fi
@@ -523,10 +523,10 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   fi
 
   if [[ "$refresh_and_retry" == 1 ]]; then
-    refresh_cache || exit 1
+    refresh_index || exit 1
 
     if [[ "$from" != "" ]]; then
-      read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache "$from") || exit 1
+      read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_index "$from") || exit 1
 
       if [[ "$from_result" == "before" ]]; then
         echo "debug:the from ${from} isn't found, will use the beginning" 1>&2
@@ -546,7 +546,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
     fi
 
     if [[ "$to" != "" ]]; then
-      read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache "$to") || exit 1
+      read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_index "$to") || exit 1
 
       if [[ "$to_result" == "after" ]]; then
         echo "debug:the to ${to} isn't found, will use the end" 1>&2
@@ -567,9 +567,9 @@ if [[ "$from" != "" || "$to" != "" ]]; then
 
   fi
 else
-  if ! [ -s $cachefile ]; then
+  if ! [ -s $indexfile ]; then
     echo "debug:neither --from or --to are given, but index doesn't exist at all, gonna rebuild" 1>&2
-    refresh_cache || exit 1
+    refresh_index || exit 1
   fi
 fi
 
@@ -580,7 +580,7 @@ fi
 
 echo "p:stage:$STAGE_QUERYING:querying logs" 1>&2
 
-prevlog_lines=$(get_prevlog_lines_from_cache)
+prevlog_lines=$(get_prevlog_lines_from_index)
 prevlog_bytes=$(get_prevlog_bytenr)
 
 from_linenr_int=$from_linenr
