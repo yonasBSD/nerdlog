@@ -1,5 +1,5 @@
 awk: cmd. line:1: fatal: cannot open file `/tmp/nerdlog_agent_test_output/query_range_is_outside/from_is_after_to_is_unset/nerdlog_agent_index' for reading: No such file or directory
-debug:logfile has changed: stored '', actual '2025-03-10 09:59:58.000000000 +0000', deleting it
+debug:logfile has changed: stored '', actual '2025-03-10 09:59:58.000000000 +0000', deleting index file
 awk: cmd. line:1: fatal: cannot open file `/tmp/nerdlog_agent_test_output/query_range_is_outside/from_is_after_to_is_unset/nerdlog_agent_index' for reading: No such file or directory
 debug:broken cache file (no prevlog lines), deleting it
 awk: cmd. line:2: fatal: cannot open file `/tmp/nerdlog_agent_test_output/query_range_is_outside/from_is_after_to_is_unset/nerdlog_agent_index' for reading: No such file or directory

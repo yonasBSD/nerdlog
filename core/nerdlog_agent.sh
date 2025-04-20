@@ -485,7 +485,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
   logfile_prev_stored_modtime="$(get_prevlog_modtime_from_cache)"
   logfile_prev_cur_modtile=$(stat -c %y $logfile_prev)
   if [[ "$logfile_prev_stored_modtime" != "$logfile_prev_cur_modtile" ]]; then
-    echo "debug:logfile has changed: stored '$logfile_prev_stored_modtime', actual '$logfile_prev_cur_modtile', deleting it" 1>&2
+    echo "debug:logfile has changed: stored '$logfile_prev_stored_modtime', actual '$logfile_prev_cur_modtile', deleting index file" 1>&2
     rm -f $cachefile || exit 1
   fi
 
