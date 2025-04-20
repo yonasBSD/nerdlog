@@ -480,18 +480,21 @@ function get_prevlog_bytenr() { # {{{
 
 is_outside_of_range=0
 if [[ "$from" != "" || "$to" != "" ]]; then
-  # Check timestamp in the first line of /tmp/nerdlog_agent_cache, and if
-  # $logfile_prev's modification time is newer, then delete whole cache
-  logfile_prev_stored_modtime="$(get_prevlog_modtime_from_cache)"
-  logfile_prev_cur_modtile=$(stat -c %y $logfile_prev)
-  if [[ "$logfile_prev_stored_modtime" != "$logfile_prev_cur_modtile" ]]; then
-    echo "debug:logfile has changed: stored '$logfile_prev_stored_modtime', actual '$logfile_prev_cur_modtile', deleting index file" 1>&2
-    rm -f $cachefile || exit 1
-  fi
+  # If indexfile exists, check if it's valid and relevant; if not, delete it.
+  if [ -e "$cachefile" ]; then
+    # Check timestamp in the first line of /tmp/nerdlog_agent_cache, and if
+    # $logfile_prev's modification time is newer, then delete whole cache
+    logfile_prev_stored_modtime="$(get_prevlog_modtime_from_cache)"
+    logfile_prev_cur_modtile=$(stat -c %y $logfile_prev)
+    if [[ "$logfile_prev_stored_modtime" != "$logfile_prev_cur_modtile" ]]; then
+      echo "debug:logfile has changed: stored '$logfile_prev_stored_modtime', actual '$logfile_prev_cur_modtile', deleting index file" 1>&2
+      rm -f $cachefile || exit 1
+    fi
 
-  if ! get_prevlog_lines_from_cache > /dev/null; then
-    echo "debug:broken cache file (no prevlog lines), deleting it" 1>&2
-    rm -f $cachefile || exit 1
+    if ! get_prevlog_lines_from_cache > /dev/null; then
+      echo "debug:broken cache file (no prevlog lines), deleting it" 1>&2
+      rm -f $cachefile || exit 1
+    fi
   fi
 
   refresh_and_retry=0
