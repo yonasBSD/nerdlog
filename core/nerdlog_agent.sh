@@ -191,6 +191,11 @@ if [[ $? != 0 ]]; then
   exit 1
 fi
 
+# TODO: also check that gawk is recent enough; the -b option that we need
+# was introduced in 4.0.0, released in 2011:
+# https://lists.gnu.org/archive/html/info-gnu/2011-06/msg00013.html
+# Since it's so old, not bothering to check the version for now.
+
 if [[ "$logfile_last" == "auto" ]]; then
   if [ -e /var/log/messages ]; then
     logfile_last=/var/log/messages
