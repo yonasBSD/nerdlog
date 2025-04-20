@@ -216,6 +216,7 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 
 	// Print the ruler under the histogram.
 	sb := strings.Builder{}
+	sb.WriteString("[:#444444]")
 	numRunes := 0
 
 	// rulerBuffer contains the "ruler" line that we'll print right below the
@@ -245,9 +246,15 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 		}
 		sb.WriteString("[-] ")
 		numRunes += 2
-		//sb.WriteString("^ ")
 		sb.WriteString(markStr)
 		numRunes += len(clearTviewFormatting(markStr))
+	}
+
+	// Fill up the ruler with spaces until the end.
+	maxCoord := h.valToCoord(h.to)
+	maxOffset := maxCoord / 2
+	for i := numRunes; i <= maxOffset; i++ {
+		sb.WriteRune(' ')
 	}
 
 	rulerStr := sb.String()
