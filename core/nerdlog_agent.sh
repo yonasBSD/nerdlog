@@ -498,20 +498,25 @@ if [[ "$from" != "" || "$to" != "" ]]; then
 
   # First try to find it in cache without refreshing the cache
 
-  if [[ "$from" != "" ]]; then
-    read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache "$from") || exit 1
-    if [[ "$from_result" != "found" ]]; then
-      echo "debug:the from ${from} isn't found, gonna refresh the cache" 1>&2
-      refresh_and_retry=1
+  if [ -s "$cachefile" ]; then
+    if [[ "$from" != "" ]]; then
+        read -r from_result from_linenr from_bytenr <<<$(get_linenr_and_bytenr_from_cache "$from") || exit 1
+        if [[ "$from_result" != "found" ]]; then
+          echo "debug:the from ${from} isn't found, gonna refresh the cache" 1>&2
+          refresh_and_retry=1
+        fi
     fi
-  fi
 
-  if [[ "$to" != "" ]]; then
-    read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache "$to") || exit 1
-    if [[ "$to_result" != "found" ]]; then
-      echo "debug:the to ${to} isn't found, gonna refresh the cache" 1>&2
-      refresh_and_retry=1
+    if [[ "$to" != "" ]]; then
+      read -r to_result to_linenr to_bytenr <<<$(get_linenr_and_bytenr_from_cache "$to") || exit 1
+      if [[ "$to_result" != "found" ]]; then
+        echo "debug:the to ${to} isn't found, gonna refresh the cache" 1>&2
+        refresh_and_retry=1
+      fi
     fi
+  else
+    echo "debug:index file doesn't exist or is empty, gonna refresh it" 1>&2
+    refresh_and_retry=1
   fi
 
   if [[ "$refresh_and_retry" == 1 ]]; then
