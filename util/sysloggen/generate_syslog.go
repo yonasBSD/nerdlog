@@ -172,10 +172,6 @@ func generateSyslogEntry(ts time.Time, layout string) string {
 }
 
 func randomStep(params *Params) time.Duration {
-	//if rand.Float64() < 0.2 {
-	//return 1 * time.Millisecond
-	//}
-
 	min := int64(params.MinDelayMS) * int64(time.Millisecond)
 	max := int64(params.MaxDelayMS) * int64(time.Millisecond)
 	return time.Duration(rand.Int63n(max-min) + min)
@@ -192,6 +188,10 @@ type Params struct {
 	// The first (older) log will have the ".1" appended to it.
 	LogBasename string
 
+	// NumLogs specifies the max amount of logs to generate. If 0, we never stop
+	// generating logs, and once caught up with the current time (time.Now()), it
+	// switches to the real-time mode and continues there forever, waiting for
+	// appropriate durations before printing every line.
 	NumLogs int
 
 	MinDelayMS int
@@ -240,7 +240,7 @@ func GenerateSyslog(params Params) error {
 		}
 	}
 
-	fmt.Println("Generating log files...")
+	fmt.Printf("Creating first log file %s\n", prevlogFname)
 
 	file, err := os.Create(prevlogFname)
 	if err != nil {
@@ -249,12 +249,35 @@ func GenerateSyslog(params Params) error {
 	defer file.Close()
 
 	numLogFile := 0
+	numLogsWritten := 0
 
-	for i := 0; i < params.NumLogs; i++ {
-		curTime = curTime.Add(randomStep(&params))
+	isRealtime := false
+
+	for {
+		step := randomStep(&params)
+		curTime = curTime.Add(step)
+
+		now := time.Now()
+		if params.NumLogs > 0 && numLogsWritten >= params.NumLogs {
+			break
+		}
+
+		// Real-time transition: we've caught up to current time
+		if params.NumLogs == 0 && curTime.After(now) {
+			if !isRealtime {
+				fmt.Printf("Switching to realtime mode\n")
+				isRealtime = true
+			}
+
+			time.Sleep(step)
+			curTime = time.Now()
+		}
+
 		if !curTime.Before(params.SecondLogTime) && numLogFile == 0 {
 			numLogFile += 1
 			file.Close()
+
+			fmt.Printf("Switching to the next log file %s\n", lastlogFname)
 
 			var err error
 			file, err = os.Create(lastlogFname)
@@ -269,6 +292,8 @@ func GenerateSyslog(params Params) error {
 		if err != nil {
 			return errors.Annotatef(err, "writing to log file")
 		}
+
+		numLogsWritten++
 	}
 
 	return nil
