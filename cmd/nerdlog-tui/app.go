@@ -32,8 +32,8 @@ type nerdlogApp struct {
 	cmdLineHistory *clhistory.CLHistory
 
 	// queryBLHistory is the history of queries, as shell strings like this:
-	// - nerdlog --lstreams 'localhost' --time -10h --query '/something/'
-	// - nerdlog --lstreams 'localhost' --time -2h --query '/something/'
+	// - nerdlog --lstreams 'localhost' --time -10h --pattern '/something/'
+	// - nerdlog --lstreams 'localhost' --time -2h --pattern '/something/'
 	queryBLHistory *blhistory.BLHistory
 	// queryCLHistory is tracking the same data as queryBLHistory (queries like
 	// nerdlog --lstreams .....), but it's command-line-like, and it can be

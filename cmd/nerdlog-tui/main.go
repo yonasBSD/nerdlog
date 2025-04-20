@@ -17,7 +17,7 @@ const inputTimeLayoutMMHH = "15:04"
 var (
 	flagTime        = pflag.StringP("time", "t", "", "Time range in the same format as accepted by the UI. Examples: '1h', 'Mar27 12:00'")
 	flagLStreams    = pflag.StringP("lstreams", "h", "", "Logstreams to connect to, as comma-separated glob patterns, e.g. 'foo-*,bar-*'")
-	flagQuery       = pflag.StringP("query", "q", "", "Initial query to execute, using awk syntax")
+	flagQuery       = pflag.StringP("pattern", "p", "", "Initial awk pattern to use")
 	flagSelectQuery = pflag.StringP("selquery", "s", "", "SELECT-like query to specify which fields to show, like 'time STICKY, message, source, level_name AS level, *'")
 )
 

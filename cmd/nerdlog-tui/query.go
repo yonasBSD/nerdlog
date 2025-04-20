@@ -20,7 +20,7 @@ var execName = "nerdlog"
 // numShellParts defines how many shell parts should be in the
 // shell-command-marshalled form. It looks like this:
 //
-//	nerdlog --lstreams <value> --time <value> --query <value>
+//	nerdlog --lstreams <value> --time <value> --pattern <value>
 //
 // Therefore, there are 7 parts.
 var numShellParts = 1 + 3*2
@@ -49,7 +49,7 @@ func (qf *QueryFull) MarshalShellCmdParts() []string {
 	parts = append(parts, execName)
 	parts = append(parts, "--lstreams", qf.LStreams)
 	parts = append(parts, "--time", qf.Time)
-	parts = append(parts, "--query", qf.Query)
+	parts = append(parts, "--pattern", qf.Query)
 	parts = append(parts, "--selquery", string(qf.SelectQuery))
 
 	return parts
@@ -81,7 +81,7 @@ func (qf *QueryFull) UnmarshalShellCmdParts(parts []string) error {
 		case "--time":
 			qf.Time = parts[1]
 			timeSet = true
-		case "--query":
+		case "--pattern":
 			qf.Query = parts[1]
 			querySet = true
 		case "--selquery":
@@ -99,7 +99,7 @@ func (qf *QueryFull) UnmarshalShellCmdParts(parts []string) error {
 	}
 
 	if !querySet {
-		return errors.Errorf("--query is missing")
+		return errors.Errorf("--pattern is missing")
 	}
 
 	if !selectQuerySet {

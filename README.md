@@ -164,7 +164,7 @@ can do the same by sharing this string.
 The string would look like this:
 
 ```
-nerdlog --lstreams 'localhost' --time -3h --query '/something/'
+nerdlog --lstreams 'localhost' --time -3h --pattern '/something/'
 ```
 
 And it can be used in either the shell (which would open a new instance of
