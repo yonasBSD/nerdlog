@@ -3,13 +3,9 @@
 Loosely inspired by Graylog/Kibana, but without the bloat. Pretty much no setup
 needed, either.
 
-First of all, a little demo. Here, we're dealing with logs from 4 remote nodes,
-each having about 2GB log file, generating about 600K log messages per hour in
-total.
+First of all, a little demo. Here, we're dealing with logs from 4 remote nodes.
 
-TODO: implement the demo, and update the numbers above.
-
-![Nerdlog](images/nerdlog.png)
+![Nerdlog](images/nerdlog_demo.gif)
 
 ## Project history
 
@@ -69,15 +65,17 @@ patterns, and apart from showing the actual logs, also drawing the histogram.
   query is made;
 - Logs are never downloaded to the local machine in full: all the log filtering
   is done on the remote nodes, and on each query, only the following data is
-  downloaded from each node, gzipped: up to 100 messages (configurable), and
-  stats for the histogram. It's obviously possible to paginate over the logs, to
-  get the next 100 messages, etc. Nerdlog then merges the responses from all
-  nodes together, and presents to the user in a unified form.
+  downloaded from each node, gzipped: up to 100 messages from every node
+  (configurable), and stats for the histogram. It's obviously possible to
+  paginate over the logs, to get the next bunch of messages, etc. Nerdlog then
+  merges the responses from all nodes together, and presents to the user in a
+  unified form.
 
 ## Project state
 
 It's still kinda in a proof-of-concept stage. Implemented as fast as possible,
-spaghetti code abounds, almost no tests, poor error handling, etc.
+spaghetti code abounds, could be covered with more tests, a lot more features
+could be implemented, etc.
 
 But it works. It's pretty usable and surprisingly fast.
 
