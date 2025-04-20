@@ -357,10 +357,6 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
     local last_bytenr="$(tail -n 1 $indexfile | cut -f4)"
     local size_to_index=$((total_size-last_bytenr))
 
-    echo debug:hey $lastTimestr 1>&2
-    echo debug:hey2 $last_linenr $last_bytenr 1>&2
-    echo debug:hey3 $size_to_index 1>&2
-
     tail -c +$((last_bytenr-prevlog_bytes)) $logfile_last | awk -b "$awk_functions
   BEGIN {
     $awk_vars
@@ -409,7 +405,6 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
     if [[ "$lastTimestrLine" =~ ^idx$'\t' ]]; then
       lastTimestr="$(echo "$lastTimestrLine" | cut -f2)"
     fi
-    #echo debug:hey3 $lastTimestr 1>&2
     awk -b "$awk_functions BEGIN { $awk_vars lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
   '"$script1"'
   ( lastHHMM != curHHMM ) {
@@ -602,19 +597,15 @@ num_bytes_to_scan=0
 if [[ "$from_bytenr" == "" && "$to_bytenr" == "" ]]; then
   # Getting _all_ available logs
   num_bytes_to_scan=$total_size
-  echo debug:hey1 $num_bytes_to_scan 2>&1
 elif [[ "$from_bytenr" != "" && "$to_bytenr" == "" ]]; then
   # Getting logs from some point in time to the very end (most frequent case)
   num_bytes_to_scan=$((total_size-from_bytenr))
-  echo debug:hey2 "|$num_bytes_to_scan,$total_size,$from_bytenr|" 2>&1
 elif [[ "$from_bytenr" == "" && "$to_bytenr" != "" ]]; then
   # Getting logs from the beginning until some point in time
   num_bytes_to_scan=$((to_bytenr))
-  echo debug:hey3 $num_bytes_to_scan 2>&1
 else
   # Getting logs between two points T1 and T2
   num_bytes_to_scan=$((to_bytenr-from_bytenr))
-  echo debug:hey4 $num_bytes_to_scan 2>&1
 fi
 
 # NOTE: this script MUST be executed with the "-b" awk key, which means that

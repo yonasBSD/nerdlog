@@ -1,4 +1,3 @@
-debug:hey2 |1446,50846,49400|
 logfile:/tmp/nerdlog-empty-file:0
 logfile:/tmp/nerdlog_agent_test_output/second_log_file_doesnt_exist/01_basic/logfile:0
 s:Mar 12 10:03,1
