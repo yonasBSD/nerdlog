@@ -364,7 +364,7 @@ func NewMainView(params *MainViewParams) *MainView {
 	})
 
 	queryLabel := tview.NewTextView()
-	queryLabel.SetScrollable(false).SetText("Query:")
+	queryLabel.SetScrollable(false).SetText("awk pattern:")
 
 	mv.timeLabel = tview.NewTextView()
 	mv.timeLabel.SetScrollable(false)
@@ -472,7 +472,7 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mv.topFlex = tview.NewFlex().SetDirection(tview.FlexColumn)
 	mv.topFlex.
-		AddItem(queryLabel, 6, 0, false).
+		AddItem(queryLabel, 12, 0, false).
 		AddItem(nil, 1, 0, false).
 		AddItem(mv.queryInput, 0, 1, true).
 		AddItem(nil, 1, 0, false).

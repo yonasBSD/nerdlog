@@ -7,11 +7,7 @@ import (
 	"github.com/rivo/tview"
 )
 
-var queryLabelText = `Query (awk syntax). Examples:
-- Simple regexp:                          [yellow]/foo bar/[-]
-- Regexps with complex conditions:        [yellow]( /foo bar/ || /other stuff/ ) && !/baz/[-]
-- Find errors:                            [yellow]/level_name":"error/[-]
-`
+var queryLabelText = `awk pattern. Examples: "[yellow]/foo bar/[-]", or "[yellow]( /foo bar/ || /other stuff/ ) && !/baz/[-]"`
 
 /*
 var timeLabelText = `Time range. Both "From" and "To" can either be absolute like "[yellow]Mar27_12:00[-]", or relative
@@ -28,7 +24,7 @@ current time is used.
 var lstreamsLabelText = `Logstreams. Comma-separated strings of the format "[yellow][user@]myserver.com[:port[:/path/to/logfile]][-]".
 Examples: "[yellow]user@myserver.com[-]", or "[yellow]user@myserver.com:22:/var/log/syslog[-]"`
 
-var selectQueryLabelText = `Select field query. Example: "[yellow]time STICKY, message, source, level_name AS level, *[-]".`
+var selectQueryLabelText = `Select field expression. Example: "[yellow]time STICKY, message, source, level_name AS level, *[-]".`
 
 type QueryEditViewParams struct {
 	// DoneFunc is called when the user submits the form. If it returns a non-nil
@@ -167,7 +163,7 @@ func NewQueryEditView(
 	queryLabel := tview.NewTextView()
 	queryLabel.SetText(queryLabelText)
 	queryLabel.SetDynamicColors(true)
-	qev.flex.AddItem(queryLabel, 4, 0, false)
+	qev.flex.AddItem(queryLabel, 1, 0, false)
 
 	qev.queryInput = tview.NewInputField()
 	qev.flex.AddItem(qev.queryInput, 1, 0, false)
@@ -361,8 +357,8 @@ func (qev *QueryEditView) Show(data QueryFull) {
 	qev.SetQueryFull(data)
 	qev.mainView.showModal(
 		pageNameEditQueryParams, qev.frame,
-		121,
-		23,
+		105,
+		20,
 		true,
 	)
 }
