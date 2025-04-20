@@ -253,10 +253,7 @@ func indexAndLengthOfTimeComponent(s string, components ...string) *indexAndLeng
 		re := fmt.Sprintf(`[^0-9_]?%s[^0-9_]?`, regexp.QuoteMeta(comp))
 
 		// Compile the regex
-		rgx, err := regexp.Compile(re)
-		if err != nil {
-			panic(err.Error())
-		}
+		rgx := regexp.MustCompile(re)
 
 		// Find the first occurrence of the component
 		loc := rgx.FindStringIndex(s)

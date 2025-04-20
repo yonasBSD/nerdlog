@@ -997,7 +997,8 @@ func getScannerFunc(name string, reader io.Reader, linesCh chan<- string) func()
 				var r io.Reader
 				r, err = gzip.NewReader(&gzipBuf)
 				if err != nil {
-					panic(err.Error())
+					linesCh <- fmt.Sprintf("error:failed to gunzip data: %s", err.Error())
+					return
 				}
 
 				scanner := bufio.NewScanner(r)
