@@ -468,9 +468,17 @@ func (h *Histogram) InputHandler() func(event *tcell.EventKey, setFocus func(p t
 			}
 
 		case tcell.KeyLeft:
-			moveLeft()
+			if event.Modifiers()&tcell.ModCtrl > 0 {
+				moveLeftLong()
+			} else {
+				moveLeft()
+			}
 		case tcell.KeyRight:
-			moveRight()
+			if event.Modifiers()&tcell.ModCtrl > 0 {
+				moveRightLong()
+			} else {
+				moveRight()
+			}
 
 		case tcell.KeyPgUp:
 			moveLeftLong()
