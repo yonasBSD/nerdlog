@@ -1578,8 +1578,7 @@ func (lsc *LStreamClient) parseLogMsgLevelDefault(logMsg *LogMsg) error {
 		regex *regexp.Regexp
 		level LogLevel
 	}{
-		{regexp.MustCompile(`\bfatal\b`), LogLevelError},
-		{regexp.MustCompile(`\berror\b|\berro\b`), LogLevelError},
+		{regexp.MustCompile(`\berror\b|\berro\b|\berr\b|\bcrit\b|\bcritical\b|\bfatal\b`), LogLevelError},
 		{regexp.MustCompile(`\bwarn(ing)?\b`), LogLevelWarn},
 		{regexp.MustCompile(`\binfo\b`), LogLevelInfo},
 		{regexp.MustCompile(`\bdebu(g)?\b`), LogLevelDebug},
