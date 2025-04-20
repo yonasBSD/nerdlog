@@ -13,7 +13,8 @@ import (
 type LogLevel int
 
 const (
-	Verbose2 LogLevel = iota
+	Verbose3 LogLevel = iota
+	Verbose2
 	Verbose1
 	Info
 	Warning
@@ -92,6 +93,10 @@ func (l *Logger) WithNamespaceAppended(n string) *Logger {
 	newLogger := *l
 	newLogger.namespace = ns
 	return &newLogger
+}
+
+func (l *Logger) Verbose3f(format string, a ...interface{}) {
+	l.Printf(Verbose3, format, a...)
 }
 
 func (l *Logger) Verbose2f(format string, a ...interface{}) {

@@ -15,7 +15,6 @@ copy_logs() {
   
   # Get the relative path of current_dir from tests_output_root_dir
   relative_path="${current_dir#$tests_output_root_dir}"
-  #echo hey $current_dir $tests_output_root_dir $relative_path
 
   second_dir="$tests_input_root_dir/$relative_path"
   

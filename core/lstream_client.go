@@ -359,12 +359,14 @@ func (lsc *LStreamClient) run() {
 		case line, ok := <-lsc.conn.getStdoutLinesCh():
 			if !ok {
 				// Stdout was just closed
+				lsc.params.Logger.Verbose3f("Stdout was closed (%s)", lsc.params.LogStream.Name)
+
 				lsc.conn.stdoutLinesCh = nil
 				lsc.checkIfDisconnected()
 				continue
 			}
 
-			//lsc.params.Logger.Verbose1f("hey line(%s): %s", lsc.params.LogStream.Name, line)
+			lsc.params.Logger.Verbose3f("Got stdout line(%s): %s", lsc.params.LogStream.Name, line)
 
 			lastUpdTime = time.Now()
 
@@ -557,12 +559,14 @@ func (lsc *LStreamClient) run() {
 		case line, ok := <-lsc.conn.getStderrLinesCh():
 			if !ok {
 				// Stderr was just closed
+				lsc.params.Logger.Verbose3f("Stderr was closed (%s)", lsc.params.LogStream.Name)
+
 				lsc.conn.stderrLinesCh = nil
 				lsc.checkIfDisconnected()
 				continue
 			}
 
-			lsc.params.Logger.Verbose2f("hey stderr line(%s): %s", lsc.params.LogStream.Name, line)
+			lsc.params.Logger.Verbose3f("Got stderr line(%s): %s", lsc.params.LogStream.Name, line)
 
 			lastUpdTime = time.Now()
 
@@ -1160,7 +1164,7 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		}
 
 		cmd := strings.Join(parts, " ") + "\n"
-		lsc.params.Logger.Verbose2f("hey command(%s): %s", lsc.params.LogStream.Name, cmd)
+		lsc.params.Logger.Verbose2f("Executing query command(%s): %s", lsc.params.LogStream.Name, cmd)
 
 		lsc.conn.stdinBuf.Write([]byte(cmd))
 
