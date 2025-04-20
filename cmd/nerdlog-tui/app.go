@@ -57,7 +57,9 @@ type cmdWithOpts struct {
 	opts CmdOpts
 }
 
-func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
+func newNerdlogApp(
+	params nerdlogAppParams, queryCLHistory *clhistory.CLHistory,
+) (*nerdlogApp, error) {
 	logger := log.NewLogger(log.Verbose1) // TODO: make it so that the level comes from the config
 
 	homeDir, err := os.UserHomeDir()
@@ -70,13 +72,6 @@ func newNerdlogApp(params nerdlogAppParams) (*nerdlogApp, error) {
 	})
 	if err != nil {
 		return nil, errors.Annotatef(err, "initializing cmdline history")
-	}
-
-	queryCLHistory, err := clhistory.New(clhistory.CLHistoryParams{
-		Filename: filepath.Join(homeDir, ".nerdlog_query_history"),
-	})
-	if err != nil {
-		return nil, errors.Annotatef(err, "initializing query history")
 	}
 
 	app := &nerdlogApp{

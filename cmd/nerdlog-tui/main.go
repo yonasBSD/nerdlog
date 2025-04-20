@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
+	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/spf13/pflag"
 	"golang.design/x/clipboard"
 )
@@ -26,6 +28,20 @@ func main() {
 	// so check if the agent env var is present, and fail quickly if it's not.
 	if os.Getenv("SSH_AUTH_SOCK") == "" {
 		fmt.Fprintf(os.Stderr, "SSH_AUTH_SOCK env var is not present, which means ssh agent is not running, or at least is not accessible to Nerdlog. As of today, ssh agent is the only way for Nerdlog to connect to logstreams, so please start one, make sure that all the necessary keys are added to it, and retry.\n")
+		os.Exit(1)
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting home dir: %s\n", err)
+		os.Exit(1)
+	}
+
+	queryCLHistory, err := clhistory.New(clhistory.CLHistoryParams{
+		Filename: filepath.Join(homeDir, ".nerdlog_query_history"),
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error initializing query history: %s\n", err)
 		os.Exit(1)
 	}
 
@@ -62,17 +78,34 @@ func main() {
 		SelectQuery: initialSelectQuery,
 	}
 
+	if !connectRightAway {
+		// No query params were given, try to get the last one from the history.
+		item, _ := queryCLHistory.Prev("")
+		if item.Str != "" {
+			var qf QueryFull
+			if err := qf.UnmarshalShellCmd(item.Str); err != nil {
+				// Ignore the error, just use the defaults
+			} else {
+				// Successfully parsed the last item from query history, use that.
+				initialQueryData = qf
+			}
+		}
+	}
+
 	enableClipboard := true
 	if err := clipboard.Init(); err != nil {
 		enableClipboard = false
 		fmt.Println("NOTE: X Clipboard is not available")
 	}
 
-	app, err := newNerdlogApp(nerdlogAppParams{
-		initialQueryData: initialQueryData,
-		connectRightAway: connectRightAway,
-		enableClipboard:  enableClipboard,
-	})
+	app, err := newNerdlogApp(
+		nerdlogAppParams{
+			initialQueryData: initialQueryData,
+			connectRightAway: connectRightAway,
+			enableClipboard:  enableClipboard,
+		},
+		queryCLHistory,
+	)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)
