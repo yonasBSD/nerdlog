@@ -615,13 +615,13 @@ func (lsc *LStreamClient) run() {
 							stageLine := strings.TrimPrefix(processLine, "stage:")
 							parts := strings.Split(stageLine, ":")
 							if len(parts) < 2 {
-								fmt.Println("received malformed p:stage line:", line)
+								cmdCtx.errs = append(cmdCtx.errs, errors.Errorf("received malformed p:stage line: %s (expected at least 2 parts, got %d)", line, len(parts)))
 								continue
 							}
 
 							num, err := strconv.Atoi(parts[0])
 							if err != nil {
-								fmt.Println("received malformed p:stage line:", line)
+								cmdCtx.errs = append(cmdCtx.errs, errors.Annotatef(err, "received malformed p:stage line: %s", line))
 								continue
 							}
 
@@ -636,7 +636,7 @@ func (lsc *LStreamClient) run() {
 
 							percentage, err := strconv.Atoi(strings.TrimPrefix(processLine, "p:"))
 							if err != nil {
-								fmt.Println("received malformed p:p line:", line)
+								cmdCtx.errs = append(cmdCtx.errs, errors.Annotatef(err, "received malformed p:p line:", line))
 								continue
 							}
 
@@ -727,7 +727,6 @@ func connectToLogStream(
 	var sshClient *ssh.Client
 
 	conf := getClientConfig(logger, logStream.Host.User)
-	//fmt.Println("hey2", conn, conf)
 
 	if logStream.Jumphost != nil {
 		logger.Infof("Connecting via jumphost")
@@ -773,35 +772,29 @@ func connectToLogStream(
 
 	//defer sess.Close()
 
-	//fmt.Println("sshSession ok", sshSession)
-
 	stdinBuf, err := sshSession.StdinPipe()
 	if err != nil {
 		res.err = errors.Trace(err)
 		return res
 	}
-	//fmt.Println("stdin ok")
 
 	stdoutBuf, err := sshSession.StdoutPipe()
 	if err != nil {
 		res.err = errors.Trace(err)
 		return res
 	}
-	//fmt.Println("stdout ok")
 
 	stderrBuf, err := sshSession.StderrPipe()
 	if err != nil {
 		res.err = errors.Trace(err)
 		return res
 	}
-	//fmt.Println("stderr ok")
 
 	err = sshSession.Shell()
 	if err != nil {
 		res.err = errors.Trace(err)
 		return res
 	}
-	//fmt.Println("shell ok")
 
 	stdoutLinesCh := make(chan string, 32)
 	stderrLinesCh := make(chan string, 32)
@@ -1027,13 +1020,8 @@ func getScannerFunc(name string, reader io.Reader, linesCh chan<- string) func()
 		}
 
 		if err := scanner.Err(); err != nil {
-			//fmt.Println("stdin read error", err)
 			return
-		} else {
-			//fmt.Println("stdin EOF")
 		}
-
-		//fmt.Println("stopped reading stdin")
 	}
 }
 

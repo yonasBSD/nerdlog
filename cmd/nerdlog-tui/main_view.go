@@ -1375,64 +1375,6 @@ func newTableCellButton(text string) *tview.TableCell {
 	return tview.NewTableCell(text).SetTextColor(tcell.ColorWhite).SetAlign(tview.AlignCenter)
 }
 
-/*
-
-	mv.bottomForm = tview.NewForm().
-		AddButton("Place order", func() {
-			fmt.Println("Place order")
-			//msv := NewMarketSelectorView(mv, &MarketSelectorParams{
-			//Title: "Place order on which market?",
-			//OnSelected: func(marketID common.MarketID) bool {
-			//pov := NewPlaceOrderView(mv, &PlaceOrderViewParams{
-			//Market: mv.marketDescrByID[marketID],
-			//})
-
-			//pov.Show()
-			//return true
-			//},
-			//})
-			//msv.Show()
-		}).
-		AddButton("Cancel order", func() {
-			//msv := NewMarketSelectorView(mv, &MarketSelectorParams{
-			//Title: "Cancel order on which market?",
-			//OnSelected: func(marketID common.MarketID) bool {
-
-			//// Even though we're in the UI loop right now, we can't invoke
-			//// FocusOrdersList right here, because when OnSelected returns, we
-			//// hide the modal window, and focus will be moved back to the bottom
-			//// menu. We need to call FocusOrdersList _after_ that.
-			//mv.params.App.QueueUpdateDraw(func() {
-			//mv.marketViewsByID[marketID].FocusOrdersList(
-			//func(order common.PrivateOrder) {
-			//// TODO: confirm
-			//mv.params.OnCancelOrderRequest(common.CancelOrderParams{
-			//MarketID: marketID,
-			//OrderID:  order.ID,
-			//})
-			//mv.params.App.SetFocus(mv.bottomForm)
-			//},
-			//func() {
-			//mv.params.App.SetFocus(mv.bottomForm)
-			//},
-			//)
-			//})
-			//return true
-			//},
-			//})
-			//msv.Show()
-		}).
-		AddButton("Quit", func() {
-			params.App.Stop()
-		}).
-		AddButton("I said quit", func() {
-			params.App.Stop()
-		})
-
-	mainFlex.AddItem(mv.bottomForm, 3, 0, false)
-
-*/
-
 func (mv *MainView) setQuery(q string) {
 	if mv.queryInput.GetText() != q {
 		mv.queryInput.SetText(q)
