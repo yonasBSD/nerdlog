@@ -132,15 +132,27 @@ if [[ "$logfile_last" == "auto" ]]; then
 fi
 
 if [[ "$logfile_prev" == "auto" ]]; then
+  # For now just blindly append ".1" to the first logfile; if it doesn't actually
+  # exist, we'll handle this case right below.
   logfile_prev="${logfile_last}.1"
 fi
 
-# Just a hack to account for cases when /var/log/syslog.1 doesn't exist:
+# A simple hack to account for cases when /var/log/syslog.1 doesn't exist:
 # create an empty file and pretend that it's an empty log file.
 if [ ! -e "$logfile_prev"  ]; then
+  echo "debug:prev logfile $logfile_prev doesn't exist, using a dummy empty file /tmp/nerdlog-empty-file" 1>&2
   logfile_prev="/tmp/nerdlog-empty-file"
-  rm -f $logfile_prev
-  touch $logfile_prev
+  rm -f $logfile_prev || exit 1
+  touch $logfile_prev || exit 1
+
+  # For stable output in tests, also update the creation/modification time of
+  # that file to be the same as the first log file. It's not portable though
+  # (not gonna work on BSD), but it's non-essential functionality, so we just
+  # ignore any errors here and do nothing then.
+  ctime=$(stat -c %W $logfile_last)
+  if [[ $? == 0 ]]; then
+    touch -d "@$ctime" $logfile_prev
+  fi
 fi
 
 command="$1"
@@ -392,7 +404,11 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
   # last-but-one line) and set it for the next script, otherwise there is a gap
   # in index before the first line in the $logfile_last.
   # TODO: make sure that if there are no logs in the $lotfile1, we don't screw up.
-    local lastTimestr="$(tail -n 2 $cachefile | head -n 1 | cut -f2)"
+    local lastTimestr=""
+    local lastTimestrLine="$(tail -n 2 $cachefile | head -n 1)"
+    if [[ "$lastTimestrLine" =~ ^idx$'\t' ]]; then
+      lastTimestr="$(echo "$lastTimestrLine" | cut -f2)"
+    fi
     #echo debug:hey3 $lastTimestr 1>&2
     awk -b "$awk_functions BEGIN { $awk_vars lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
   '"$script1"'

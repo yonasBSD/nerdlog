@@ -104,9 +104,9 @@ func runTestCase(t *testing.T, nerdlogAgentShFname, testCasesDir, testName strin
 		return errors.Annotatef(err, "resolving logfiles")
 	}
 
-	if len(logfiles) != 2 {
+	if len(logfiles) == 0 || len(logfiles) > 2 {
 		return errors.Errorf(
-			"For now, there must be exactly 2 logfiles, but got %d: %v",
+			"For now, there must be exactly 1 or 2 logfiles, but got %d: %v",
 			len(logfiles), logfiles,
 		)
 	}
@@ -122,12 +122,14 @@ func runTestCase(t *testing.T, nerdlogAgentShFname, testCasesDir, testName strin
 		return errors.Trace(err)
 	}
 
-	if err := copyFile(logfiles[1], logfilePrev); err != nil {
-		return errors.Annotatef(err, "copying logfile prev: from %s to %s", logfiles[1], logfilePrev)
-	}
+	if len(logfiles) > 1 {
+		if err := copyFile(logfiles[1], logfilePrev); err != nil {
+			return errors.Annotatef(err, "copying logfile prev: from %s to %s", logfiles[1], logfilePrev)
+		}
 
-	if err := setSyslogFileModTime(logfilePrev); err != nil {
-		return errors.Trace(err)
+		if err := setSyslogFileModTime(logfilePrev); err != nil {
+			return errors.Trace(err)
+		}
 	}
 
 	indexFname := filepath.Join(testOutputDir, "nerdlog_agent_index")
