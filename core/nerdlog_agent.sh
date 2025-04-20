@@ -30,6 +30,68 @@ awktime_minute_key='substr($0, 1, 12)'
 # TODO: double check that if any of these is provided manually in a flag,
 # then all of them are provided manually.
 
+function find_gawk_binary() { # {{{
+  gawk_path="$(which gawk)"
+  if [[ $? == 0 ]]; then
+    if [ -x "$gawk_path" ]; then
+      awk_version_str="$($gawk_path --version)"
+      if [[ $? == 0 ]]; then
+        if echo "$awk_version_str" | grep -q 'GNU Awk'; then
+          # gawk works fine
+          echo "$gawk_path"
+          exit 0
+        fi
+      fi
+    fi
+  fi
+
+  awk_path="$(which awk)"
+  if [[ $? == 0 ]]; then
+    if [ -x "$awk_path" ]; then
+      awk_version_str="$($awk_path --version)"
+      if [[ $? == 0 ]]; then
+        if echo "$awk_version_str" | grep -q 'GNU Awk'; then
+          # awk works fine
+          echo "$awk_path"
+          exit 0
+        fi
+      fi
+    fi
+  fi
+
+  exit 1
+} # }}}
+
+function detect_timezone() { # {{{
+  # Prefer timedatectl if available
+  host_timezone="$(timedatectl show --property=Timezone --value)"
+  if [[ $? == 0 ]]; then
+    echo "$host_timezone"
+    exit 0
+  fi
+
+  # Resort to /etc/timezone
+  if [ -r /etc/timezone ]; then
+    host_timezone="$(cat /etc/timezone)"
+    if [[ $? == 0 ]]; then
+      echo "$host_timezone"
+      exit 0
+    fi
+  fi
+
+  # Then resort to browsing zoneinfo files manually
+  zone_file="$(find /usr/share/zoneinfo  -type f -exec cmp -s /etc/localtime '{}' \; -print)"
+  if [[ $? == 0 ]]; then
+    host_timezone="$(echo "$zone_file" | sed -e 's|^/usr/share/zoneinfo/||' -e '/posix/d')"
+    if [[ $? == 0 ]]; then
+      echo "$host_timezone"
+      exit 0
+    fi
+  fi
+
+  exit 1
+} # }}}
+
 while [[ $# -gt 0 ]]; do
   case $1 in
     -c|--index-file)
@@ -120,6 +182,15 @@ if [[ "$CUR_MONTH" == "" ]]; then
   CUR_MONTH="$(date +'%m')"
 fi
 
+# TODO: instead of always detecting it, add support for the --awk-binary flag,
+# and only autodetect if it wasn't provided. Also, gotta always do this during
+# logstream_info command.
+awk_binary="$(find_gawk_binary)"
+if [[ $? != 0 ]]; then
+  echo "error:gawk (GNU Awk) is a requirement, but not found on the system. Please install it, then retry" 1>&2
+  exit 1
+fi
+
 if [[ "$logfile_last" == "auto" ]]; then
   if [ -e /var/log/messages ]; then
     logfile_last=/var/log/messages
@@ -168,9 +239,12 @@ case "${command}" in
     ;;
 
   logstream_info)
-    # TODO: support the case where timedatectl is not available
-    host_timezone="$(timedatectl show --property=Timezone --value)" || exit 1
-    echo "host_timezone:$host_timezone"
+    host_timezone="$(detect_timezone)"
+    if [[ $? == 0 ]]; then
+      echo "host_timezone:$host_timezone"
+    else
+      echo "warn:failed to detect host timezone"
+    fi
 
     if [ ! -e ${logfile_last} ]; then
       echo "error:${logfile_last} does not exist"
@@ -357,7 +431,7 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
     local last_bytenr="$(tail -n 1 $indexfile | cut -f4)"
     local size_to_index=$((total_size-last_bytenr))
 
-    tail -c +$((last_bytenr-prevlog_bytes)) $logfile_last | awk -b "$awk_functions
+    tail -c +$((last_bytenr-prevlog_bytes)) $logfile_last | "$awk_binary" -b "$awk_functions
   BEGIN {
     $awk_vars
     lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr
@@ -380,7 +454,7 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
 
     echo "prevlog_modtime	$(stat -c %y $logfile_prev)" > $indexfile
 
-    awk -b "$awk_functions BEGIN { $awk_vars lastHHMM=\"\"; last3=\"\" }"'
+    "$awk_binary" -b "$awk_functions BEGIN { $awk_vars lastHHMM=\"\"; last3=\"\" }"'
   '"$script1"'
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
@@ -405,7 +479,7 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
     if [[ "$lastTimestrLine" =~ ^idx$'\t' ]]; then
       lastTimestr="$(echo "$lastTimestrLine" | cut -f2)"
     fi
-    awk -b "$awk_functions BEGIN { $awk_vars lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
+    "$awk_binary" -b "$awk_functions BEGIN { $awk_vars lastTimestr = \"$lastTimestr\"; $scriptInitFromLastTimestr }"'
   '"$script1"'
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';
@@ -436,7 +510,7 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
 #
 # Now we can use those vars $my_result, $my_linenr and $my_bytenr
 function get_linenr_and_bytenr_from_index() { # {{{
-  awk -F"\t" '
+  "$awk_binary" -F"\t" '
     BEGIN { isFirstIdx = 1; }
     $1 == "idx" {
       if ("'$1'" == $2) {
@@ -458,19 +532,19 @@ function get_linenr_and_bytenr_from_index() { # {{{
 } # }}}
 
 function get_prevlog_lines_from_index() { # {{{
-  if ! awk -F"\t" 'BEGIN { found=0 } $1 == "prevlog_lines" { print $2; found = 1; exit } END { if (found == 0) { exit 1 } }' $indexfile ; then
+  if ! "$awk_binary" -F"\t" 'BEGIN { found=0 } $1 == "prevlog_lines" { print $2; found = 1; exit } END { if (found == 0) { exit 1 } }' $indexfile ; then
     return 1
   fi
 } # }}}
 
 function get_prevlog_modtime_from_index() { # {{{
-  if ! awk -F"\t" 'BEGIN { found=0 } $1 == "prevlog_modtime" { print $2; found = 1; exit } END { if (found == 0) { exit 1 } }' $indexfile ; then
+  if ! "$awk_binary" -F"\t" 'BEGIN { found=0 } $1 == "prevlog_modtime" { print $2; found = 1; exit } END { if (found == 0) { exit 1 } }' $indexfile ; then
     return 1
   fi
 } # }}}
 
 function get_prevlog_bytenr() { # {{{
-  du -sb $logfile_prev | awk '{ print $1 }'
+  du -sb $logfile_prev | "$awk_binary" '{ print $1 }'
 } # }}}
 
 is_outside_of_range=0
@@ -610,13 +684,13 @@ fi
 
 # NOTE: this script MUST be executed with the "-b" awk key, which means that
 # awk will work in terms of bytes, not characters. We use length($0) there and
-# we rely on it being number of bytes. That said, it's only used for percentage
-# calculation, which is a non-essential.
+# we rely on it being number of bytes.
 #
-# Also btw, this percentage calculation slows the whole query by about 10%,
-# which isn't ideal. TODO: maybe instead of doing the division on every line,
-# we can only do the division when the percentage changes, so we calculate the
-# next point when it'd change, and going forward we just compare it with a simple "<".
+# Also btw, percentage calculation slows the whole query by about 10%, which
+# isn't ideal. TODO: maybe instead of doing the division on every line, we can
+# only do the division when the percentage changes, so we calculate the next
+# point when it'd change, and going forward we just compare it with a simple
+# "<".
 awk_script='
 '$awk_func_print_percentage'
 
@@ -735,7 +809,7 @@ fi
 
 # Now execute all those commands, and feed those logs to the awk script
 # which will analyze them and produce the final output.
-for cmd in "${cmds[@]}"; do eval $cmd || exit 1; done | awk -b "$awk_script" -
+for cmd in "${cmds[@]}"; do eval $cmd || exit 1; done | "$awk_binary" -b "$awk_script" -
 
 if ! [[ ${PIPESTATUS[@]} =~ ^(0[[:space:]]*)+$ ]]; then
   exit 1
