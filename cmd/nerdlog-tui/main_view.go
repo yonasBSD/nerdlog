@@ -67,6 +67,7 @@ type MainView struct {
 	rootPages *tview.Pages
 	logsTable *tview.Table
 
+	queryLabel *tview.TextView
 	queryInput *tview.InputField
 	cmdInput   *tview.InputField
 
@@ -164,15 +165,19 @@ type OnReconnectRequest func()
 type OnCmdCallback func(cmd string, opts CmdOpts)
 
 var (
-	queryInputStaleMatch = tcell.Style{}.
+	queryLabelMatch    = "awk pattern:"
+	queryLabelMismatch = "awk pattern[yellow::b]*[-::-]"
+
+	queryInputStateMatch = tcell.Style{}.
 				Background(tcell.ColorBlue).
 				Foreground(tcell.ColorWhite).
 				Bold(true)
 
-	queryInputStaleMismatch = tcell.Style{}.
-				Background(tcell.ColorDarkRed).
-				Foreground(tcell.ColorWhite).
-				Bold(true)
+	queryInputStateMismatch = tcell.Style{}.
+		//Background(tcell.ColorDarkRed).
+		Background(tcell.ColorBlue).
+		Foreground(tcell.ColorWhite).
+		Bold(true)
 
 	menuUnselected = tcell.Style{}.
 			Background(tcell.ColorBlue).
@@ -229,6 +234,9 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.rootPages = tview.NewPages()
 
 	mainFlex := tview.NewFlex().SetDirection(tview.FlexRow)
+
+	mv.queryLabel = tview.NewTextView()
+	mv.queryLabel.SetDynamicColors(true).SetScrollable(false).SetText(queryLabelMatch)
 
 	mv.queryInput = tview.NewInputField()
 	mv.queryInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -363,9 +371,6 @@ func NewMainView(params *MainViewParams) *MainView {
 		mv.openQueryEditView()
 	})
 
-	queryLabel := tview.NewTextView()
-	queryLabel.SetScrollable(false).SetText("awk pattern:")
-
 	mv.timeLabel = tview.NewTextView()
 	mv.timeLabel.SetScrollable(false)
 
@@ -472,7 +477,7 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mv.topFlex = tview.NewFlex().SetDirection(tview.FlexColumn)
 	mv.topFlex.
-		AddItem(queryLabel, 12, 0, false).
+		AddItem(mv.queryLabel, 12, 0, false).
 		AddItem(nil, 1, 0, false).
 		AddItem(mv.queryInput, 0, 1, true).
 		AddItem(nil, 1, 0, false).
@@ -869,12 +874,15 @@ func (mv *MainView) bumpOverlay() {
 }
 
 func (mv *MainView) queryInputApplyStyle() {
-	style := queryInputStaleMatch
+	style := queryInputStateMatch
+	text := queryLabelMatch
 	if mv.queryInput.GetText() != mv.query {
-		style = queryInputStaleMismatch
+		style = queryInputStateMismatch
+		text = queryLabelMismatch
 	}
 
 	mv.queryInput.SetFieldStyle(style)
+	mv.queryLabel.SetText(text)
 }
 
 func (mv *MainView) applyQueryEditData(data QueryFull, dqp doQueryParams) error {
