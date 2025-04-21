@@ -50,6 +50,7 @@ type nerdlogAppParams struct {
 	initialQueryData QueryFull
 	connectRightAway bool
 	enableClipboard  bool
+	logLevel         log.LogLevel
 }
 
 type cmdWithOpts struct {
@@ -60,7 +61,7 @@ type cmdWithOpts struct {
 func newNerdlogApp(
 	params nerdlogAppParams, queryCLHistory *clhistory.CLHistory,
 ) (*nerdlogApp, error) {
-	logger := log.NewLogger(log.Verbose1) // TODO: make it so that the level comes from the config
+	logger := log.NewLogger(params.logLevel)
 
 	homeDir, err := os.UserHomeDir()
 	if err != nil {

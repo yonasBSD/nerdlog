@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/dimonomid/nerdlog/clhistory"
+	"github.com/dimonomid/nerdlog/log"
 	"github.com/spf13/pflag"
 	"golang.design/x/clipboard"
 )
@@ -19,6 +20,7 @@ var (
 	flagLStreams    = pflag.StringP("lstreams", "h", "", "Logstreams to connect to, as comma-separated glob patterns, e.g. 'foo-*,bar-*'")
 	flagQuery       = pflag.StringP("pattern", "p", "", "Initial awk pattern to use")
 	flagSelectQuery = pflag.StringP("selquery", "s", "", "SELECT-like query to specify which fields to show, like 'time STICKY, message, lstream, level_name AS level, *'")
+	flagLogLevel    = pflag.String("loglevel", "error", "This is NOT about the logs that nerdlog fetches from the remote servers, it's rather about nerdlog's own log. Valid values are: error, warning, info, verbose1, verbose2 or verbose3")
 )
 
 func main() {
@@ -98,11 +100,30 @@ func main() {
 		fmt.Println("NOTE: X Clipboard is not available")
 	}
 
+	logLevel := log.Info
+	if *flagLogLevel == "error" {
+		logLevel = log.Error
+	} else if *flagLogLevel == "warning" {
+		logLevel = log.Warning
+	} else if *flagLogLevel == "info" {
+		logLevel = log.Info
+	} else if *flagLogLevel == "verbose1" {
+		logLevel = log.Verbose1
+	} else if *flagLogLevel == "verbose2" {
+		logLevel = log.Verbose2
+	} else if *flagLogLevel == "verbose3" {
+		logLevel = log.Verbose3
+	} else {
+		fmt.Fprintf(os.Stderr, "Invalid --loglevel, try error, warning, info, verbose1, verbose2 or verbose3")
+		os.Exit(1)
+	}
+
 	app, err := newNerdlogApp(
 		nerdlogAppParams{
 			initialQueryData: initialQueryData,
 			connectRightAway: connectRightAway,
 			enableClipboard:  enableClipboard,
+			logLevel:         logLevel,
 		},
 		queryCLHistory,
 	)
