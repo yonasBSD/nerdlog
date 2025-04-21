@@ -1,5 +1,10 @@
 #/bin/bash
 
+# NOTE: ABANDON ALL HOPE.
+#
+# This script logic is really convoluted and hard to understand, and begs for a
+# major rewrite.
+
 trap 'echo "exit_code:$?"' EXIT
 
 # Arguments:
