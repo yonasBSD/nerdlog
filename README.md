@@ -1,11 +1,12 @@
-# Nerdlog: fast, remote-first, multi-host TUI log viewer with timeline histogram and no central server
+# Nerdlog
 
-Loosely inspired by Graylog/Kibana, but without the bloat. Pretty much no setup
-needed, either.
+Nerdlog is a fast, remote-first, multi-host TUI log viewer with timeline
+histogram and no central server. Loosely inspired by Graylog/Kibana, but
+without the bloat. Pretty much no setup needed, either.
 
-It's laser-focused on being efficient while querying logs from multiple
-remote machines simultaneously, filtering them by time range and patterns, and
-apart from showing the actual logs, also drawing the timeline histogram:
+It's laser-focused on being efficient while querying logs from multiple remote
+machines simultaneously, filtering them by time range and patterns, while also
+drawing a timeline histogram for quick visual insight:
 
 ![Nerdlog](images/nerdlog_intro.png)
 
@@ -19,7 +20,7 @@ It does support some other log formats and can use any log files, but that was t
 - No centralized server required; nerdlog establishes an ssh connection to
   every node that the user wants to collect logs from, and keeps them idle in
   the background (although a separate server to store the log files might still
-  help in some cases; see the "Requirements and limitations" section below);
+  help in some cases; see the [Requirements and limitations](https://dmitryfrank.com/projects/nerdlog/article#requirements) sections in the article);
 - Logs are not downloaded to the local machine in full: all the log analysis
   is done on the remote nodes, and on each query, only the following data is
   downloaded from each node: up to 250 messages from every logstream
@@ -31,9 +32,7 @@ It does support some other log formats and can use any log files, but that was t
 
 ## Demo
 
-First of all, a little demo. Here, we're dealing with (fake) logs from 4 remote
-nodes, and simulating a scenario of drilling down into logs to find the issue,
-filtering out irrelevant messages and finding relevant ones.
+Here’s a quick demo showing how Nerdlog works across four remote nodes:
 
 ![Nerdlog](images/nerdlog_demo.gif)
 
