@@ -254,3 +254,7 @@ Currently supported options are:
   `Local` is used, but you can specify `UTC` or `America/New_York` etc.
 
 `:q[uit]` Quit the app.
+
+## More details
+
+[Check out the Nerdlog article](https://dmitryfrank.com/projects/nerdlog/article) for more in-depth look at the core concepts, limitations and workarounds, and implementation details.
