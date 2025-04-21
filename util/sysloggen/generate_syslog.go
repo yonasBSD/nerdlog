@@ -160,21 +160,52 @@ func randomElement(list []string) string {
 	return list[rand.Intn(len(list))]
 }
 
-func generateSyslogEntry(ts time.Time, layout string) string {
+func generateSyslogEntry(ts time.Time, layout string, parts SyslogParts) string {
 	timestamp := ts.Format(layout)
 	hostname := "myhost"
-	tag := randomElement(facilities)
-	severity := randomElement(severities)
-	pid := rand.Intn(9000) + 100
-	message := randomElement(messages)
 
-	return fmt.Sprintf("%s %s %s[%d]: <%s> %s", timestamp, hostname, tag, pid, severity, message)
+	if parts.Tag == "" {
+		parts.Tag = randomElement(facilities)
+	}
+
+	if parts.Severity == "" {
+		parts.Severity = randomElement(severities)
+	}
+
+	if parts.Pid == 0 {
+		parts.Pid = rand.Intn(9000) + 100
+	}
+
+	if parts.Message == "" {
+		parts.Message = randomElement(messages)
+	}
+
+	return fmt.Sprintf(
+		"%s %s %s[%d]: <%s> %s",
+		timestamp, hostname, parts.Tag, parts.Pid, parts.Severity, parts.Message,
+	)
 }
 
-func randomStep(params *Params) time.Duration {
-	min := int64(params.MinDelayMS) * int64(time.Millisecond)
-	max := int64(params.MaxDelayMS) * int64(time.Millisecond)
-	return time.Duration(rand.Int63n(max-min) + min)
+func randomStep(params *DelayCfg, lastDelay, curDelayDelta time.Duration) time.Duration {
+	min := -100 * int64(time.Millisecond)
+	max := 100 * int64(time.Millisecond)
+	curDelayDelta += time.Duration(rand.Int63n(max-min) + min)
+	//curDelayDelta += -time.Duration(rand.Int63n(max))
+	//_ = min
+
+	ret := lastDelay + curDelayDelta
+	if ret < time.Duration(params.MinDelayMS)*time.Millisecond {
+		ret = time.Duration(params.MinDelayMS) * time.Millisecond
+	}
+	if ret > time.Duration(params.MaxDelayMS)*time.Millisecond {
+		//ret = time.Duration(params.MaxDelayMS) * time.Millisecond
+	}
+
+	return ret
+
+	//min := int64(params.MinDelayMS) * int64(time.Millisecond)
+	//max := int64(params.MaxDelayMS) * int64(time.Millisecond)
+	//return time.Duration(rand.Int63n(max-min) + min)
 }
 
 type Params struct {
@@ -204,11 +235,165 @@ type Params struct {
 	// generate anything.
 	SkipIfPrevLogSizeIs int64
 	SkipIfLastLogSizeIs int64
+
+	Spikes []Spike
+}
+
+type DelayCfg struct {
+	MinDelayMS int
+	MaxDelayMS int
+}
+
+type SpikePhase struct {
+	// If EndTime is zero, the phase will never end
+	EndTime time.Time
+
+	MinDelayMS int
+	MaxDelayMS int
+
+	Trend func(phasePercentage float64, minDelayMS, maxDelayMS int) DelayCfg
+}
+
+type SyslogParts struct {
+	Tag      string
+	Severity string
+	Pid      int
+	Message  string
+}
+
+type Spike struct {
+	StartTime time.Time
+	// All of SyslogParts fields are optional; what is not specified, will be random
+	SyslogParts SyslogParts
+	Phases      []SpikePhase
+}
+
+type streamCtx struct {
+	spikeCfg Spike
+
+	lastDelay     time.Duration
+	curDelayDelta time.Duration
+
+	nextMsgTime time.Time
 }
 
 func GenerateSyslog(params Params) error {
 	if params.TimeLayout == "" {
 		params.TimeLayout = "Jan _2 15:04:05"
+	}
+
+	sCtxs := []*streamCtx{
+		// Main stream
+		&streamCtx{
+			spikeCfg: Spike{
+				Phases: []SpikePhase{
+					SpikePhase{
+						MinDelayMS: params.MinDelayMS,
+						MaxDelayMS: params.MaxDelayMS,
+					},
+				},
+			},
+		},
+	}
+
+	for _, spike := range params.Spikes {
+		sCtxs = append(sCtxs, &streamCtx{
+			spikeCfg: spike,
+		})
+	}
+
+	type nextDelayAndMsg struct {
+		time        time.Time
+		syslogParts SyslogParts
+	}
+
+	getNextDelayAndMsg := func(curTime time.Time) nextDelayAndMsg {
+		// Generate nextMsgTime for all active spikes
+		for _, sc := range sCtxs {
+			if sc.nextMsgTime.IsZero() {
+				if curTime.Before(sc.spikeCfg.StartTime) {
+					continue
+				}
+
+				phaseStartTime := sc.spikeCfg.StartTime
+
+				if len(sc.spikeCfg.Phases) == 0 {
+					panic("no phases")
+				}
+				var d *DelayCfg
+				for _, phase := range sc.spikeCfg.Phases {
+					if phase.EndTime.IsZero() || curTime.Before(phase.EndTime) {
+						// Found the phase
+						percentage := 0.0
+						if !phase.EndTime.IsZero() {
+							totalDur := phase.EndTime.Sub(phaseStartTime)
+							elapsedDur := curTime.Sub(phaseStartTime)
+							percentage = float64(elapsedDur) / float64(totalDur) * 100.0
+						}
+
+						var curDelayCfg DelayCfg
+						if phase.Trend != nil {
+							curDelayCfg = phase.Trend(percentage, phase.MinDelayMS, phase.MaxDelayMS)
+						} else {
+							curDelayCfg = DelayCfg{
+								MinDelayMS: phase.MinDelayMS,
+								MaxDelayMS: phase.MaxDelayMS,
+							}
+						}
+
+						d = &curDelayCfg
+						break
+					}
+
+					phaseStartTime = phase.EndTime
+				}
+
+				if d == nil {
+					// the spike is over (all phases of it are over)
+					continue
+				}
+
+				if sc.lastDelay == 0 {
+					sc.lastDelay = time.Duration(d.MinDelayMS + (d.MaxDelayMS-d.MinDelayMS)/2)
+				}
+
+				dur := randomStep(d, sc.lastDelay, sc.curDelayDelta)
+				newDelayDelta := sc.lastDelay - dur
+
+				sc.curDelayDelta = newDelayDelta
+				sc.lastDelay = dur
+				sc.nextMsgTime = curTime.Add(dur)
+			}
+		}
+
+		var earliestTime *time.Time
+		var syslogParts *SyslogParts
+		// Find the earliest time
+		for _, sc := range sCtxs {
+			if sc.nextMsgTime.IsZero() {
+				continue
+			}
+
+			if earliestTime == nil || sc.nextMsgTime.Before(*earliestTime) {
+				tmpTime := sc.nextMsgTime
+				tmpParts := sc.spikeCfg.SyslogParts
+
+				earliestTime = &tmpTime
+				syslogParts = &tmpParts
+
+				// Reset it so we'll generate it again next time
+				sc.nextMsgTime = time.Time{}
+			}
+		}
+
+		if earliestTime == nil {
+			panic("earliestTime must not be nil at this point, since we have the 'main' spike")
+		}
+
+		return nextDelayAndMsg{
+			time:        *earliestTime,
+			syslogParts: *syslogParts,
+		}
 	}
 
 	rand.Seed(int64(params.RandomSeed))
@@ -254,7 +439,12 @@ func GenerateSyslog(params Params) error {
 	isRealtime := false
 
 	for {
-		step := randomStep(&params)
+		next := getNextDelayAndMsg(curTime)
+		if curTime.After(next.time) {
+			panic(fmt.Sprintf("curTime %v can't be after next.time %v", curTime, next.time))
+		}
+
+		step := next.time.Sub(curTime)
 		curTime = curTime.Add(step)
 
 		now := time.Now()
@@ -287,7 +477,7 @@ func GenerateSyslog(params Params) error {
 			defer file.Close()
 		}
 
-		logEntry := generateSyslogEntry(curTime, params.TimeLayout)
+		logEntry := generateSyslogEntry(curTime, params.TimeLayout, next.syslogParts)
 		_, err := file.WriteString(logEntry + "\n")
 		if err != nil {
 			return errors.Annotatef(err, "writing to log file")
