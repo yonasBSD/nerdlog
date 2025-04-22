@@ -400,7 +400,7 @@ func NewRowDetailsView(
 			rdv.updateUI()
 		}
 
-		getToggleFilterByTagAndValue := func(awkExpr string) func() {
+		getToggleFilterByValue := func(awkExpr string) func() {
 			return func() {
 				rdv.queryFull.Query = addToOrRemoveFromAwkQuery(rdv.queryFull.Query, awkExpr)
 				rdv.updateUI()
@@ -455,16 +455,10 @@ func NewRowDetailsView(
 			}
 
 			if rCtx.valExists && rCtx.field.Name != FieldNameTime && rCtx.field.Name != "lstream" {
-				if !rCtx.filteredByTagAndValue {
-					rdv.tbl.AddOption("[ ] Filter logs with this tag+value pair", getToggleFilterByTagAndValue(rCtx.awkTagAndValue))
-				} else {
-					rdv.tbl.AddOption("[✔] Filter logs with this tag+value pair", getToggleFilterByTagAndValue(rCtx.awkTagAndValue))
-				}
-
 				if !rCtx.filteredByValue {
-					rdv.tbl.AddOption("[ ] Filter logs containing value", getToggleFilterByTagAndValue(rCtx.awkValue))
+					rdv.tbl.AddOption("[ ] Filter logs containing value", getToggleFilterByValue(rCtx.awkValue))
 				} else {
-					rdv.tbl.AddOption("[✔] Filter logs containing value", getToggleFilterByTagAndValue(rCtx.awkValue))
+					rdv.tbl.AddOption("[✔] Filter logs containing value", getToggleFilterByValue(rCtx.awkValue))
 				}
 			}
 
@@ -740,9 +734,7 @@ func (rdv *RowDetailsView) updateUI() {
 			awkName = "msg"
 		}
 
-		awkTagAndValue := fmt.Sprintf(`/\y%s(":"?|=)%s/`, awkName, awkEscape(val))
 		awkValue := fmt.Sprintf(`/%s/`, awkEscape(val))
-		filteredByTagAndValue := strings.Contains(rdv.queryFull.Query, awkTagAndValue)
 		filteredByValue := strings.Contains(rdv.queryFull.Query, awkValue)
 
 		nRow := i
@@ -757,10 +749,6 @@ func (rdv *RowDetailsView) updateUI() {
 			nameStr += fmt.Sprintf(" [lightgray::i](%s)[-::-]", name.field.DisplayName)
 		}
 
-		if filteredByTagAndValue {
-			nameStr = "🔍 " + nameStr
-		}
-
 		nameCell := newTableCellLogmsg(nameStr).SetAttributes(tcell.AttrBold)
 		if name.idx >= 0 {
 			nameCell.SetTextColor(tcell.ColorLightBlue)
@@ -773,9 +761,6 @@ func (rdv *RowDetailsView) updateUI() {
 		if filteredByValue {
 			valStr = "🔍 " + valStr
 		}
-		if filteredByTagAndValue {
-			valStr = "🔍 " + valStr
-		}
 
 		valueCell = newTableCellLogmsg(valStr)
 		rdv.tbl.SetCell(nRow, rdvColIdxValue, valueCell)
@@ -785,12 +770,6 @@ func (rdv *RowDetailsView) updateUI() {
 			fieldIdx:  name.idx,
 			val:       val,
 			valExists: valExists,
-
-			// NOTE: it's so ugly to try and support both structured and non-structured
-			// logs. When we've switched to structured logs everywhere, we can make it
-			// less ugly.
-			awkTagAndValue:        awkTagAndValue,
-			filteredByTagAndValue: filteredByTagAndValue,
 
 			awkValue:        awkValue,
 			filteredByValue: filteredByValue,
@@ -809,11 +788,6 @@ type rowDetailsViewCellCtx struct {
 	val string
 	// valExists is true if value actual exists in the log row
 	valExists bool
-
-	// awkTagAndValue is a part of awk query to filter by this exact tag and
-	// value pair.
-	awkTagAndValue        string
-	filteredByTagAndValue bool
 
 	awkValue        string
 	filteredByValue bool
