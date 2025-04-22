@@ -8,9 +8,15 @@ nerdlog:
 clean:
 	rm -rf bin
 
+PREFIX ?= /usr/local
+DESTDIR ?=
+BINDIR := $(DESTDIR)$(PREFIX)/bin
+INSTALL := install
+INSTALL_FLAGS := -m 755
+
 .PHONY: install
 install:
-	sudo ln -sf $(PWD)/bin/nerdlog /usr/local/bin/nerdlog;
+	$(INSTALL) $(INSTALL_FLAGS) -D bin/nerdlog $(BINDIR)/nerdlog
 
 test:
 	# The tests run rather slow so we use "-v -p 1" so that we get the unbuffered

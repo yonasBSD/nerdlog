@@ -61,7 +61,7 @@ To build it, you need [Go](https://go.dev/). Having it installed:
 To install `nerdlog` binary to your `/usr/local/bin`:
 
 ```
-$ make && make install
+$ make && sudo make install
 ```
 
 Or to build and run without installing:
