@@ -56,7 +56,19 @@ But it works. It's pretty usable and surprisingly fast.
 
 ## Installation
 
-To build it, you need [Go](https://go.dev/). Having it installed:
+To build it, you need [Go](https://go.dev/). Having it installed, there are a
+few options:
+
+### Using `go install`
+
+```
+go install github.com/dimonomid/nerdlog/cmd/nerdlog@latest
+```
+
+Unless you have custom `GOPATH` or `GOBIN` env vars set, it will install the
+`nerdlog` binary to `$HOME/go/bin`.
+
+### Using `make`
 
 To install `nerdlog` binary to your `/usr/local/bin`:
 
