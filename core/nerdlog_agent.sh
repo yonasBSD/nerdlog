@@ -1,4 +1,4 @@
-#/bin/bash
+#!/bin/bash
 
 # NOTE: ABANDON ALL HOPE.
 #

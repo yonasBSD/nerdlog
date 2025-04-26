@@ -156,7 +156,7 @@ these sticky columns will remain visible at the left side.
 Another supported keyword here is `AS`, so e.g. `message AS msg` is a valid
 syntax.
 
-For a more extensive discussion on the logstreams and other core concepts, consider
+For a more extensive discussion on the logstreams and other core concepts, and advanced options like using `sudo` to read log files, consider
 reading the [Core concepts](https://dmitryfrank.com/projects/nerdlog/article#core_concepts)
 section in the article.
 

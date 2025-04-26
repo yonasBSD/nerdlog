@@ -31,6 +31,19 @@ type ConfigLogStream struct {
 	// it's optional (and eventually, if empty, will be set to default values by
 	// the LStreamsResolver).
 	LogFiles []string `yaml:"log_files"`
+
+	Options ConfigLogStreamOptions `yaml:"options"`
+}
+
+// ConfigLogStreamOptions contains additional options for a particular logstream.
+type ConfigLogStreamOptions struct {
+	// Sudo is a shortcut for SudoMode: if Sudo is true, it's an equivalent of
+	// setting SudoMode to SudoModeFull.
+	Sudo bool `yaml:"sudo"`
+
+	// SudoMode can be used to configure nerdlog to read log files with "sudo -n".
+	// See constants for the SudoMode type for more details.
+	SudoMode SudoMode `yaml:"sudo_mode"`
 }
 
 func (lss ConfigLogStreams) Keys() []string {
@@ -42,4 +55,18 @@ func (lss ConfigLogStreams) Keys() []string {
 	sort.Strings(keys)
 
 	return keys
+}
+
+// EffectiveSudoMode returns the SudoMode considering all fields that can
+// affect it: Sudo and SudoMode.
+func (opts ConfigLogStreamOptions) EffectiveSudoMode() SudoMode {
+	if opts.SudoMode != "" {
+		return opts.SudoMode
+	}
+
+	if opts.Sudo {
+		return SudoModeFull
+	}
+
+	return ""
 }

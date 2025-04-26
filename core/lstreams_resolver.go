@@ -47,6 +47,40 @@ type LogStream struct {
 	//
 	// It must contain at least a single item, otherwise LogStream is invalid.
 	LogFiles []string
+
+	Options LogStreamOptions
+}
+
+type LogStreamOptions struct {
+	SudoMode SudoMode
+}
+
+// SudoMode can be used to configure nerdlog to read log files with "sudo -n".
+// See constants below for more details.
+type SudoMode string
+
+const (
+	// SudoModeNone is the same as an empty string, and it obviously means that
+	// no sudo will be used. It exists as a separate mode to make it possible to
+	// override the mode to not use sudo even if some config specifies some
+	// non-empty sudo mode.
+	SudoModeNone SudoMode = "none"
+
+	// SudoModeFull means that the whole nerdlog_agent.sh script will be executed
+	// with "sudo -n". Useful for cases when the log files are owned by root but
+	// sudo doesn't require a password.
+	SudoModeFull SudoMode = "full"
+
+	// If needed, we might implement something like SudoModeGranular, which would
+	// mean that the agent script runs without sudo, but then internally it
+	// executes some commands with sudo. It would mean a more complicated setup
+	// and more maintenance burden and harder to configure sudoers file, so
+	// postponed until we actually need it (if at all).
+)
+
+var ValidSudoModes = map[SudoMode]struct{}{
+	SudoModeNone: {},
+	SudoModeFull: {},
 }
 
 type ConfigHost struct {
@@ -389,6 +423,10 @@ func expandFromLogStreamsConfig(
 
 			if lsCopy.Host.User == "" {
 				lsCopy.Host.User = matchedItem.User
+			}
+
+			if lsCopy.Options.SudoMode == "" {
+				lsCopy.Options.SudoMode = matchedItem.Options.EffectiveSudoMode()
 			}
 
 			if len(lsCopy.LogFiles) == 0 {
