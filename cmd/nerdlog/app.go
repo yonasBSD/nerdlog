@@ -51,6 +51,7 @@ type nerdlogAppParams struct {
 	connectRightAway bool
 	enableClipboard  bool
 	logLevel         log.LogLevel
+	sshConfigPath    string
 }
 
 type cmdWithOpts struct {
@@ -143,7 +144,7 @@ func newNerdlogApp(
 	})
 
 	// NOTE: initLStreamsManager has to be called _after_ app.mainView is initialized.
-	if err := app.initLStreamsManager("", homeDir, logger); err != nil {
+	if err := app.initLStreamsManager(params, "", homeDir, logger); err != nil {
 		return nil, errors.Trace(err)
 	}
 
@@ -172,6 +173,7 @@ func (app *nerdlogApp) runTViewApp() error {
 
 // NOTE: initLStreamsManager has to be called _after_ app.mainView is initialized.
 func (app *nerdlogApp) initLStreamsManager(
+	params nerdlogAppParams,
 	initialLStreams string,
 	homeDir string,
 	logger *log.Logger,
@@ -266,20 +268,30 @@ func (app *nerdlogApp) initLStreamsManager(
 	}
 
 	var sshConfig *ssh_config.Config
-	sshConfigFile, err := os.Open(filepath.Join(homeDir, ".ssh", "config"))
-	if err != nil {
-		if !os.IsNotExist(err) {
-			// TODO: would perhaps be more useful if we warn the user about it,
-			// but still proceed.
-			return errors.Annotatef(err, "reading ssh config")
-		}
-	} else {
-		var err error
-		sshConfig, err = ssh_config.Decode(sshConfigFile)
+	if params.sshConfigPath != "" {
+		sshConfigFile, err := os.Open(params.sshConfigPath)
 		if err != nil {
-			// TODO: would perhaps be more useful if we warn the user about it,
-			// but still proceed.
-			return errors.Annotatef(err, "parsing ssh config")
+			if !os.IsNotExist(err) {
+				// TODO: would perhaps be more useful if we warn the user about it,
+				// but still proceed.
+				return errors.Annotatef(
+					err,
+					"reading ssh config from %s (path is configurable via --ssh-config)",
+					params.sshConfigPath,
+				)
+			}
+		} else {
+			var err error
+			sshConfig, err = ssh_config.Decode(sshConfigFile)
+			if err != nil {
+				// TODO: would perhaps be more useful if we warn the user about it,
+				// but still proceed.
+				return errors.Annotatef(
+					err,
+					"parsing ssh config from %s (path is configurable via --ssh-config)",
+					params.sshConfigPath,
+				)
+			}
 		}
 	}
 

@@ -15,27 +15,28 @@ import (
 const inputTimeLayout = "Jan2 15:04"
 const inputTimeLayoutMMHH = "15:04"
 
-var (
-	flagTime        = pflag.StringP("time", "t", "", "Time range in the same format as accepted by the UI. Examples: '1h', 'Mar27 12:00'")
-	flagLStreams    = pflag.StringP("lstreams", "h", "", "Logstreams to connect to, as comma-separated glob patterns, e.g. 'foo-*,bar-*'")
-	flagQuery       = pflag.StringP("pattern", "p", "", "Initial awk pattern to use")
-	flagSelectQuery = pflag.StringP("selquery", "s", "", "SELECT-like query to specify which fields to show, like 'time STICKY, message, lstream, level_name AS level, *'")
-	flagLogLevel    = pflag.String("loglevel", "error", "This is NOT about the logs that nerdlog fetches from the remote servers, it's rather about nerdlog's own log. Valid values are: error, warning, info, verbose1, verbose2 or verbose3")
-)
-
 func main() {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting home dir: %s\n", err)
+		os.Exit(1)
+	}
+
+	var (
+		flagTime        = pflag.StringP("time", "t", "", "Time range in the same format as accepted by the UI. Examples: '1h', 'Mar27 12:00'")
+		flagLStreams    = pflag.StringP("lstreams", "h", "", "Logstreams to connect to, as comma-separated glob patterns, e.g. 'foo-*,bar-*'")
+		flagQuery       = pflag.StringP("pattern", "p", "", "Initial awk pattern to use")
+		flagSelectQuery = pflag.StringP("selquery", "s", "", "SELECT-like query to specify which fields to show, like 'time STICKY, message, lstream, level_name AS level, *'")
+		flagLogLevel    = pflag.String("loglevel", "error", "This is NOT about the logs that nerdlog fetches from the remote servers, it's rather about nerdlog's own log. Valid values are: error, warning, info, verbose1, verbose2 or verbose3")
+		flagSSHConfig   = pflag.String("ssh-config", filepath.Join(homeDir, ".ssh", "config"), "ssh config file to use; set to an empty string to disable reading ssh config")
+	)
+
 	pflag.Parse()
 
 	// As of today, the only way to connect to a logstream is to use ssh via agent,
 	// so check if the agent env var is present, and fail quickly if it's not.
 	if os.Getenv("SSH_AUTH_SOCK") == "" {
 		fmt.Fprintf(os.Stderr, "SSH_AUTH_SOCK env var is not present, which means ssh agent is not running, or at least is not accessible to Nerdlog. As of today, ssh agent is the only way for Nerdlog to connect to logstreams, so please start one, make sure that all the necessary keys are added to it, and retry.\n")
-		os.Exit(1)
-	}
-
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error getting home dir: %s\n", err)
 		os.Exit(1)
 	}
 
@@ -124,6 +125,7 @@ func main() {
 			connectRightAway: connectRightAway,
 			enableClipboard:  enableClipboard,
 			logLevel:         logLevel,
+			sshConfigPath:    *flagSSHConfig,
 		},
 		queryCLHistory,
 	)
