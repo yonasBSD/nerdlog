@@ -240,6 +240,11 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mv.queryInput = tview.NewInputField()
 	mv.queryInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		event = mv.eventHandlerBackForward(event)
+		if event == nil {
+			return nil
+		}
+
 		switch event.Key() {
 		case tcell.KeyEnter:
 			mv.setQuery(mv.queryInput.GetText())
@@ -343,6 +348,11 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mv.queryEditBtn = tview.NewButton("Edit")
 	mv.queryEditBtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		event = mv.eventHandlerBackForward(event)
+		if event == nil {
+			return nil
+		}
+
 		switch event.Key() {
 		case tcell.KeyTab:
 			mv.params.App.SetFocus(mv.menuDropdown)
@@ -379,6 +389,11 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.menuDropdown.SetListStyles(menuUnselected, menuSelected)
 	mv.menuDropdown.SetTextOptions(" ", " ", " ", " ", " Menu ")
 	mv.menuDropdown.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		event = mv.eventHandlerBackForward(event)
+		if event == nil {
+			return nil
+		}
+
 		switch event.Key() {
 		case tcell.KeyTab:
 			if mv.menuDropdown.IsListOpen() {
@@ -523,6 +538,11 @@ func NewMainView(params *MainViewParams) *MainView {
 	})
 	mv.histogram.SetDataBinsSnapper(snapDataBinsInChartDot)
 	mv.histogram.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		event = mv.eventHandlerBackForward(event)
+		if event == nil {
+			return nil
+		}
+
 		switch event.Key() {
 		case tcell.KeyTab:
 			mv.params.App.SetFocus(mv.logsTable)
@@ -582,6 +602,11 @@ func NewMainView(params *MainViewParams) *MainView {
 	})
 
 	mv.logsTable.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		event = mv.eventHandlerBackForward(event)
+		if event == nil {
+			return nil
+		}
+
 		key := event.Key()
 
 		switch key {
@@ -781,6 +806,28 @@ func NewMainView(params *MainViewParams) *MainView {
 	go mv.run()
 
 	return mv
+}
+
+// eventHandlerBackForward handles keyboard events for the browser-like history:
+//
+// - Alt+Left: Go back
+// - Alt+Right: Go forward
+//
+// If the event is handled, nil is returned; otherwise, the original event is
+// returned.
+func (mv *MainView) eventHandlerBackForward(event *tcell.EventKey) *tcell.EventKey {
+	if event.Modifiers()&tcell.ModAlt > 0 {
+		switch event.Key() {
+		case tcell.KeyLeft:
+			mv.params.OnCmd("back", CmdOpts{Internal: true})
+			return nil
+		case tcell.KeyRight:
+			mv.params.OnCmd("fwd", CmdOpts{Internal: true})
+			return nil
+		}
+	}
+
+	return event
 }
 
 func (mv *MainView) focusCmdline() {
