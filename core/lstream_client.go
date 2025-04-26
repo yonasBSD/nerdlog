@@ -651,7 +651,7 @@ func (lsc *LStreamClient) run() {
 
 							percentage, err := strconv.Atoi(strings.TrimPrefix(processLine, "p:"))
 							if err != nil {
-								cmdCtx.errs = append(cmdCtx.errs, errors.Annotatef(err, "received malformed p:p line:", line))
+								cmdCtx.errs = append(cmdCtx.errs, errors.Annotatef(err, "received malformed p:p line: %s", line))
 								continue
 							}
 
