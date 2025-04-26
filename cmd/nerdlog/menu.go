@@ -7,19 +7,19 @@ type menuItem struct {
 
 var mainMenu = []menuItem{
 	{
-		Title: "Back                 :back ",
+		Title: "Back                 <Alt+Left> ",
 		Handler: func(mv *MainView) {
 			mv.params.OnCmd("back", CmdOpts{Internal: true})
 		},
 	},
 	{
-		Title: "Forward              :fwd  ",
+		Title: "Forward              <Alt+Right>",
 		Handler: func(mv *MainView) {
 			mv.params.OnCmd("fwd", CmdOpts{Internal: true})
 		},
 	},
 	{
-		Title: "Copy query command   :xclip",
+		Title: "Copy query command   :xclip     ",
 		Handler: func(mv *MainView) {
 			mv.params.OnCmd("xclip", CmdOpts{Internal: true})
 		},

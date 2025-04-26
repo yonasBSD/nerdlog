@@ -215,6 +215,8 @@ If you know Vim though, you'll feel right at home in nerdlog too since it suppor
 
 When in an input field (command line, query input, etc), you can go through input history using `Up` / `Down` or `Ctrl+P` / `Ctrl+N`.
 
+In any widget on the main screen, the keyboard shortcuts `Alt+Left` and `Alt+Right` go back and forward in the query history, much like it works in the browser. Btw, commands `:back` and `:fwd` do the same thing.
+
 In the query edit form (the Edit button on the UI, or the `:e[dit]` command), the `Ctrl+K` / `Ctrl+J` iterates "full" query history (affecting not only one field like query, but all of them: time range, logstreams filter, query).
 
 ## Commands
@@ -240,9 +242,9 @@ nerdlog), OR it can also be used in a currently running nerdlog instance: just
 type `:` to go to the command mode, copypaste this command above, and nerdlog
 will parse it and apply the query.
 
-`:back` or `:prev` Go to the previous query, just like in the browser. This can be done from the Menu too (Menu -> Back)
+`:back` or `:prev` Go to the previous query, just like in the browser. This can be done from the Menu too (Menu -> Back), or using a keyboard shortcut `Alt+Left`.
 
-`:fwd` or `:next` Go to the next query, just like in the browser. This can be done from the Menu too (Menu -> Forward)
+`:fwd` or `:next` Go to the next query, just like in the browser. This can be done from the Menu too (Menu -> Forward), or using a keyboard shortcut `Alt+Right`.
 
 `:e[dit]` Open query edit form; you can do the same if you just use Tab to navigate
 to the Edit button in the UI.
