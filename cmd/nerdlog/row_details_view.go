@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/dimonomid/nerdlog/cmd/nerdlog-tui/ui"
+	"github.com/dimonomid/nerdlog/cmd/nerdlog/ui"
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/gdamore/tcell/v2"
 	"github.com/juju/errors"

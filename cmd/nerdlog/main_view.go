@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/dimonomid/nerdlog/clhistory"
-	"github.com/dimonomid/nerdlog/cmd/nerdlog-tui/ui"
+	"github.com/dimonomid/nerdlog/cmd/nerdlog/ui"
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/dimonomid/nerdlog/log"
 	"github.com/gdamore/tcell/v2"

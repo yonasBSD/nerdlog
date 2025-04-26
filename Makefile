@@ -2,7 +2,7 @@ all: clean nerdlog
 
 .PHONY: nerdlog
 nerdlog:
-	go build -o bin/nerdlog ./cmd/nerdlog-tui
+	go build -o bin/nerdlog ./cmd/nerdlog
 
 .PHONY: clean
 clean:
