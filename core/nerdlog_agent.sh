@@ -301,16 +301,6 @@ esac
 
 # What follows is the handler for the "query" command.
 
-user_pattern=$1
-
-logfile_prev_size=$(stat -c%s $logfile_prev) || exit 1
-logfile_last_size=$(stat -c%s $logfile_last) || exit 1
-total_size=$((logfile_prev_size+logfile_last_size)) || exit 1
-
-if [[ "$refresh_index" == "1" ]]; then
-  rm -f $indexfile || exit 1
-fi
-
 # NOTE: we only show percentages with 5% increments, to save on traffic and
 # other overhead. With all 24 my-nodes, having percentage being printed with
 # 1% increments, it generates extra traffic of about 290KB per single query,
@@ -324,6 +314,86 @@ function printPercentage(numCur, numTotal) {
   }
 }
 '
+
+function run_awk_script {
+  awk_pattern=''
+  if [[ "$user_pattern" != "" ]]; then
+    awk_pattern="!($user_pattern) {next}"
+  fi
+
+  # NOTE: this script MUST be executed with the "-b" awk key, which means that
+  # awk will work in terms of bytes, not characters. We use length($0) there and
+  # we rely on it being number of bytes.
+  #
+  # Also btw, percentage calculation slows the whole query by about 10%, which
+  # isn't ideal. TODO: maybe instead of doing the division on every line, we can
+  # only do the division when the percentage changes, so we calculate the next
+  # point when it'd change, and going forward we just compare it with a simple
+  # "<".
+  awk_script='
+  '$awk_func_print_percentage'
+
+  BEGIN { bytenr=1; curline=0; maxlines='$max_num_lines'; lastPercent=0 }
+  { bytenr += length($0)+1 }
+  NR % 100 == 0 {
+    printPercentage(bytenr, '$num_bytes_to_scan')
+  }
+  '$awk_pattern'
+  {
+    stats['"$awktime_minute_key"']++;
+
+    '$lines_until_check'
+
+    lastlines[curline] = $0;
+    lastNRs[curline] = NR;
+    curline++
+    if (curline >= maxlines) {
+      curline = 0;
+    }
+
+    next;
+  }
+
+  END {
+    print "logfile:'$logfile_prev':0";
+    print "logfile:'$logfile_last':'$prevlog_lines'";
+
+    for (x in stats) {
+      print "s:" x "," stats[x]
+    }
+
+    for (i = 0; i < maxlines; i++) {
+      ln = curline + i;
+      if (ln >= maxlines) {
+        ln -= maxlines;
+      }
+
+      if (!lastlines[ln]) {
+        continue;
+      }
+
+      curNR = lastNRs[ln] + '$from_linenr_int' - 1;
+
+      print "m:" curNR ":" lastlines[ln];
+    }
+  }
+  '
+
+  "$awk_binary" -b "$awk_script" "$@"
+  if [[ "$?" != 0 ]]; then
+    return 1
+  fi
+}
+
+user_pattern=$1
+
+logfile_prev_size=$(stat -c%s $logfile_prev) || exit 1
+logfile_last_size=$(stat -c%s $logfile_last) || exit 1
+total_size=$((logfile_prev_size+logfile_last_size)) || exit 1
+
+if [[ "$refresh_index" == "1" ]]; then
+  rm -f $indexfile || exit 1
+fi
 
 function refresh_index { # {{{
   local last_linenr=0
@@ -667,11 +737,6 @@ if [[ "$from_linenr" == "" ]]; then
   from_linenr_int=1
 fi
 
-awk_pattern=''
-if [[ "$user_pattern" != "" ]]; then
-  awk_pattern="!($user_pattern) {next}"
-fi
-
 lines_until_check=''
 if [[ "$lines_until" != "" ]]; then
   lines_until_check="if (NR >= $((lines_until-from_linenr_int+1))) { next; }"
@@ -692,63 +757,6 @@ else
   num_bytes_to_scan=$((to_bytenr-from_bytenr))
 fi
 
-# NOTE: this script MUST be executed with the "-b" awk key, which means that
-# awk will work in terms of bytes, not characters. We use length($0) there and
-# we rely on it being number of bytes.
-#
-# Also btw, percentage calculation slows the whole query by about 10%, which
-# isn't ideal. TODO: maybe instead of doing the division on every line, we can
-# only do the division when the percentage changes, so we calculate the next
-# point when it'd change, and going forward we just compare it with a simple
-# "<".
-awk_script='
-'$awk_func_print_percentage'
-
-BEGIN { bytenr=1; curline=0; maxlines='$max_num_lines'; lastPercent=0 }
-{ bytenr += length($0)+1 }
-NR % 100 == 0 {
-  printPercentage(bytenr, '$num_bytes_to_scan')
-}
-'$awk_pattern'
-{
-  stats['"$awktime_minute_key"']++;
-
-  '$lines_until_check'
-
-  lastlines[curline] = $0;
-  lastNRs[curline] = NR;
-  curline++
-  if (curline >= maxlines) {
-    curline = 0;
-  }
-
-  next;
-}
-
-END {
-  print "logfile:'$logfile_prev':0";
-  print "logfile:'$logfile_last':'$prevlog_lines'";
-
-  for (x in stats) {
-    print "s:" x "," stats[x]
-  }
-
-  for (i = 0; i < maxlines; i++) {
-    ln = curline + i;
-    if (ln >= maxlines) {
-      ln -= maxlines;
-    }
-
-    if (!lastlines[ln]) {
-      continue;
-    }
-
-    curNR = lastNRs[ln] + '$from_linenr_int' - 1;
-
-    print "m:" curNR ":" lastlines[ln];
-  }
-}
-'
 
 # NOTE: there are multiple ways to tail a file, and performance differs greatly:
 # Log file has 21789347 lines:
@@ -819,10 +827,20 @@ fi
 
 # Now execute all those commands, and feed those logs to the awk script
 # which will analyze them and produce the final output.
-for cmd in "${cmds[@]}"; do eval $cmd || exit 1; done | "$awk_binary" -b "$awk_script" -
+for cmd in "${cmds[@]}"; do eval $cmd || exit 1; done | \
+  user_pattern="$user_pattern"                          \
+  max_num_lines="$max_num_lines"                        \
+  num_bytes_to_scan="$num_bytes_to_scan"                \
+  lines_until_check="$lines_until_check"                \
+  prevlog_lines="$prevlog_lines"                        \
+  from_linenr_int="$from_linenr_int"                    \
+  run_awk_script -
 
-if ! [[ ${PIPESTATUS[@]} =~ ^(0[[:space:]]*)+$ ]]; then
-  exit 1
-fi
+codes=(${PIPESTATUS[@]})
+for status in "${codes[@]}"; do
+  if [[ $status -ne 0 ]]; then
+    exit 1
+  fi
+done
 
 echo "p:stage:$STAGE_DONE:done" 1>&2
