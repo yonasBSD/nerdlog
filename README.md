@@ -62,8 +62,16 @@ few options:
 
 ### Using `go install`
 
+Latest release (might miss newest features which are not yet officially released):
+
 ```
 go install github.com/dimonomid/nerdlog/cmd/nerdlog@latest
+```
+
+Latest master:
+
+```
+go install github.com/dimonomid/nerdlog/cmd/nerdlog@master
 ```
 
 Unless you have custom `GOPATH` or `GOBIN` env vars set, it will install the
