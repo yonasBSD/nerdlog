@@ -22,6 +22,8 @@ import (
 	"github.com/dimonomid/nerdlog/log"
 )
 
+const SpecialFilenameJournalctl = "_journalctl"
+
 const connectionTimeout = 5 * time.Second
 
 // Setting useGzip to false is just a simple way to disable gzip, for debugging
@@ -49,6 +51,10 @@ const (
 // some extra logic in the agent script for the traditional syslog format
 // (which has it space-padded, not zero-padded).
 const queryLogsArgsTimeLayout = "2006-01-02-15:04"
+
+// queryLogsTimestampUntilTimeLayout is used to format the --timestamp-until
+// arguments for nerdlog_agent.sh.
+const queryLogsTimestampUntilTimeLayout = "2006-01-02 15:04:05.000000"
 
 //go:embed nerdlog_agent.sh
 var nerdlogAgentSh string
@@ -124,6 +130,10 @@ type BusyStage struct {
 	// Title is just a human-readable description of the stage.
 	Title string
 
+	// ExtraInfo might contains some additional context, also just a
+	// human-readable string.
+	ExtraInfo string
+
 	// Percentage is a percentage of the current stage.
 	Percentage int
 }
@@ -136,6 +146,12 @@ type ConnDetails struct {
 type BootstrapDetails struct {
 	// Err is an error message from the last bootstrap attempt.
 	Err string
+
+	// WarnJournalctlNoAdminAccess is set to true if journalctl is used and the
+	// user doesn't have access to all the system logs. It's a separate bool
+	// instead of a generic warning message to make it possible to suppress it
+	// with a flag.
+	WarnJournalctlNoAdminAccess bool
 }
 
 func (c *connCtx) getStdoutLinesCh() chan string {
@@ -514,7 +530,7 @@ func (lsc *LStreamClient) run() {
 
 						for i := len(respCtx.logfiles) - 1; i >= 0; i-- {
 							logfile := respCtx.logfiles[i]
-							if logLineno > logfile.fromLinenumber {
+							if logfile.filename == SpecialFilenameJournalctl || logLineno > logfile.fromLinenumber {
 								logLineno -= logfile.fromLinenumber
 								logFilename = logfile.filename
 								break
@@ -616,7 +632,11 @@ func (lsc *LStreamClient) run() {
 
 				switch {
 				case cmdCtx.cmd.bootstrap != nil:
-					cmdCtx.unhandledStderr = append(cmdCtx.unhandledStderr, line)
+					if line == "warn_journalctl_no_admin_access" {
+						cmdCtx.bootstrapCtx.warnJournalctlNoAdminAccess = true
+					} else {
+						cmdCtx.unhandledStderr = append(cmdCtx.unhandledStderr, line)
+					}
 				case cmdCtx.cmd.ping != nil:
 					cmdCtx.unhandledStderr = append(cmdCtx.unhandledStderr, line)
 				case cmdCtx.cmd.queryLogs != nil:
@@ -644,6 +664,11 @@ func (lsc *LStreamClient) run() {
 								Num:   num,
 								Title: parts[1],
 							}
+
+							if len(parts) >= 3 {
+								lsc.busyStage.ExtraInfo = parts[2]
+							}
+
 							lsc.sendBusyStageUpdate()
 
 						case strings.HasPrefix(processLine, "p:"):
@@ -1170,6 +1195,16 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 			parts = append(parts, "--lines-until", shellQuote(strconv.Itoa(cmdCtx.cmd.queryLogs.linesUntil)))
 		}
 
+		if tu := cmdCtx.cmd.queryLogs.timestampUntil; tu != nil {
+			parts = append(parts,
+				"--timestamp-until",
+				shellQuote(
+					tu.time.In(lsc.location).Format(queryLogsTimestampUntilTimeLayout),
+				),
+				"--skip-n-latest", shellQuote(strconv.Itoa(tu.numMsgs)),
+			)
+		}
+
 		parts = append(parts, agentQueryTimeFormatArgs(&lsc.timeFormat.AWKExpr)...)
 
 		if cmdCtx.cmd.queryLogs.query != "" {
@@ -1333,8 +1368,19 @@ func (lsc *LStreamClient) handleCommandResultsIfDone(cmdCtx *lstreamCmdCtx) {
 	switch {
 	case cmdCtx.cmd.bootstrap != nil:
 		if cmdCtx.bootstrapCtx.receivedSuccess && len(cmdCtx.errs) == 0 {
-			// Bootstrap script has ran successfully, let's now try to autodetect the
-			// envelope log format.
+			// Bootstrap script has ran successfully.
+
+			// If journalctl is used and we don't have access to all the system
+			// logs, send a warning update.
+			if cmdCtx.bootstrapCtx.warnJournalctlNoAdminAccess {
+				lsc.sendUpdate(&LStreamClientUpdate{
+					BootstrapDetails: &BootstrapDetails{
+						WarnJournalctlNoAdminAccess: true,
+					},
+				})
+			}
+
+			// Let's now try to autodetect the envelope log format.
 			timeFormat, err := GetTimeFormatDescrFromLogLines(lsc.exampleLogLines)
 			if err != nil {
 				cmdCtx.errs = append(cmdCtx.errs, err)

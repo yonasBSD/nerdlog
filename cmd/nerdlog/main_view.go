@@ -1041,6 +1041,9 @@ func (mv *MainView) applyHMState(lsmanState *core.LStreamsManagerState) {
 			}
 
 			sb.WriteString(" - " + slowest.logstream)
+			if slowest.stage.ExtraInfo != "" {
+				sb.WriteString(fmt.Sprintf("\n%s", slowest.stage.ExtraInfo))
+			}
 			sb.WriteString("[-]")
 		}
 
@@ -1657,13 +1660,18 @@ func (mv *MainView) showOriginalMsg(msg core.LogMsg) {
 		lnBegin = 1
 	}
 
-	s := fmt.Sprintf(
-		"ssh -t %s 'vim +\"set ft=messages\" +%d <(tail -n +%d %s | head -n %d)'\n\n%s",
-		msg.Context["lstream"], lnOffsetUp+1, lnBegin, msg.LogFilename, lnOffsetUp+lnOffsetDown,
-		tview.Escape(msg.OrigLine),
-	)
+	sb := strings.Builder{}
 
-	mv.showMessagebox("msg", "Message", s, &MessageboxParams{})
+	if msg.LogFilename != core.SpecialFilenameJournalctl {
+		sb.WriteString(fmt.Sprintf(
+			"ssh -t %s 'vim +\"set ft=messages\" +%d <(tail -n +%d %s | head -n %d)'\n\n",
+			msg.Context["lstream"], lnOffsetUp+1, lnBegin, msg.LogFilename, lnOffsetUp+lnOffsetDown,
+		))
+	}
+
+	sb.WriteString(tview.Escape(msg.OrigLine))
+
+	mv.showMessagebox("msg", "Message", sb.String(), &MessageboxParams{})
 }
 
 func (mv *MainView) showModal(pageName string, primitive tview.Primitive, width, height int, focus bool) {
@@ -1840,6 +1848,12 @@ func (mv *MainView) handleQueryError(err error) {
 func (mv *MainView) handleBootstrapError(err error) {
 	mv.showMessagebox("err", "Bootstrap error", err.Error(), &MessageboxParams{
 		BackgroundColor: tcell.ColorDarkRed,
+	})
+}
+
+func (mv *MainView) handleBootstrapWarning(err error) {
+	mv.showMessagebox("err", "Bootstrap warning", err.Error(), &MessageboxParams{
+		BackgroundColor: tcell.ColorDarkOrchid,
 	})
 }
 

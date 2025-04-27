@@ -10,8 +10,9 @@ drawing a timeline histogram for quick visual insight:
 
 ![Nerdlog](images/nerdlog_intro.png)
 
-Primary use case: reading system logs (`/var/log/messages` or
-`/var/log/syslog`) from one or more remote hosts. Very efficient even on large log files (like 1GB or more).
+Primary use case: reading system logs (from the files `/var/log/messages` or
+`/var/log/syslog`, or straight from `journalctl`) from one or more remote
+hosts. Very efficient even on large log files (like 1GB or more).
 
 It does support some other log formats and can use any log files, but that was the primary use case which was driving the implementation: we were having our web service backend running as systemd services on a bunch of Linux instances, printing a lot of logs, and wanted to be able to read these logs efficiently and having the timeline histogram, much like tools like Graylog have.
 
@@ -91,11 +92,34 @@ few fields:
 
 Time range is self-explanatory.
 
-Next one is "Logstreams": shortly, a logstream means one or more _consecutive_
-logfiles like `/var/log/syslog`, `/var/log/syslog.1` etc, on a particular
-server accessible via ssh. If you have a server like `myserver.com` accessible
-via ssh on port 22, then the logstream to read its `/var/log/syslog` (or
-`/var/log/messages`) file could be:
+Next one is "Logstreams": shortly, as the name suggests, a logstream is a
+contiguous stream of log messages, on a particular server accessible via ssh.
+As of now, two kinds of logstreams are supported:
+
+- One or more _consecutive_ log files like `/var/log/syslog` and
+  `/var/log/syslog.1` (actually as of now there can be at most 2 files in a
+  logstream, but this limitation will hopefully be removed).
+- Logs returned from `journalctl`
+
+By default, nerdlog checks available logstreams in the following order:
+
+- If available, use the `/var/log/messages` file (and the older `/var/log/messages.1`)
+- If available, use the `/var/log/syslog` file (and the older `/var/log/syslog.1`)
+- As the last resort, use `journalctl` if available.
+
+Why preferring the logfiles instead of `journalctl`: because [log files work
+much faster and are more
+reliable](https://github.com/dimonomid/nerdlog/issues/7#issuecomment-2820521885).
+For some benchmarks, [also see this
+comment](https://github.com/dimonomid/nerdlog/issues/7#issuecomment-2823303380).
+However, `journalctl` is more universally available these days, and it often also
+has longer history, so nerdlog has full support for it. So far there's no
+option to prefer `journalctl` instead of log files by default, lmk if you need it;
+shouldn't be hard to implement.
+
+So if you have a server like `myserver.com` accessible via ssh on port 22, then
+the logstream to read its `/var/log/messages` file (or `/var/log/syslog` file,
+or from `journalctl` if none of these files are present) could be:
 
 ```
 myuser@myserver.com
@@ -106,6 +130,12 @@ form is:
 
 ```
 myuser@myserver.com:1234:/some/other/logfile
+```
+
+To select `journalctl` explicitly, specify `_journalctl` as the log file:
+
+```
+myuser@myserver.com:1234:_journalctl
 ```
 
 Multiple logstreams can be provided separated by commas, like this:
@@ -157,8 +187,7 @@ Another supported keyword here is `AS`, so e.g. `message AS msg` is a valid
 syntax.
 
 For a more extensive discussion on the logstreams and other core concepts, and advanced options like using `sudo` to read log files, consider
-reading the [Core concepts](https://dmitryfrank.com/projects/nerdlog/article#core_concepts)
-section in the article.
+reading the [Core concepts](https://dmitryfrank.com/projects/nerdlog/article#core_concepts) section in the article.
 
 ## Requirements
 
@@ -166,10 +195,6 @@ section in the article.
 - SSH agent must be running locally;
 - Gawk (GNU awk) is a requirement on the hosts, since nerlog relies on the `-b`
   option. So notably, `mawk` will not work. You need `gawk`;
-- If you're going to read system logs (those accessible via `journalctl`), make
-  sure that you have `rsyslog` or similar system installed; otherwise, nobody
-  is writing to these log files. Notably, on latest Fedora and Debian,
-  `rsyslog` is not installed by default.
 
 For more extensive discussion about these requirements, the consequent limitations, and possible ways to address them, see the [Requirements and Limitations](https://dmitryfrank.com/projects/nerdlog/article#requirements) sections in the article.
 

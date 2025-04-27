@@ -18,10 +18,17 @@ STAGE_INDEX_APPEND=2
 STAGE_QUERYING=3
 STAGE_DONE=4
 
+SPECIAL_FILENAME_AUTO="auto"
+SPECIAL_FILENAME_JOURNALCTL="_journalctl"
+
+# The output looks like this:
+# 2025-04-27T21:31:11.670468+00:00 myhot systemd[1]: Something happened.
+JOURNALCTL_FORMAT_FLAG="--output=short-iso-precise"
+
 indexfile=/tmp/nerdlog_agent_index
 
-logfile_prev=auto
-logfile_last=auto
+logfile_prev="${SPECIAL_FILENAME_AUTO}"
+logfile_last="${SPECIAL_FILENAME_AUTO}"
 
 positional_args=()
 
@@ -129,6 +136,19 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
+    --timestamp-until)
+      timestamp_until="$2"
+      if [[ "$skip_n_latest" == "" ]]; then
+        skip_n_latest=1
+      fi
+      shift # past argument
+      shift # past value
+      ;;
+    --skip-n-latest)
+      skip_n_latest="$2"
+      shift # past argument
+      shift # past value
+      ;;
     --refresh-index)
       refresh_index="1"
       shift # past argument
@@ -201,26 +221,33 @@ fi
 # https://lists.gnu.org/archive/html/info-gnu/2011-06/msg00013.html
 # Since it's so old, not bothering to check the version for now.
 
-if [[ "$logfile_last" == "auto" ]]; then
+if [[ "$logfile_last" == "${SPECIAL_FILENAME_AUTO}" ]]; then
   if [ -e /var/log/messages ]; then
     logfile_last=/var/log/messages
   elif [ -e /var/log/syslog ]; then
     logfile_last=/var/log/syslog
+  elif command -v journalctl > /dev/null 2>&1; then
+    logfile_last="${SPECIAL_FILENAME_JOURNALCTL}"
   else
-    echo "error:failed to autodetect log file: neither /var/log/messages nor /var/log/syslog are present. Specify the log file manually" 1>&2
+    echo "error:failed to autodetect log file: neither /var/log/messages nor /var/log/syslog log files are present, and journalctl is not available either. Specify the log file manually" 1>&2
     exit 1
   fi
 fi
 
-if [[ "$logfile_prev" == "auto" ]]; then
-  # For now just blindly append ".1" to the first logfile; if it doesn't actually
-  # exist, we'll handle this case right below.
-  logfile_prev="${logfile_last}.1"
+if [[ "$logfile_prev" == "${SPECIAL_FILENAME_AUTO}" ]]; then
+  if [[ "$logfile_last" != "${SPECIAL_FILENAME_JOURNALCTL}" ]]; then
+    # For now just blindly append ".1" to the first logfile; if it doesn't actually
+    # exist, we'll handle this case right below.
+    logfile_prev="${logfile_last}.1"
+  else
+    # Set it to the same special value
+    logfile_prev="${SPECIAL_FILENAME_JOURNALCTL}"
+  fi
 fi
 
 # A simple hack to account for cases when /var/log/syslog.1 doesn't exist:
 # create an empty file and pretend that it's an empty log file.
-if [ ! -e "$logfile_prev"  ]; then
+if [ ! -e "$logfile_prev" ] && [[ "$logfile_prev" != "${SPECIAL_FILENAME_JOURNALCTL}" ]]; then
   echo "debug:prev logfile $logfile_prev doesn't exist, using a dummy empty file /tmp/nerdlog-empty-file" 1>&2
   logfile_prev="/tmp/nerdlog-empty-file"
   rm -f $logfile_prev || exit 1
@@ -256,39 +283,61 @@ case "${command}" in
       echo "warn:failed to detect host timezone"
     fi
 
-    if [ ! -e ${logfile_last} ]; then
-      echo "error:${logfile_last} does not exist"
-      exit 1
-    fi
+    if [[ "${logfile_last}" != "${SPECIAL_FILENAME_JOURNALCTL}" ]]; then
+      if [ ! -e ${logfile_last} ]; then
+        echo "error:${logfile_last} does not exist" 1>&2
+        exit 1
+      fi
 
-    if [ ! -r ${logfile_last} ]; then
-      echo "error:${logfile_last} exists but is not readable, check your permissions"
-      exit 1
-    fi
+      if [ ! -r ${logfile_last} ]; then
+        echo "error:${logfile_last} exists but is not readable, check your permissions" 1>&2
+        exit 1
+      fi
 
-    if [ ! -e ${logfile_prev} ]; then
-      echo "error:${logfile_prev} does not exist"
-      exit 1
-    fi
+      if [ ! -e ${logfile_prev} ]; then
+        echo "error:${logfile_prev} does not exist" 1>&2
+        exit 1
+      fi
 
-    if [ ! -r ${logfile_prev} ]; then
-      echo "error:${logfile_prev} exists but is not readable, check your permissions"
-      exit 1
-    fi
+      if [ ! -r ${logfile_prev} ]; then
+        echo "error:${logfile_prev} exists but is not readable, check your permissions" 1>&2
+        exit 1
+      fi
 
-    # Print a bunch of example log lines, so that the client can autodetect the
-    # format.
-    if [ -s ${logfile_last} ]; then
-      last_line="$(tail -n 1 ${logfile_last})" || exit 1
-      first_line="$(head -n 1 ${logfile_last})" || exit 1
+      # Print a bunch of example log lines, so that the client can autodetect the
+      # format.
+      if [ -s ${logfile_last} ]; then
+        last_line="$(tail -n 1 ${logfile_last})" || exit 1
+        first_line="$(head -n 1 ${logfile_last})" || exit 1
+        echo "example_log_line:$last_line"
+        echo "example_log_line:$first_line"
+      fi
+      if [ -s ${logfile_prev} ]; then
+        last_line="$(tail -n 1 ${logfile_prev})" || exit 1
+        first_line="$(head -n 1 ${logfile_prev})" || exit 1
+        echo "example_log_line:$last_line"
+        echo "example_log_line:$first_line"
+      fi
+    else
+      # We need to use journalctl, check if it's executable
+      if ! command -v journalctl > /dev/null 2>&1; then
+        echo "error:journalctl is not found" 1>&2
+        exit 1
+      fi
+
+      # Check if the user has access to all system logs (as opposed to only its
+      # own logs). Ideally we'd ask journalctl, but it doesn't seem to provide
+      # a way to learn this easily, so for now just checking user id and groups
+      # manually.
+      if ! [[ "$(id -u)" == 0 || " $(id -Gn) " == *" adm "* || " $(id -Gn) " == *" systemd-journal "* ]]; then
+        # User is not root, and is not in the adm or systemd-journal groups.
+        # Print a warning so that the client script can show it on the UI somehow.
+        echo "warn_journalctl_no_admin_access" 1>&2
+      fi
+
+      # And print one line for the timestamp format autodetection.
+      last_line="$(journalctl $JOURNALCTL_FORMAT_FLAG --quiet -n 1)" || exit 1
       echo "example_log_line:$last_line"
-      echo "example_log_line:$first_line"
-    fi
-    if [ -s ${logfile_prev} ]; then
-      last_line="$(tail -n 1 ${logfile_prev})" || exit 1
-      first_line="$(head -n 1 ${logfile_prev})" || exit 1
-      echo "example_log_line:$last_line"
-      echo "example_log_line:$first_line"
     fi
 
     exit 0
@@ -315,7 +364,7 @@ function printPercentage(numCur, numTotal) {
 }
 '
 
-function run_awk_script {
+function run_awk_script_logfiles {
   awk_pattern=''
   if [[ "$user_pattern" != "" ]]; then
     awk_pattern="!($user_pattern) {next}"
@@ -385,7 +434,187 @@ function run_awk_script {
   fi
 }
 
+function run_awk_script_journalctl {
+  awk_pattern_check=''
+  if [[ "$user_pattern" != "" ]]; then
+    awk_pattern_check="!($user_pattern) {next}"
+  fi
+
+  awk_skip_n_latest_check=''
+  if [[ "$skip_n_latest" != "" ]]; then
+    awk_skip_n_latest_check="NR <= $skip_n_latest {next}"
+  fi
+
+  early_exit_check=''
+  if [[ "$stop_after_max_num_lines" != "" ]]; then
+    early_exit_check="curline >= maxlines {exit}"
+  fi
+
+  awk_script='
+  '$awk_func_print_percentage'
+
+  # Takes timestamp in the same format as we use for --from and --to and
+  # store in the index ("2006-01-02-15:04"), and returns the corresponding unix
+  # timestamp.
+  function indexTimestrToTimestamp(timestr) {
+    year = substr(timestr, 1, 4);
+    month = substr(timestr, 6, 2);
+    day = substr(timestr, 9, 2);
+    hh = substr(timestr, 12, 2);
+    mm = substr(timestr, 15, 2);
+
+    return mktime(year " " month " " day " " hh " " mm " 00");
+  }
+
+  BEGIN {
+    curline=0;
+    maxlines='$max_num_lines';
+    lastPercent=-1;
+
+    # Find out earliest and latest timestamp for percentage calculations.
+    earliestTimestamp=0;
+    latestTimestamp=0;
+
+    if ("'$from'" != "") {
+      earliestTimestamp = indexTimestrToTimestamp("'$from'");
+    } else {
+      # No "from" timestamp; technically it is possible to get it using
+      # "journalctl --no-pager | head -n 1", but not bothering for now
+      # because nerdlog always provides the --from.
+      #
+      # If it happens, the script will just not print any percentages
+      # because timespanSeconds will be 0.
+    }
+
+    if ("'$to'" != "") {
+      latestTimestamp = indexTimestrToTimestamp("'$to'");
+    } else {
+      # No "to" timestamp; just use the current time.
+      latestTimestamp = systime();
+    }
+
+    timespanSeconds = 0;
+    if (earliestTimestamp != 0 && latestTimestamp != 0) {
+      timespanSeconds = latestTimestamp - earliestTimestamp;
+    }
+  }
+
+  # Print percentage based on time. It is not as great as if it was
+  # based on the number of bytes as we have it for the logfiles (because the
+  # pace at which the percentage progresses will vary based on the intensivity
+  # of the logs), but for journalctl we can hardly do any better.
+  NR % 1000 == 0 {
+    month = '"$awktime_month"';
+    year = '"$awktime_year"';
+    day = '"$awktime_day"';
+    hhmm = '"$awktime_hhmm"';
+    hh = substr(hhmm, 1, 2);
+    mm = substr(hhmm, 4, 2);
+    curTimestamp = mktime(year " " month " " day " " hh " " mm " 00");
+
+    if (timespanSeconds > 0) {
+      printPercentage(latestTimestamp-curTimestamp, timespanSeconds)
+    } else {
+      # We do not know the timespan, so just do not print any percentages.
+    }
+  }
+
+  '$awk_skip_n_latest_check'
+  '$early_exit_check'
+  '$awk_pattern_check'
+  {
+    stats['"$awktime_minute_key"']++;
+
+    if (curline < maxlines) {
+      lines[curline] = $0;
+      curline++
+    }
+
+    next;
+  }
+
+  END {
+    print "logfile:'$logfile_last':0";
+
+    for (x in stats) {
+      print "s:" x "," stats[x]
+    }
+
+    for (i = curline-1; i >= 0; i--) {
+      print "m:0:" lines[i];
+    }
+  }
+  '
+
+  "$awk_binary" "$awk_script" "$@"
+  if [[ "$?" != 0 ]]; then
+    return 1
+  fi
+}
+
 user_pattern=$1
+
+if [[ "$logfile_last" == "${SPECIAL_FILENAME_JOURNALCTL}" ]]; then
+  echo "p:stage:$STAGE_QUERYING:querying logs:Note that journalctl can be SLOW. Consider using log files." 1>&2
+
+  # For both $from and $to, convert the format
+  # "2006-01-02-15:04" -> "2006-01-02 15:04:00"
+  journalctl_from=""
+  if [[ "$from" != "" ]]; then
+    journalctl_from="${from:0:10} ${from:11}:00"
+  fi
+
+  journalctl_to=""
+  if [[ "$to" != "" ]]; then
+    journalctl_to="${to:0:10} ${to:11}:00"
+  fi
+
+  stop_after_max_num_lines=""
+
+  # Build journalctl command.
+  #
+  # --quiet is needed to suppress lines like "-- No entries --" or other
+  # human-readable informative things; we only need logs since we parse them.
+  #
+  # --reverse is needed because it simplifies things and allows optimization in
+  # some cases: in the awk script, we don't have to keep circular buffer for
+  # all the lines and then print the last ones (like we do when reading log
+  # files); and also when we're just getting the next page and not interested
+  # in timeline histogram data for the full period, we just exit early after
+  # accumulating $max_num_lines.
+  cmd=("journalctl" "$JOURNALCTL_FORMAT_FLAG" "--quiet" "--reverse")
+
+  if [[ -n "$journalctl_from" ]]; then
+    cmd+=("--since" "$journalctl_from")
+  fi
+
+  if [[ -n "$timestamp_until" ]]; then
+    cmd+=("--until" "$timestamp_until")
+    stop_after_max_num_lines="1"
+    # NOTE: we'll also skip the $skip_n_latest messages with the latest timestamp.
+  elif [[ -n "$journalctl_to" ]]; then
+    cmd+=("--until" "$journalctl_to")
+  fi
+
+  "${cmd[@]}" |                      \
+    user_pattern="$user_pattern"     \
+    max_num_lines="$max_num_lines"   \
+    stop_after_max_num_lines="$stop_after_max_num_lines"   \
+    skip_n_latest="$skip_n_latest"   \
+    run_awk_script_journalctl -
+
+  codes=(${PIPESTATUS[@]})
+  for status in "${codes[@]}"; do
+    # The exit code 141 means SIGPIPE + 128, which is what journalctl returns
+    # if awk didn't consume the whole output, which is totally normal when
+    # we're querying the next page and exiting after getting enough lines.
+    if [[ $status -ne 0 && $status -ne 141 ]]; then
+      exit 1
+    fi
+  done
+
+  exit 0
+fi
 
 logfile_prev_size=$(stat -c%s $logfile_prev) || exit 1
 logfile_last_size=$(stat -c%s $logfile_last) || exit 1
@@ -834,7 +1063,7 @@ for cmd in "${cmds[@]}"; do eval $cmd || exit 1; done | \
   lines_until_check="$lines_until_check"                \
   prevlog_lines="$prevlog_lines"                        \
   from_linenr_int="$from_linenr_int"                    \
-  run_awk_script -
+  run_awk_script_logfiles -
 
 codes=(${PIPESTATUS[@]})
 for status in "${codes[@]}"; do

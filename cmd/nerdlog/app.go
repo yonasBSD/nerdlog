@@ -52,6 +52,8 @@ type nerdlogAppParams struct {
 	enableClipboard  bool
 	logLevel         log.LogLevel
 	sshConfigPath    string
+
+	noJournalctlAccessWarn bool
 }
 
 type cmdWithOpts struct {
@@ -187,6 +189,7 @@ func (app *nerdlogApp) initLStreamsManager(
 		var lastState *core.LStreamsManagerState
 		var logResps []*core.LogRespTotal // TODO: perhaps we should also only keep the last one?
 		var bootstrapErrors []error
+		var bootstrapWarnings []error
 
 		handleUpdate := func(upd core.LStreamsManagerUpdate) {
 			switch {
@@ -195,10 +198,19 @@ func (app *nerdlogApp) initLStreamsManager(
 			case upd.LogResp != nil:
 				logResps = append(logResps, upd.LogResp)
 			case upd.BootstrapIssue != nil:
-				bootstrapErrors = append(
-					bootstrapErrors,
-					errors.Errorf("%s: %s", upd.BootstrapIssue.LStreamName, upd.BootstrapIssue.Err),
-				)
+				if upd.BootstrapIssue.Err != "" {
+					bootstrapErrors = append(
+						bootstrapErrors,
+						errors.Errorf("%s: %s", upd.BootstrapIssue.LStreamName, upd.BootstrapIssue.Err),
+					)
+				}
+
+				if upd.BootstrapIssue.WarnJournalctlNoAdminAccess && !params.noJournalctlAccessWarn {
+					bootstrapWarnings = append(
+						bootstrapWarnings,
+						errors.Errorf("%s: journalctl is being used, but the user doesn't have access to all the system logs (not it adm or systemd-journal groups, and not root).\n\nUse --no-journalctl-access-warning to suppress this message.", upd.BootstrapIssue.LStreamName),
+					)
+				}
 
 			default:
 				panic("empty lstreams manager update")
@@ -217,7 +229,7 @@ func (app *nerdlogApp) initLStreamsManager(
 				// still receiving updates during the teardown; so if that's the case,
 				// just don't update the TUI.
 				if app.tviewApp != nil &&
-					(lastState != nil || len(logResps) > 0 || len(bootstrapErrors) > 0) {
+					(lastState != nil || len(logResps) > 0 || len(bootstrapErrors) > 0 || len(bootstrapWarnings) > 0) {
 
 					app.tviewApp.QueueUpdateDraw(func() {
 						if lastState != nil {
@@ -237,11 +249,16 @@ func (app *nerdlogApp) initLStreamsManager(
 						if len(bootstrapErrors) > 0 {
 							app.mainView.handleBootstrapError(combineErrors(bootstrapErrors))
 						}
+
+						if len(bootstrapWarnings) > 0 {
+							app.mainView.handleBootstrapWarning(combineErrors(bootstrapWarnings))
+						}
 					})
 
 					lastState = nil
 					logResps = nil
 					bootstrapErrors = nil
+					bootstrapWarnings = nil
 				}
 
 				// The same select again, but without the default case.

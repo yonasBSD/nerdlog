@@ -108,7 +108,7 @@ func GetTimeFormatDescrFromLogLines(logLines []string) (*TimeFormatDescr, error)
 	for i, line := range logLines {
 		layout := DetectTimeLayout(line)
 		if layout == "" {
-			return nil, errors.Errorf("unable to detect time format")
+			return nil, errors.Errorf("unable to detect time format from %q", line)
 		}
 
 		timeDescr, err := GenerateTimeDescr(layout)
@@ -140,6 +140,7 @@ func DetectTimeLayout(logLine string) string {
 	var knownFormats = []string{
 		"Jan _2 15:04:05",                  // Traditional rsyslog format without year
 		"2006-01-02T15:04:05.000000Z07:00", // ISO8601, used in modern rsyslog by default
+		"2006-01-02T15:04:05.000000+0000",  // Used by journalctl with --output=short-iso-precise
 		"2006-01-02 15:04:05",
 		"2006-01-02T15:04:05Z07:00",
 		"2006-01-02T15:04:05.000Z07:00",

@@ -233,6 +233,8 @@ func (lsman *LStreamsManager) run() {
 					BootstrapIssue: &BootstrapIssue{
 						LStreamName: upd.Name,
 						Err:         upd.BootstrapDetails.Err,
+
+						WarnJournalctlNoAdminAccess: upd.BootstrapDetails.WarnJournalctlNoAdminAccess,
 					},
 				}
 				lsman.params.UpdatesCh <- upd
@@ -329,7 +331,14 @@ func (lsman *LStreamsManager) run() {
 				lsman.sendStateUpdate()
 
 				for lstreamName, lsc := range lsman.lscs {
-					var linesUntil int
+					cmdQueryLogs := lstreamCmdQueryLogs{
+						maxNumLines: req.queryLogs.MaxNumLines,
+
+						from:  req.queryLogs.From,
+						to:    req.queryLogs.To,
+						query: req.queryLogs.Query,
+					}
+
 					if req.queryLogs.LoadEarlier {
 						// TODO: right now, this loadEarlier case isn't optimized at all:
 						// we again query the whole timerange, and every node goes through
@@ -347,25 +356,20 @@ func (lsman *LStreamsManager) run() {
 						// matter how large the current time period is, loading more
 						// messages will be as fast as possible.
 
-						// Set linesUntil
 						if nodeCtx, ok := lsman.curLogs.perNode[lstreamName]; ok {
 							if len(nodeCtx.logs) > 0 {
-								linesUntil = nodeCtx.logs[0].CombinedLinenumber
+								if nodeCtx.logs[0].LogFilename == SpecialFilenameJournalctl {
+									cmdQueryLogs.timestampUntil = getEarliestTimeAndNumMsgs(nodeCtx.logs)
+								} else {
+									cmdQueryLogs.linesUntil = nodeCtx.logs[0].CombinedLinenumber
+								}
 							}
 						}
 					}
 
 					lsc.EnqueueCmd(lstreamCmd{
-						respCh: lsman.respCh,
-						queryLogs: &lstreamCmdQueryLogs{
-							maxNumLines: req.queryLogs.MaxNumLines,
-
-							from:  req.queryLogs.From,
-							to:    req.queryLogs.To,
-							query: req.queryLogs.Query,
-
-							linesUntil: linesUntil,
-						},
+						respCh:    lsman.respCh,
+						queryLogs: &cmdQueryLogs,
 					})
 				}
 
@@ -489,6 +493,34 @@ func (lsman *LStreamsManager) run() {
 			lsman.sendStateUpdate()
 		}
 	}
+}
+
+type timeAndNumMsgs struct {
+	// time is the timestamp of some log message.
+	time time.Time
+	// numMsgs is the number of messages on the timestamp time.
+	numMsgs int
+}
+
+func getEarliestTimeAndNumMsgs(logs []LogMsg) *timeAndNumMsgs {
+	if len(logs) == 0 {
+		return nil
+	}
+
+	ret := &timeAndNumMsgs{
+		time:    logs[0].Time,
+		numMsgs: 1,
+	}
+
+	for _, logMsg := range logs[1:] {
+		if !logMsg.Time.Equal(ret.time) {
+			break
+		}
+
+		ret.numMsgs++
+	}
+
+	return ret
 }
 
 func (lsman *LStreamsManager) getNumLStreamClientsTearingDown() int {
@@ -627,6 +659,12 @@ type LStreamsManagerState struct {
 type BootstrapIssue struct {
 	LStreamName string
 	Err         string
+
+	// WarnJournalctlNoAdminAccess is set to true if journalctl is used and the
+	// user doesn't have access to all the system logs. It's a separate bool
+	// instead of a generic warning message to make it possible to suppress it
+	// with a flag.
+	WarnJournalctlNoAdminAccess bool
 }
 
 func (lsman *LStreamsManager) updateLStreamsByState() {

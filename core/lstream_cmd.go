@@ -59,6 +59,12 @@ type lstreamCmdBootstrap struct{}
 type lstreamCmdCtxBootstrap struct {
 	receivedSuccess bool
 	receivedFailure bool
+
+	// warnJournalctlNoAdminAccess is set to true if journalctl is used and the
+	// user doesn't have access to all the system logs. It's a separate bool
+	// instead of a generic warning message to make it possible to suppress it
+	// with a flag.
+	warnJournalctlNoAdminAccess bool
 }
 
 type lstreamCmdPing struct{}
@@ -77,6 +83,11 @@ type lstreamCmdQueryLogs struct {
 	// If linesUntil is not zero, it'll be passed to nerdlog_agent.sh as --lines-until.
 	// Effectively, only logs BEFORE this log line (not including it) will be output.
 	linesUntil int
+
+	// timestampUntil is not zero, it'll be passed to nerdlog_agent as
+	// --timestamp-until. It serves the same purpose as linesUntil for cases when
+	// we don't have line numbers (e.g. when using journalctl).
+	timestampUntil *timeAndNumMsgs
 }
 
 type lstreamCmdCtxQueryLogs struct {

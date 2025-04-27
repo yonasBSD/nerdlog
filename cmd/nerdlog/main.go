@@ -29,6 +29,8 @@ func main() {
 		flagSelectQuery = pflag.StringP("selquery", "s", "", "SELECT-like query to specify which fields to show, like 'time STICKY, message, lstream, level_name AS level, *'")
 		flagLogLevel    = pflag.String("loglevel", "error", "This is NOT about the logs that nerdlog fetches from the remote servers, it's rather about nerdlog's own log. Valid values are: error, warning, info, verbose1, verbose2 or verbose3")
 		flagSSHConfig   = pflag.String("ssh-config", filepath.Join(homeDir, ".ssh", "config"), "ssh config file to use; set to an empty string to disable reading ssh config")
+
+		flagNoJournalctlAccessWarn = pflag.Bool("no-journalctl-access-warning", false, "Suppress the warning when journalctl is being used by the user who can't read all system logs")
 	)
 
 	pflag.Parse()
@@ -126,6 +128,8 @@ func main() {
 			enableClipboard:  enableClipboard,
 			logLevel:         logLevel,
 			sshConfigPath:    *flagSSHConfig,
+
+			noJournalctlAccessWarn: *flagNoJournalctlAccessWarn,
 		},
 		queryCLHistory,
 	)
