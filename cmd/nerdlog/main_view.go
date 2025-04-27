@@ -148,7 +148,13 @@ type MainView struct {
 	//marketViewsByID map[common.MarketID]*MarketView
 	//marketDescrByID map[common.MarketID]MarketDescr
 
-	modalsFocusStack []tview.Primitive
+	modalsFocusStack []modalFocusItem
+}
+
+type modalFocusItem struct {
+	pageName          string
+	modal             tview.Primitive
+	previouslyFocused tview.Primitive
 }
 
 type CmdOpts struct {
@@ -1636,9 +1642,9 @@ func (mv *MainView) ShowMessagebox(
 	})
 }
 
-func (mv *MainView) HideMessagebox(msgID string, popFocusStack bool) {
+func (mv *MainView) HideMessagebox(msgID string, focusAfterPageRemoval bool) {
 	mv.params.App.QueueUpdateDraw(func() {
-		mv.hideModal(pageNameMessage+msgID, popFocusStack)
+		mv.hideModal(pageNameMessage+msgID, focusAfterPageRemoval)
 	})
 }
 
@@ -1660,8 +1666,12 @@ func (mv *MainView) showOriginalMsg(msg core.LogMsg) {
 	mv.showMessagebox("msg", "Message", s, &MessageboxParams{})
 }
 
-func (mv *MainView) showModal(name string, primitive tview.Primitive, width, height int, focus bool) {
-	mv.modalsFocusStack = append(mv.modalsFocusStack, mv.params.App.GetFocus())
+func (mv *MainView) showModal(pageName string, primitive tview.Primitive, width, height int, focus bool) {
+	mv.modalsFocusStack = append(mv.modalsFocusStack, modalFocusItem{
+		pageName:          pageName,
+		modal:             primitive,
+		previouslyFocused: mv.params.App.GetFocus(),
+	})
 
 	// Returns a new primitive which puts the provided primitive in the center and
 	// sets its size to the given width and height.
@@ -1672,21 +1682,21 @@ func (mv *MainView) showModal(name string, primitive tview.Primitive, width, hei
 			AddItem(p, 1, 1, 1, 1, 0, 0, true)
 	}
 
-	mv.rootPages.AddPage(name, modal(primitive, width, height), true, true)
+	mv.rootPages.AddPage(pageName, modal(primitive, width, height), true, true)
 
 	if focus {
 		mv.params.App.SetFocus(primitive)
 	} else {
-		mv.popFocusStack()
+		mv.focusAfterPageRemoval(pageName)
 	}
 }
 
-func (mv *MainView) hideModal(name string, popFocusStack bool) {
+func (mv *MainView) hideModal(pageName string, focusAfterPageRemoval bool) {
 	prevFocused := mv.params.App.GetFocus()
 
-	mv.rootPages.RemovePage(name)
-	if popFocusStack {
-		mv.popFocusStack()
+	mv.rootPages.RemovePage(pageName)
+	if focusAfterPageRemoval {
+		mv.focusAfterPageRemoval(pageName)
 	} else {
 		// Feels hacky, but I didn't find another way: apparently adding/removing
 		// pages inevitably messes with focus, and so if we want to keep it
@@ -1695,10 +1705,31 @@ func (mv *MainView) hideModal(name string, popFocusStack bool) {
 	}
 }
 
-func (mv *MainView) popFocusStack() {
-	l := len(mv.modalsFocusStack)
-	mv.params.App.SetFocus(mv.modalsFocusStack[l-1])
-	mv.modalsFocusStack = mv.modalsFocusStack[:l-1]
+func (mv *MainView) focusAfterPageRemoval(pageName string) {
+	idx := -1
+	for i, item := range mv.modalsFocusStack {
+		if item.pageName == pageName {
+			idx = i
+			break
+		}
+	}
+
+	if idx == -1 {
+		panic(fmt.Sprintf("didn't find focus item for page %q", pageName))
+	}
+
+	removedItem := mv.modalsFocusStack[idx]
+	mv.modalsFocusStack = append(mv.modalsFocusStack[:idx], mv.modalsFocusStack[idx+1:]...)
+
+	if len(mv.modalsFocusStack) == idx {
+		// Removed the last item from the stack: just use the previously focused
+		mv.params.App.SetFocus(removedItem.previouslyFocused)
+	} else {
+		// Removed non-last item from the stack: fix the previouslyFocused
+		// for the next item, and don't change focus right now (so it'll stay
+		// on the last page).
+		mv.modalsFocusStack[idx].previouslyFocused = removedItem.previouslyFocused
+	}
 }
 
 func (mv *MainView) getQueryFull() QueryFull {
