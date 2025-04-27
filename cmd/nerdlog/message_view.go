@@ -80,6 +80,20 @@ func getNumLines(s string, screenWidth int) int {
 	return numLines
 }
 
+// GetOptimalMessageViewSize returns the optimal width and height for a
+// MessageView based on the screen width and the text to show.
+func GetOptimalMessageViewSize(screenWidth int, text string) (int, int) {
+	// extraWidth covers padding and border
+	extraWidth := 4
+	// extraHeight covers padding, border and buttons
+	extraHeight := 6
+
+	width := getMaxLineLength(text) + extraWidth
+	height := extraHeight + getNumLines(text, screenWidth-extraWidth)
+
+	return width, height
+}
+
 func NewMessageView(
 	mainView *MainView, params *MessageViewParams,
 ) *MessageView {
@@ -88,19 +102,17 @@ func NewMessageView(
 		mainView: mainView,
 	}
 
-	// extraWidth covers padding and border
-	extraWidth := 4
-	// extraHeight covers padding, border and buttons
-	extraHeight := 6
+	optimalWidth, optimalHeight := GetOptimalMessageViewSize(
+		mainView.screenWidth,
+		params.Message,
+	)
 
 	if msgv.params.Width == 0 {
-		// Set it to fit the longest line (if the terminal window allows),
-		// plus the padding and the border.
-		msgv.params.Width = getMaxLineLength(params.Message) + extraWidth
+		msgv.params.Width = optimalWidth
 	}
 
 	if msgv.params.Height == 0 {
-		msgv.params.Height = extraHeight + getNumLines(params.Message, mainView.screenWidth-extraWidth)
+		msgv.params.Height = optimalHeight
 	}
 
 	msgv.msgboxFlex = tview.NewFlex().SetDirection(tview.FlexRow)
