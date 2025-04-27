@@ -132,10 +132,10 @@ form is:
 myuser@myserver.com:1234:/some/other/logfile
 ```
 
-To select `journalctl` explicitly, specify `_journalctl` as the log file:
+To select `journalctl` explicitly, specify `journalctl` as the log file:
 
 ```
-myuser@myserver.com:1234:_journalctl
+myuser@myserver.com:1234:journalctl
 ```
 
 Multiple logstreams can be provided separated by commas, like this:

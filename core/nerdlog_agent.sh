@@ -19,7 +19,7 @@ STAGE_QUERYING=3
 STAGE_DONE=4
 
 SPECIAL_FILENAME_AUTO="auto"
-SPECIAL_FILENAME_JOURNALCTL="_journalctl"
+SPECIAL_FILENAME_JOURNALCTL="journalctl"
 
 # The output looks like this:
 # 2025-04-27T21:31:11.670468+00:00 myhot systemd[1]: Something happened.

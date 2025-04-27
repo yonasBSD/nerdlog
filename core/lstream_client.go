@@ -22,7 +22,7 @@ import (
 	"github.com/dimonomid/nerdlog/log"
 )
 
-const SpecialFilenameJournalctl = "_journalctl"
+const SpecialFilenameJournalctl = "journalctl"
 
 const connectionTimeout = 5 * time.Second
 
