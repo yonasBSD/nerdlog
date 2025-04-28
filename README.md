@@ -57,8 +57,21 @@ But it works. It's pretty usable and surprisingly fast.
 
 ## Installation
 
-To build it, you need [Go](https://go.dev/). Having it installed, there are a
-few options:
+The easiest is to just use a prebuilt binary for your platform, see the
+[releases page](https://github.com/dimonomid/nerdlog/releases).
+
+To build it from source, you need [Go](https://go.dev/).
+
+Also on Linux, the X11 dev package is required because of access to clipboard
+([here's the library that nerdlog
+uses](https://github.com/golang-design/clipboard)), e.g. on Ubuntu it can be
+installed with this:
+
+```
+sudo apt install libx11-dev
+```
+
+On MacOS and Windows, no extra dependencies are required.
 
 ### Using `go install`
 
