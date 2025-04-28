@@ -8,7 +8,6 @@ import (
 	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/dimonomid/nerdlog/log"
 	"github.com/spf13/pflag"
-	"golang.design/x/clipboard"
 )
 
 // TODO: make multiple of them
@@ -97,10 +96,10 @@ func main() {
 		}
 	}
 
-	enableClipboard := true
-	if err := clipboard.Init(); err != nil {
-		enableClipboard = false
-		fmt.Println("NOTE: X Clipboard is not available")
+	var clipboardInitErr error
+	if err := initClipboard(); err != nil {
+		clipboardInitErr = err
+		fmt.Printf("NOTE: X Clipboard is not available: %s\n", clipboardInitErr.Error())
 	}
 
 	logLevel := log.Info
@@ -125,7 +124,7 @@ func main() {
 		nerdlogAppParams{
 			initialQueryData: initialQueryData,
 			connectRightAway: connectRightAway,
-			enableClipboard:  enableClipboard,
+			clipboardInitErr: clipboardInitErr,
 			logLevel:         logLevel,
 			sshConfigPath:    *flagSSHConfig,
 

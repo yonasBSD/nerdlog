@@ -49,7 +49,7 @@ type nerdlogApp struct {
 type nerdlogAppParams struct {
 	initialQueryData QueryFull
 	connectRightAway bool
-	enableClipboard  bool
+	clipboardInitErr error
 	logLevel         log.LogLevel
 	sshConfigPath    string
 

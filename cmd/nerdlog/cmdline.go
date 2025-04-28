@@ -121,11 +121,11 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 	case "xc", "xclip":
 		qf := app.mainView.getQueryFull()
 		shellCmd := qf.MarshalShellCmd()
-		if app.params.enableClipboard {
+		if app.params.clipboardInitErr == nil {
 			clipboard.Write(clipboard.FmtText, []byte(shellCmd))
 			app.printMsg("Copied to clipboard")
 		} else {
-			app.printMsg("Clipboard is not available, command: " + shellCmd)
+			app.printError(fmt.Sprintf("Clipboard is not available: %s", app.params.clipboardInitErr.Error()))
 		}
 
 	case "nerdlog":
