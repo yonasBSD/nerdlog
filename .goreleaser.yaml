@@ -15,7 +15,7 @@ builds:
       - linux
       - windows
       - darwin
-    main: ./cmd/nerdlog-tui
+    main: ./cmd/nerdlog
 
 archives:
   - formats:
