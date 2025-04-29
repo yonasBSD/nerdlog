@@ -1117,8 +1117,6 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		lsc.conn.stdinBuf.Write([]byte("("))
 		lsc.conn.stdinBuf.Write([]byte("  cat <<- 'EOF' > " + lsc.getLStreamNerdlogAgentPath() + "\n" + nerdlogAgentSh + "EOF\n"))
 		lsc.conn.stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
-		lsc.conn.stdinBuf.Write([]byte("  chmod u+x " + lsc.getLStreamNerdlogAgentPath() + "\n"))
-		lsc.conn.stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
 
 		var parts []string
 
@@ -1129,7 +1127,7 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 
 		parts = append(
 			parts,
-			shellQuote(lsc.getLStreamNerdlogAgentPath()),
+			"bash", shellQuote(lsc.getLStreamNerdlogAgentPath()),
 			"logstream_info",
 			"--logfile-last", shellQuote(lsc.params.LogStream.LogFileLast()),
 		)
@@ -1172,7 +1170,7 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 
 		parts = append(
 			parts,
-			shellQuote(lsc.getLStreamNerdlogAgentPath()),
+			"bash", shellQuote(lsc.getLStreamNerdlogAgentPath()),
 			"query",
 			"--index-file", shellQuote(lsc.getLStreamIndexFilePath()),
 			"--max-num-lines", shellQuote(strconv.Itoa(cmdCtx.cmd.queryLogs.maxNumLines)),

@@ -1,4 +1,7 @@
-#!/bin/bash
+# NOTE: we intentionally don't rely on shebang here, and expect this script to
+# be invoked as "bash nerdlog_agent.sh" explicitly, since it's likely the most
+# portable way (short of using /bin/sh, but that would be a bigger effort since
+# this script does rely on bash).
 
 # NOTE: ABANDON ALL HOPE.
 #
