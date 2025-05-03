@@ -330,6 +330,16 @@ Currently supported options are:
 
 `:q[uit]` Quit the app.
 
+## Noteworthy dependencies
+
+- [tview](https://github.com/rivo/tview): A terminal UI library with rich, interactive widgets, written in Go
+- [tcell](https://github.com/gdamore/tcell): A Go package that provides a cell based view for text terminals, like XTerm
+- [clipboard](https://github.com/golang-design/clipboard): A cross-platform clipboard package that supports accessing text and images in Go
+- [glob](https://github.com/gobwas/glob): A Go globbing library
+- [ssh_config](https://github.com/kevinburke/ssh_config): A Go parser for `ssh_config` files *(Note: it doesn't support all the features we need and may be replaced; see [issue #12](https://github.com/dimonomid/nerdlog/issues/12) for details)*
+
+**Huge thanks** to the maintainers of these libraries, Nerdlog wouldn't be possible without your work!
+
 ## More details
 
 [Check out the Nerdlog article](https://dmitryfrank.com/projects/nerdlog/article) for more in-depth look at the core concepts, limitations and workarounds, and implementation details.
