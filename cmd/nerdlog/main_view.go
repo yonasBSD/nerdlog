@@ -1231,17 +1231,7 @@ func (mv *MainView) updateTableHeader(msgs []core.LogMsg) (colNames []string) {
 
 		// Special case for the time column. Pretty dirty, but will do for now.
 		if fld.Name == "time" {
-			tz := mv.params.Options.GetTimezone()
-			zone, offset := time.Now().In(tz).Zone()
-			if zone != "UTC" {
-				sign := "+"
-				if offset < 0 {
-					sign = "-"
-					offset = -offset
-				}
-				zone = fmt.Sprintf("UTC%s%02d", sign, offset/3600)
-			}
-			displayName = fmt.Sprintf("time (%s)", zone)
+			displayName = fmt.Sprintf("time (%s)", mv.timezoneStr(time.Now()))
 		}
 
 		cell := newTableCellHeader(displayName)
@@ -1903,4 +1893,22 @@ func (mv *MainView) reconnect(repeatQuery bool) {
 	}
 
 	mv.params.OnReconnectRequest()
+}
+
+// timezoneStr is a small helper to return a timezone offset string like "UTC"
+// or "UTC+03" or "UTC-07", accordingly to the currently configured timezone,
+// and the given referenceTime.
+func (mv *MainView) timezoneStr(referenceTime time.Time) string {
+	tz := mv.params.Options.GetTimezone()
+	zone, offset := referenceTime.In(tz).Zone()
+	if zone != "UTC" {
+		sign := "+"
+		if offset < 0 {
+			sign = "-"
+			offset = -offset
+		}
+		zone = fmt.Sprintf("UTC%s%02d", sign, offset/3600)
+	}
+
+	return zone
 }

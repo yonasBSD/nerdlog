@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/gdamore/tcell/v2"
 	"github.com/juju/errors"
@@ -17,7 +20,7 @@ in which case the current time will be used. Absolute time is in UTC.
 */
 
 var timeLabelText = `Time range in the format "[yellow]<time>[ to <time>][-]", where [yellow]<time>[-] is either absolute like "[yellow]Mar27 12:00[-]"
-(in UTC), or relative like "[yellow]-2h30m[-]" (relative to current time). If the "to" part is omitted,
+or relative like "[yellow]-2h30m[-]" (relative to current time). If the "to" part is omitted,
 current time is used.
 `
 
@@ -45,7 +48,9 @@ type QueryEditView struct {
 	backBtn *tview.Button
 	fwdBtn  *tview.Button
 
+	timeFlex      *tview.Flex
 	timeInput     *tview.InputField
+	timezoneLabel *tview.TextView
 	lstreamsInput *tview.InputField
 	queryInput    *tview.InputField
 
@@ -144,8 +149,16 @@ func NewQueryEditView(
 	qev.flex.AddItem(timeLabel, 3, 0, false)
 
 	qev.timeInput = tview.NewInputField()
-	qev.flex.AddItem(qev.timeInput, 1, 0, true)
 	focusers = append(focusers, qev.timeInput)
+
+	qev.timezoneLabel = tview.NewTextView()
+
+	qev.timeFlex = tview.NewFlex().SetDirection(tview.FlexColumn)
+	qev.timeFlex.
+		AddItem(qev.timeInput, 0, 1, true).
+		AddItem(nil, 1, 0, false).
+		AddItem(qev.timezoneLabel, 0, 0, false) // Will be resized later in SetQueryFull
+	qev.flex.AddItem(qev.timeFlex, 1, 0, true)
 
 	qev.flex.AddItem(nil, 1, 0, false)
 
@@ -382,6 +395,11 @@ func (qev *QueryEditView) SetQueryFull(qf QueryFull) {
 	qev.queryInput.SetText(qf.Query)
 
 	qev.selectQueryInput.SetText(string(qf.SelectQuery))
+
+	// TODO: instead of using now, better use beginning or end of the time range.
+	referenceTime := time.Now()
+	qev.timezoneLabel.SetText(fmt.Sprintf("(%s)", qev.mainView.timezoneStr(referenceTime)))
+	qev.timeFlex.ResizeItem(qev.timezoneLabel, len(qev.timezoneLabel.GetText(true)), 0)
 }
 
 func (qev *QueryEditView) genericInputHandler(
