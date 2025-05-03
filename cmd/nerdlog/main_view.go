@@ -833,6 +833,12 @@ func (mv *MainView) eventHandlerBackForward(event *tcell.EventKey) *tcell.EventK
 		}
 	}
 
+	switch event.Key() {
+	case tcell.KeyCtrlR, tcell.KeyF5:
+		mv.params.OnCmd("refresh", CmdOpts{Internal: true})
+		return nil
+	}
+
 	return event
 }
 

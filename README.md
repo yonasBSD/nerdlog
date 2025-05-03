@@ -252,6 +252,13 @@ There are multiple ways to navigate the app, and you can mix them as you wish.
 
 The most conventional one is to just use Tab and Shift+Tab to switch between widgets (logs table, query input, Edit and Menu buttons, timeline histogram), arrows and keys like Home / End / PgUp / PgDn to move around within a widget, Enter to apply things, Escape to cancel things.
 
+Some browser-like keyboard shortcuts are also supported (after all, one of the
+inspirations for Nerdlog were browser-based tools like Graylog):
+
+- `F5` or `Ctrl+R`: Refresh (i.e. rerun the same query again)
+- `Alt+Left`: Go back in history
+- `Alt+Right`: Go forward in history
+
 If you know Vim though, you'll feel right at home in nerdlog too since it supports a bunch of Vim-like keybindings:
 
 - Keys `h`, `j`, `k`, `l`, `g`, `G`, `Ctrl+U`, `Ctrl+D`, etc move cursor whenever you're not in some text-editing field, like query input or others
@@ -260,8 +267,6 @@ If you know Vim though, you'll feel right at home in nerdlog too since it suppor
 - `i` or `a` focuses the main query input field
 
 When in an input field (command line, query input, etc), you can go through input history using `Up` / `Down` or `Ctrl+P` / `Ctrl+N`.
-
-In any widget on the main screen, the keyboard shortcuts `Alt+Left` and `Alt+Right` go back and forward in the query history, much like it works in the browser. Btw, commands `:back` and `:fwd` do the same thing.
 
 In the query edit form (the Edit button on the UI, or the `:e[dit]` command), the `Ctrl+K` / `Ctrl+J` iterates "full" query history (affecting not only one field like query, but all of them: time range, logstreams filter, query).
 
@@ -297,6 +302,8 @@ to the Edit button in the UI.
 
 `:w[rite] [filename]` Write all currently loaded log lines to the filename.
 If filename is omitted, `/tmp/last_nerdlog` is used.
+
+`:refresh` Rerun the same query again. This can be done from the Menu too (Menu -> Refresh), or using a keyboard shortcut `Ctrl+R` or `F5`.
 
 `:reconnect` Reconnect to all logstreams
 

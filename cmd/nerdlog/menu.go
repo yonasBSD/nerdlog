@@ -19,6 +19,12 @@ var mainMenu = []menuItem{
 		},
 	},
 	{
+		Title: "Refresh              <Ctrl+R>   ",
+		Handler: func(mv *MainView) {
+			mv.params.OnCmd("refresh", CmdOpts{Internal: true})
+		},
+	},
+	{
 		Title: "Copy query command   :xclip     ",
 		Handler: func(mv *MainView) {
 			mv.params.OnCmd("xclip", CmdOpts{Internal: true})

@@ -182,6 +182,9 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 	case "disconnect":
 		app.mainView.disconnect()
 
+	case "refresh":
+		app.mainView.doQuery(doQueryParams{})
+
 	default:
 		app.printError(fmt.Sprintf("unknown command %q", parts[0]))
 	}
