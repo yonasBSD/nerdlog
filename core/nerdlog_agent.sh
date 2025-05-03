@@ -471,6 +471,7 @@ function run_awk_script_journalctl {
 
   BEGIN {
     curline=0;
+    lastline="";
     maxlines='$max_num_lines';
     lastPercent=-1;
 
@@ -500,6 +501,30 @@ function run_awk_script_journalctl {
     if (earliestTimestamp != 0 && latestTimestamp != 0) {
       timespanSeconds = latestTimestamp - earliestTimestamp;
     }
+  }
+
+  {
+    # Unfortunately journalctl prints multiline messages without the leading
+    # timestamp and other details: instead, they just add padding with spaces,
+    # which breaks our parsing; so we manually replace this padding with the
+    # details from the previous non-padded line.
+    if (substr($0, 1, 1) == " ") {
+      # Find out the number of leading spaces
+      numLeadingSpace = length($0)
+      if (NF > 0) {
+        numLeadingSpace = index($0, $1) - 1;
+      }
+
+      if (length(lastline) < numLeadingSpace) {
+        print "error:line has more leading whitespaces than the length of the previous line";
+        exit 1;
+      }
+
+      # Replace these leading spaces with the same amount of characters from the previous line.
+      $0 = substr(lastline, 1, numLeadingSpace) substr($0, numLeadingSpace + 1);
+    }
+
+    lastline = $0;
   }
 
   # Print percentage based on time. It is not as great as if it was
