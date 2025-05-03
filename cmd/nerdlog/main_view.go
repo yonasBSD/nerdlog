@@ -1468,6 +1468,8 @@ func (mv *MainView) setTimeRange(from, to TimeOrDur) {
 
 func (mv *MainView) formatTimeRange() {
 	tz := mv.params.Options.GetTimezone()
+	mv.from = mv.from.In(tz)
+	mv.to = mv.to.In(tz)
 
 	mv.bumpTimeRange(false)
 
@@ -1475,9 +1477,9 @@ func (mv *MainView) formatTimeRange() {
 
 	var timeStr string
 	if !mv.to.IsZero() {
-		timeStr = fmt.Sprintf("%s to %s (%s)", mv.from.In(tz).Format(inputTimeLayout), mv.to.In(tz).Format(inputTimeLayout), formatDuration(rangeDur))
+		timeStr = fmt.Sprintf("%s to %s (%s)", mv.from.Format(inputTimeLayout), mv.to.Format(inputTimeLayout), formatDuration(rangeDur))
 	} else if mv.from.IsAbsolute() {
-		timeStr = fmt.Sprintf("%s to now (%s)", mv.from.In(tz).Format(inputTimeLayout), formatDuration(rangeDur))
+		timeStr = fmt.Sprintf("%s to now (%s)", mv.from.Format(inputTimeLayout), formatDuration(rangeDur))
 	} else {
 		timeStr = fmt.Sprintf("last %s", TimeOrDur{Dur: -mv.from.Dur})
 	}
