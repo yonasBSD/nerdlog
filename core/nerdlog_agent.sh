@@ -219,6 +219,22 @@ if [[ $? != 0 ]]; then
   exit 1
 fi
 
+os_kind=""
+case "$(uname -s)" in
+  Linux)
+    os_kind="linux"
+    ;;
+  Darwin)
+    os_kind="macos"
+    ;;
+  FreeBSD|OpenBSD|NetBSD|DragonFly)
+    os_kind="bsd"
+    ;;
+  *)
+    echo "error:unknown kernel name $(uname -s)" 2>&1
+    exit 1
+esac
+
 # TODO: also check that gawk is recent enough; the -b option that we need
 # was introduced in 4.0.0, released in 2011:
 # https://lists.gnu.org/archive/html/info-gnu/2011-06/msg00013.html
@@ -260,7 +276,7 @@ if [ ! -e "$logfile_prev" ] && [[ "$logfile_prev" != "${SPECIAL_FILENAME_JOURNAL
   # that file to be the same as the first log file. It's not portable though
   # (not gonna work on BSD), but it's non-essential functionality, so we just
   # ignore any errors here and do nothing then.
-  ctime=$(stat -c %W $logfile_last)
+  ctime=$(stat -c %W $logfile_last 2>/dev/null)
   if [[ $? == 0 ]]; then
     touch -d "@$ctime" $logfile_prev
   fi
@@ -644,8 +660,42 @@ if [[ "$logfile_last" == "${SPECIAL_FILENAME_JOURNALCTL}" ]]; then
   exit 0
 fi
 
-logfile_prev_size=$(stat -c%s $logfile_prev) || exit 1
-logfile_last_size=$(stat -c%s $logfile_last) || exit 1
+# A portable function to get file size.
+# Usage: get_file_size /path/to/file
+get_file_size() {
+  case $os_kind in
+    linux)
+      stat -c %s "$1"
+      ;;
+    macos|bsd)
+      stat -f %z "$1"
+      ;;
+    *)
+      echo "error:internal error: invalid os_kind '$os_kind'" 1>&2
+      return 1
+  esac
+}
+
+# A portable function to get file modification time.
+# Usage: get_file_modtime /path/to/file
+get_file_modtime() {
+  case $os_kind in
+    linux)
+      stat -c %y "$1"
+      ;;
+    macos|bsd)
+      # It's not exactly equivalent of the GNU version: it doesn't print
+      # fractional seconds, but good enough for our needs.
+      stat -f "%SB" -t "%Y-%m-%d %H:%M:%S" "$1"
+      ;;
+    *)
+      echo "error:internal error: invalid os_kind '$os_kind'" 1>&2
+      return 1
+  esac
+}
+
+logfile_prev_size=$(get_file_size $logfile_prev) || exit 1
+logfile_last_size=$(get_file_size $logfile_last) || exit 1
 total_size=$((logfile_prev_size+logfile_last_size)) || exit 1
 
 if [[ "$refresh_index" == "1" ]]; then
@@ -789,7 +839,7 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
   else
     echo "p:stage:$STAGE_INDEX_FULL:indexing from scratch" 1>&2
 
-    echo "prevlog_modtime	$(stat -c %y $logfile_prev)" > $indexfile
+    echo "prevlog_modtime	$(get_file_modtime $logfile_prev)" > $indexfile
 
     "$awk_binary" -b "$awk_functions BEGIN { $awk_vars lastHHMM=\"\"; last3=\"\" }"'
   '"$script1"'
@@ -881,7 +931,7 @@ function get_prevlog_modtime_from_index() { # {{{
 } # }}}
 
 function get_prevlog_bytenr() { # {{{
-  du -sb $logfile_prev | "$awk_binary" '{ print $1 }'
+  get_file_size $logfile_prev
 } # }}}
 
 is_outside_of_range=0
@@ -891,7 +941,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
     # Check timestamp in the first line of /tmp/nerdlog_agent_index, and if
     # $logfile_prev's modification time is newer, then delete whole index
     logfile_prev_stored_modtime="$(get_prevlog_modtime_from_index)"
-    logfile_prev_cur_modtile=$(stat -c %y $logfile_prev)
+    logfile_prev_cur_modtile=$(get_file_modtime $logfile_prev)
     if [[ "$logfile_prev_stored_modtime" != "$logfile_prev_cur_modtile" ]]; then
       echo "debug:logfile has changed: stored '$logfile_prev_stored_modtime', actual '$logfile_prev_cur_modtile', deleting index file" 1>&2
       rm -f $indexfile || exit 1
