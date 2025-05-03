@@ -308,6 +308,10 @@ If filename is omitted, `/tmp/last_nerdlog` is used.
 
 `:refresh` Rerun the same query again. This can be done from the Menu too (Menu -> Refresh), or using a keyboard shortcut `Ctrl+R` or `F5`.
 
+`:refresh!` Hard refresh, i.e. also rebuild the index for every logstream. This
+can be done from the Menu too, or using a keyboard shortcut `Alt+Ctrl+R` or
+`Shift+F5`.
+
 `:reconnect` Reconnect to all logstreams
 
 `:disconnect` Disconnect from all logstreams
