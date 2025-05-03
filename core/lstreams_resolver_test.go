@@ -122,9 +122,13 @@ func TestLStreamsResolverSingleEntryNoGlob(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"myserver.com": {
 					Name: "myserver.com",
-					Host: ConfigHost{
-						Addr: "myserver.com:22",
-						User: "osuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "myserver.com:22",
+								User: "osuser",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -137,9 +141,13 @@ func TestLStreamsResolverSingleEntryNoGlob(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"myuser@myserver.com": {
 					Name: "myuser@myserver.com",
-					Host: ConfigHost{
-						Addr: "myserver.com:22",
-						User: "myuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "myserver.com:22",
+								User: "myuser",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -152,9 +160,13 @@ func TestLStreamsResolverSingleEntryNoGlob(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"myuser@myserver.com:777": {
 					Name: "myuser@myserver.com:777",
-					Host: ConfigHost{
-						Addr: "myserver.com:777",
-						User: "myuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "myserver.com:777",
+								User: "myuser",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -167,9 +179,13 @@ func TestLStreamsResolverSingleEntryNoGlob(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"myserver.com:777": {
 					Name: "myserver.com:777",
-					Host: ConfigHost{
-						Addr: "myserver.com:777",
-						User: "osuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "myserver.com:777",
+								User: "osuser",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -182,9 +198,13 @@ func TestLStreamsResolverSingleEntryNoGlob(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"myuser@myserver.com:22:/var/log/syslog": {
 					Name: "myuser@myserver.com:22:/var/log/syslog",
-					Host: ConfigHost{
-						Addr: "myserver.com:22",
-						User: "myuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "myserver.com:22",
+								User: "myuser",
+							},
+						},
 					},
 					LogFiles: []string{"/var/log/syslog", "auto"},
 				},
@@ -197,9 +217,13 @@ func TestLStreamsResolverSingleEntryNoGlob(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"myuser@myserver.com:22:/var/log/auth.log": {
 					Name: "myuser@myserver.com:22:/var/log/auth.log",
-					Host: ConfigHost{
-						Addr: "myserver.com:22",
-						User: "myuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "myserver.com:22",
+								User: "myuser",
+							},
+						},
 					},
 					LogFiles: []string{"/var/log/auth.log", "auto"},
 				},
@@ -212,9 +236,13 @@ func TestLStreamsResolverSingleEntryNoGlob(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"myuser@myserver.com:22:/var/log/mylog_last:/var/log/mylog_prev": {
 					Name: "myuser@myserver.com:22:/var/log/mylog_last:/var/log/mylog_prev",
-					Host: ConfigHost{
-						Addr: "myserver.com:22",
-						User: "myuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "myserver.com:22",
+								User: "myuser",
+							},
+						},
 					},
 					LogFiles: []string{"/var/log/mylog_last", "/var/log/mylog_prev"},
 				},
@@ -250,17 +278,25 @@ func TestLStreamsResolverMultipleEntriesNoGlob(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"host1.com": {
 					Name: "host1.com",
-					Host: ConfigHost{
-						Addr: "host1.com:22",
-						User: "osuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host1.com:22",
+								User: "osuser",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
 				"host2.com": {
 					Name: "host2.com",
-					Host: ConfigHost{
-						Addr: "host2.com:22",
-						User: "osuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host2.com:22",
+								User: "osuser",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -273,17 +309,25 @@ func TestLStreamsResolverMultipleEntriesNoGlob(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"alice@foo.com:2200:/a.log:/b.log": {
 					Name: "alice@foo.com:2200:/a.log:/b.log",
-					Host: ConfigHost{
-						Addr: "foo.com:2200",
-						User: "alice",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "foo.com:2200",
+								User: "alice",
+							},
+						},
 					},
 					LogFiles: []string{"/a.log", "/b.log"},
 				},
 				"bob@bar.com": {
 					Name: "bob@bar.com",
-					Host: ConfigHost{
-						Addr: "bar.com:22",
-						User: "bob",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "bar.com:22",
+								User: "bob",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -328,25 +372,37 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"myhost-01": {
 					Name: "myhost-01",
-					Host: ConfigHost{
-						Addr: "host-from-nerdlog-config-01.com:1001",
-						User: "user-from-nerdlog-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-from-nerdlog-config-01.com:1001",
+								User: "user-from-nerdlog-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/mylog_1", "auto"},
 				},
 				"myhost-02": {
 					Name: "myhost-02",
-					Host: ConfigHost{
-						Addr: "host-from-nerdlog-config-02.com:1002",
-						User: "user-from-nerdlog-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-from-nerdlog-config-02.com:1002",
+								User: "user-from-nerdlog-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/mylog_1", "/from/nerdlog/config/mylog_2"},
 				},
 				"myhost-03": {
 					Name: "myhost-03",
-					Host: ConfigHost{
-						Addr: "host-from-nerdlog-config-03.com:1003",
-						User: "user-from-nerdlog-config-03",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-from-nerdlog-config-03.com:1003",
+								User: "user-from-nerdlog-config-03",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/mylog_1", "/from/nerdlog/config/mylog_2"},
 				},
@@ -362,42 +418,62 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"myhost-01": {
 					Name: "myhost-01",
-					Host: ConfigHost{
-						Addr: "host-from-nerdlog-config-01.com:1001",
-						User: "user-from-nerdlog-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-from-nerdlog-config-01.com:1001",
+								User: "user-from-nerdlog-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/mylog_1", "auto"},
 				},
 				"myhost-02": {
 					Name: "myhost-02",
-					Host: ConfigHost{
-						Addr: "host-from-nerdlog-config-02.com:1002",
-						User: "user-from-nerdlog-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-from-nerdlog-config-02.com:1002",
+								User: "user-from-nerdlog-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/mylog_1", "/from/nerdlog/config/mylog_2"},
 				},
 				"myhost-03": {
 					Name: "myhost-03",
-					Host: ConfigHost{
-						Addr: "host-from-nerdlog-config-03.com:1003",
-						User: "user-from-nerdlog-config-03",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-from-nerdlog-config-03.com:1003",
+								User: "user-from-nerdlog-config-03",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/mylog_1", "/from/nerdlog/config/mylog_2"},
 				},
 
 				"foo-01": {
 					Name: "foo-01",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-01.com:2001",
-						User: "user-foo-from-nerdlog-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-01.com:2001",
+								User: "user-foo-from-nerdlog-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/foolog", "auto"},
 				},
 				"foo-02": {
 					Name: "foo-02",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-02.com:2002",
-						User: "user-foo-from-nerdlog-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-02.com:2002",
+								User: "user-foo-from-nerdlog-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/foolog", "auto"},
 				},
@@ -414,17 +490,25 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"bar-01": {
 					Name: "bar-01",
-					Host: ConfigHost{
-						Addr: "host-bar-from-nerdlog-config-01.com:22",
-						User: "user-bar-from-nerdlog-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-bar-from-nerdlog-config-01.com:22",
+								User: "user-bar-from-nerdlog-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
 				"bar-02": {
 					Name: "bar-02",
-					Host: ConfigHost{
-						Addr: "host-bar-from-nerdlog-config-02.com:22",
-						User: "user-bar-from-nerdlog-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-bar-from-nerdlog-config-02.com:22",
+								User: "user-bar-from-nerdlog-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -441,17 +525,25 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"foo-01:123": {
 					Name: "foo-01:123",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-01.com:123",
-						User: "user-foo-from-nerdlog-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-01.com:123",
+								User: "user-foo-from-nerdlog-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/foolog", "auto"},
 				},
 				"foo-02:123": {
 					Name: "foo-02:123",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-02.com:123",
-						User: "user-foo-from-nerdlog-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-02.com:123",
+								User: "user-foo-from-nerdlog-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/foolog", "auto"},
 				},
@@ -468,17 +560,25 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"customuser@foo-01": {
 					Name: "customuser@foo-01",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-01.com:2001",
-						User: "customuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-01.com:2001",
+								User: "customuser",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/foolog", "auto"},
 				},
 				"customuser@foo-02": {
 					Name: "customuser@foo-02",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-02.com:2002",
-						User: "customuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-02.com:2002",
+								User: "customuser",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/foolog", "auto"},
 				},
@@ -495,17 +595,25 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"foo-01::/var/log/custom": {
 					Name: "foo-01::/var/log/custom",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-01.com:2001",
-						User: "user-foo-from-nerdlog-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-01.com:2001",
+								User: "user-foo-from-nerdlog-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"/var/log/custom", "auto"},
 				},
 				"foo-02::/var/log/custom": {
 					Name: "foo-02::/var/log/custom",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-02.com:2002",
-						User: "user-foo-from-nerdlog-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-02.com:2002",
+								User: "user-foo-from-nerdlog-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"/var/log/custom", "auto"},
 				},
@@ -522,17 +630,25 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"foo-01::/var/log/custom:/var/log/custom_prev": {
 					Name: "foo-01::/var/log/custom:/var/log/custom_prev",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-01.com:2001",
-						User: "user-foo-from-nerdlog-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-01.com:2001",
+								User: "user-foo-from-nerdlog-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"/var/log/custom", "/var/log/custom_prev"},
 				},
 				"foo-02::/var/log/custom:/var/log/custom_prev": {
 					Name: "foo-02::/var/log/custom:/var/log/custom_prev",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-02.com:2002",
-						User: "user-foo-from-nerdlog-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-02.com:2002",
+								User: "user-foo-from-nerdlog-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"/var/log/custom", "/var/log/custom_prev"},
 				},
@@ -549,17 +665,25 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"customuser@foo-01:444:/var/log/custom:/var/log/custom_prev": {
 					Name: "customuser@foo-01:444:/var/log/custom:/var/log/custom_prev",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-01.com:444",
-						User: "customuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-01.com:444",
+								User: "customuser",
+							},
+						},
 					},
 					LogFiles: []string{"/var/log/custom", "/var/log/custom_prev"},
 				},
 				"customuser@foo-02:444:/var/log/custom:/var/log/custom_prev": {
 					Name: "customuser@foo-02:444:/var/log/custom:/var/log/custom_prev",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-02.com:444",
-						User: "customuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-02.com:444",
+								User: "customuser",
+							},
+						},
 					},
 					LogFiles: []string{"/var/log/custom", "/var/log/custom_prev"},
 				},
@@ -576,9 +700,13 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"foo-01": {
 					Name: "foo-01",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-01.com:2001",
-						User: "user-foo-from-nerdlog-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-01.com:2001",
+								User: "user-foo-from-nerdlog-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/foolog", "auto"},
 				},
@@ -595,9 +723,13 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"customuser@foo-01": {
 					Name: "customuser@foo-01",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-01.com:2001",
-						User: "customuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-01.com:2001",
+								User: "customuser",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/foolog", "auto"},
 				},
@@ -614,34 +746,50 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"foo-01": {
 					Name: "foo-01",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-01.com:2001",
-						User: "user-foo-from-nerdlog-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-01.com:2001",
+								User: "user-foo-from-nerdlog-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/foolog", "auto"},
 				},
 				"foo-02": {
 					Name: "foo-02",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-02.com:2002",
-						User: "user-foo-from-nerdlog-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-02.com:2002",
+								User: "user-foo-from-nerdlog-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/foolog", "auto"},
 				},
 
 				"foo-01::/var/log/custom": {
 					Name: "foo-01::/var/log/custom",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-01.com:2001",
-						User: "user-foo-from-nerdlog-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-01.com:2001",
+								User: "user-foo-from-nerdlog-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"/var/log/custom", "auto"},
 				},
 				"foo-02::/var/log/custom": {
 					Name: "foo-02::/var/log/custom",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-02.com:2002",
-						User: "user-foo-from-nerdlog-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-02.com:2002",
+								User: "user-foo-from-nerdlog-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"/var/log/custom", "auto"},
 				},
@@ -658,9 +806,13 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"realhost.com": {
 					Name: "realhost.com",
-					Host: ConfigHost{
-						Addr: "realhost.com:22",
-						User: "user-from-nerdlog-config",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "realhost.com:22",
+								User: "user-from-nerdlog-config",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -678,17 +830,25 @@ func TestLStreamsResolverGlobOnlyNerdlogConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"baz-01": {
 					Name: "baz-01",
-					Host: ConfigHost{
-						Addr: "baz-01:22",
-						User: "osuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "baz-01:22",
+								User: "osuser",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/bazlog", "auto"},
 				},
 				"baz-02": {
 					Name: "baz-02",
-					Host: ConfigHost{
-						Addr: "baz-02:22",
-						User: "osuser",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "baz-02:22",
+								User: "osuser",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/bazlog", "auto"},
 				},
@@ -725,17 +885,25 @@ func TestLStreamsResolverGlobOnlySSHConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"sshfoo-01": {
 					Name: "sshfoo-01",
-					Host: ConfigHost{
-						Addr: "host-foo-from-ssh-config-01.com:3001",
-						User: "user-foo-from-ssh-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-ssh-config-01.com:3001",
+								User: "user-foo-from-ssh-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
 				"sshfoo-02": {
 					Name: "sshfoo-02",
-					Host: ConfigHost{
-						Addr: "host-foo-from-ssh-config-02.com:3002",
-						User: "user-foo-from-ssh-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-ssh-config-02.com:3002",
+								User: "user-foo-from-ssh-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -752,33 +920,49 @@ func TestLStreamsResolverGlobOnlySSHConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"sshfoo-01": {
 					Name: "sshfoo-01",
-					Host: ConfigHost{
-						Addr: "host-foo-from-ssh-config-01.com:3001",
-						User: "user-foo-from-ssh-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-ssh-config-01.com:3001",
+								User: "user-foo-from-ssh-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
 				"sshfoo-02": {
 					Name: "sshfoo-02",
-					Host: ConfigHost{
-						Addr: "host-foo-from-ssh-config-02.com:3002",
-						User: "user-foo-from-ssh-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-ssh-config-02.com:3002",
+								User: "user-foo-from-ssh-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
 				"sshbar-01": {
 					Name: "sshbar-01",
-					Host: ConfigHost{
-						Addr: "host-bar-from-ssh-config-01.com:3001",
-						User: "user-bar-from-ssh-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-bar-from-ssh-config-01.com:3001",
+								User: "user-bar-from-ssh-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
 				"sshbar-02": {
 					Name: "sshbar-02",
-					Host: ConfigHost{
-						Addr: "host-bar-from-ssh-config-02.com:3002",
-						User: "user-bar-from-ssh-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-bar-from-ssh-config-02.com:3002",
+								User: "user-bar-from-ssh-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -795,17 +979,25 @@ func TestLStreamsResolverGlobOnlySSHConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"sshfoo-01::/var/log/auth.log": {
 					Name: "sshfoo-01::/var/log/auth.log",
-					Host: ConfigHost{
-						Addr: "host-foo-from-ssh-config-01.com:3001",
-						User: "user-foo-from-ssh-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-ssh-config-01.com:3001",
+								User: "user-foo-from-ssh-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"/var/log/auth.log", "auto"},
 				},
 				"sshfoo-02::/var/log/auth.log": {
 					Name: "sshfoo-02::/var/log/auth.log",
-					Host: ConfigHost{
-						Addr: "host-foo-from-ssh-config-02.com:3002",
-						User: "user-foo-from-ssh-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-ssh-config-02.com:3002",
+								User: "user-foo-from-ssh-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"/var/log/auth.log", "auto"},
 				},
@@ -822,9 +1014,13 @@ func TestLStreamsResolverGlobOnlySSHConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"sshfoo-02": {
 					Name: "sshfoo-02",
-					Host: ConfigHost{
-						Addr: "host-foo-from-ssh-config-02.com:3002",
-						User: "user-foo-from-ssh-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-ssh-config-02.com:3002",
+								User: "user-foo-from-ssh-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -841,9 +1037,13 @@ func TestLStreamsResolverGlobOnlySSHConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"sshrealhost.com": {
 					Name: "sshrealhost.com",
-					Host: ConfigHost{
-						Addr: "sshrealhost.com:4001",
-						User: "user-from-ssh-config",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "sshrealhost.com:4001",
+								User: "user-from-ssh-config",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -860,9 +1060,13 @@ func TestLStreamsResolverGlobOnlySSHConfig(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"sshnoport-01": {
 					Name: "sshnoport-01",
-					Host: ConfigHost{
-						Addr: "host-noport-from-ssh-config-01.com:22",
-						User: "user-noport-from-ssh-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-noport-from-ssh-config-01.com:22",
+								User: "user-noport-from-ssh-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -891,17 +1095,25 @@ func TestLStreamsResolverGlobBothNerdlogAndSSHConfigs(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"foo-01": {
 					Name: "foo-01",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-01.com:2001",
-						User: "user-foo-from-nerdlog-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-01.com:2001",
+								User: "user-foo-from-nerdlog-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/foolog", "auto"},
 				},
 				"foo-02": {
 					Name: "foo-02",
-					Host: ConfigHost{
-						Addr: "host-foo-from-nerdlog-config-02.com:2002",
-						User: "user-foo-from-nerdlog-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-foo-from-nerdlog-config-02.com:2002",
+								User: "user-foo-from-nerdlog-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/foolog", "auto"},
 				},
@@ -920,17 +1132,25 @@ func TestLStreamsResolverGlobBothNerdlogAndSSHConfigs(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"bar-01": {
 					Name: "bar-01",
-					Host: ConfigHost{
-						Addr: "host-bar-from-nerdlog-config-01.com:6001",
-						User: "user-bar-from-nerdlog-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-bar-from-nerdlog-config-01.com:6001",
+								User: "user-bar-from-nerdlog-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
 				"bar-02": {
 					Name: "bar-02",
-					Host: ConfigHost{
-						Addr: "host-bar-from-nerdlog-config-02.com:6002",
-						User: "user-bar-from-nerdlog-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-bar-from-nerdlog-config-02.com:6002",
+								User: "user-bar-from-nerdlog-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"auto", "auto"},
 				},
@@ -949,17 +1169,25 @@ func TestLStreamsResolverGlobBothNerdlogAndSSHConfigs(t *testing.T) {
 			wantStreams: map[string]LogStream{
 				"baz-01": {
 					Name: "baz-01",
-					Host: ConfigHost{
-						Addr: "host-baz-from-ssh-config-01.com:7001",
-						User: "user-baz-from-ssh-config-01",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-baz-from-ssh-config-01.com:7001",
+								User: "user-baz-from-ssh-config-01",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/bazlog", "auto"},
 				},
 				"baz-02": {
 					Name: "baz-02",
-					Host: ConfigHost{
-						Addr: "host-baz-from-ssh-config-02.com:7002",
-						User: "user-baz-from-ssh-config-02",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-baz-from-ssh-config-02.com:7002",
+								User: "user-baz-from-ssh-config-02",
+							},
+						},
 					},
 					LogFiles: []string{"/from/nerdlog/config/bazlog", "auto"},
 				},

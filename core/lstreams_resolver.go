@@ -38,17 +38,38 @@ type LogStream struct {
 	// "lstream" context tag; it must uniquely identify the LogStream.
 	Name string
 
-	Host     ConfigHost
-	Jumphost *ConfigHost
+	// NOTE: all fields below are shell-specific; so if at some point we want
+	// to support other kinds of backends, we'll probably need to factor all
+	// these details to a separate struct like LogStreamShell or something.
+
+	// Transport specifies how we can get shell access to the host containing
+	// the logstream.
+	Transport ConfigLogStreamShellTransport
 
 	// LogFiles contains a list of files which are part of the logstream, like
 	// ["/var/log/syslog", "/var/log/syslog.1"]. The [0]th item is the latest log
-	// file [1]st is the previous one, etc.
+	// file [1]st is the previous one, etc. One special case here is journalctl:
+	// if [0]th item is "journalctl", then we won't use plain log files, and
+	// instead will get the data straight from journalctl.
 	//
 	// It must contain at least a single item, otherwise LogStream is invalid.
 	LogFiles []string
 
 	Options LogStreamOptions
+}
+
+type ConfigLogStreamShellTransportSSH struct {
+	Host     ConfigHost
+	Jumphost *ConfigHost
+}
+
+type ConfigLogStreamShellTransportLocalhost struct {
+	// No details are needed here
+}
+
+type ConfigLogStreamShellTransport struct {
+	SSH       *ConfigLogStreamShellTransportSSH
+	Localhost *ConfigLogStreamShellTransportLocalhost
 }
 
 type LogStreamOptions struct {
@@ -155,29 +176,19 @@ func (r *LStreamsResolver) Resolve(lstreamsStr string) (map[string]LogStream, er
 
 			parsedLogStreams[key] = ch
 		}
-
-		//matcher, err := glob.Compile(part)
-		//if err != nil {
-		//return errors.Annotatef(err, "pattern %q", part)
-		//}
-
-		//numMatchedPart := 0
-
-		//for _, hc := range lsman.params.ConfigHosts {
-		//if !matcher.MatchString(hc.Name) {
-		//continue
-		//}
-
-		//matchingHANames[hc.Name] = struct{}{}
-		//numMatchedPart++
-		//}
-
-		//if numMatchedPart == 0 {
-		//return errors.Errorf("%q didn't match anything", part)
-		//}
 	}
 
 	return parsedLogStreams, nil
+}
+
+// draftLogStream is a draft version of LogStream; it's used as temporary
+// storage in the process of resolving logstreams.
+type draftLogStream struct {
+	name     string
+	host     ConfigHost
+	jumphost *ConfigHost
+	logFiles []string
+	options  LogStreamOptions
 }
 
 // parseLogStreamSpecEntry parses a single logstream spec entry like
@@ -255,21 +266,21 @@ func (r *LStreamsResolver) parseLogStreamSpecEntry(s string) ([]LogStream, error
 		return nil, errors.Errorf("no logstream specified in %q", s)
 	}
 
-	ret := []LogStream{
+	lstreams := []draftLogStream{
 		{
-			Name: s,
+			name: s,
 
-			Host: ConfigHost{
+			host: ConfigHost{
 				Addr: fmt.Sprintf("%s:%s", plstream.hostname, plstream.port),
 				User: plstream.user,
 			},
-			Jumphost: jhconf,
+			jumphost: jhconf,
 
-			LogFiles: logFiles,
+			logFiles: logFiles,
 		},
 	}
 
-	ret, err = expandFromLogStreamsConfig(ret, r.params.ConfigLogStreams)
+	lstreams, err = expandFromLogStreamsConfig(lstreams, r.params.ConfigLogStreams)
 	if err != nil {
 		return nil, errors.Annotatef(err, "expanding from nerdlog config")
 	}
@@ -279,25 +290,41 @@ func (r *LStreamsResolver) parseLogStreamSpecEntry(s string) ([]LogStream, error
 		return nil, errors.Annotatef(err, "parsing ssh config")
 	}
 
-	ret, err = expandFromLogStreamsConfig(ret, lsConfigFromSSHConfig)
+	lstreams, err = expandFromLogStreamsConfig(lstreams, lsConfigFromSSHConfig)
 	if err != nil {
 		return nil, errors.Annotatef(err, "expanding from ssh config")
 	}
 
-	ret, err = setLogStreamsDefaults(ret, r.params.CurOSUser)
+	lstreams, err = setLogStreamsDefaults(lstreams, r.params.CurOSUser)
 	if err != nil {
 		return nil, errors.Annotatef(err, "setting defaults")
 	}
 
 	// Check if some of the items were clearly indended to be globs matching
 	// something (those with asterisks in them), and didn't match anything.
-	for _, ls := range ret {
+	for _, ls := range lstreams {
 		// TODO: would perhaps be useful to implement a function like IsValidDialAddress,
 		// which checks a bunch of other things, but for now, a single asterisk check
 		// will do.
-		if strings.Contains(ls.Host.Addr, "*") {
-			return nil, errors.Errorf("glob %q didn't match anything (having address %q)", s, ls.Host.Addr)
+		if strings.Contains(ls.host.Addr, "*") {
+			return nil, errors.Errorf("glob %q didn't match anything (having address %q)", s, ls.host.Addr)
 		}
+	}
+
+	// Convert partial logstreams to the actual ones.
+	ret := make([]LogStream, 0, len(lstreams))
+	for _, ls := range lstreams {
+		ret = append(ret, LogStream{
+			Name: ls.name,
+			Transport: ConfigLogStreamShellTransport{
+				SSH: &ConfigLogStreamShellTransportSSH{
+					Host:     ls.host,
+					Jumphost: ls.jumphost,
+				},
+			},
+			LogFiles: ls.logFiles,
+			Options:  ls.options,
+		})
 	}
 
 	return ret, nil
@@ -359,20 +386,20 @@ type ConfigLogStreamWKey struct {
 // expandFromLogStreamsConfig goes through each of the logstreams, and
 // potentially expands every item as per the provided config.
 func expandFromLogStreamsConfig(
-	logStreams []LogStream,
+	logStreams []draftLogStream,
 	lsConfig ConfigLogStreams,
-) ([]LogStream, error) {
+) ([]draftLogStream, error) {
 	// If there's no config, cut it short.
 	if lsConfig == nil {
 		return logStreams, nil
 	}
 
-	var ret []LogStream
+	var ret []draftLogStream
 
 	for i, ls := range logStreams {
 		var matchedConfigItems []*ConfigLogStreamWKey
 
-		addr, err := parseAddr(ls.Host.Addr)
+		addr, err := parseAddr(ls.host.Addr)
 		if err != nil {
 			return nil, errors.Annotatef(err, "logstream #%d, parsing address", i+1)
 		}
@@ -404,7 +431,7 @@ func expandFromLogStreamsConfig(
 			addrCopy := addr
 
 			// Always override the name with the key from the config.
-			lsCopy.Name = strings.Replace(lsCopy.Name, globPattern, matchedItem.Key, -1)
+			lsCopy.name = strings.Replace(lsCopy.name, globPattern, matchedItem.Key, -1)
 
 			// Overwrite the host address (since what we've had might be a glob):
 			// either with the Hostname if it's specified explicitly, or if not, then
@@ -421,19 +448,19 @@ func expandFromLogStreamsConfig(
 				addrCopy.port = matchedItem.Port
 			}
 
-			if lsCopy.Host.User == "" {
-				lsCopy.Host.User = matchedItem.User
+			if lsCopy.host.User == "" {
+				lsCopy.host.User = matchedItem.User
 			}
 
-			if lsCopy.Options.SudoMode == "" {
-				lsCopy.Options.SudoMode = matchedItem.Options.EffectiveSudoMode()
+			if lsCopy.options.SudoMode == "" {
+				lsCopy.options.SudoMode = matchedItem.Options.EffectiveSudoMode()
 			}
 
-			if len(lsCopy.LogFiles) == 0 {
-				lsCopy.LogFiles = matchedItem.LogFiles
+			if len(lsCopy.logFiles) == 0 {
+				lsCopy.logFiles = matchedItem.LogFiles
 			}
 
-			lsCopy.Host.Addr = fmt.Sprintf("%s:%s", addrCopy.host, addrCopy.port)
+			lsCopy.host.Addr = fmt.Sprintf("%s:%s", addrCopy.host, addrCopy.port)
 
 			ret = append(ret, lsCopy)
 		}
@@ -446,33 +473,33 @@ func expandFromLogStreamsConfig(
 // missing pieces for which it knows the defaults: port 22, user as the current
 // OS user.
 func setLogStreamsDefaults(
-	logStreams []LogStream,
+	logStreams []draftLogStream,
 	osUser string,
-) ([]LogStream, error) {
-	ret := make([]LogStream, 0, len(logStreams))
+) ([]draftLogStream, error) {
+	ret := make([]draftLogStream, 0, len(logStreams))
 
 	for i, ls := range logStreams {
-		port, err := portFromAddr(ls.Host.Addr)
+		port, err := portFromAddr(ls.host.Addr)
 		if err != nil {
 			return nil, errors.Annotatef(err, "logstream #%d, getting port", i+1)
 		}
 
 		if port == "" {
-			ls.Host.Addr += "22"
+			ls.host.Addr += "22"
 		}
 
-		if ls.Host.User == "" {
-			ls.Host.User = osUser
+		if ls.host.User == "" {
+			ls.host.User = osUser
 		}
 
-		if len(ls.LogFiles) == 0 {
+		if len(ls.logFiles) == 0 {
 			// Will be autodetected by the agent script.
-			ls.LogFiles = append(ls.LogFiles, "auto")
+			ls.logFiles = append(ls.logFiles, "auto")
 		}
 
-		if len(ls.LogFiles) == 1 {
+		if len(ls.logFiles) == 1 {
 			// Will be autodetected by the agent script.
-			ls.LogFiles = append(ls.LogFiles, "auto")
+			ls.logFiles = append(ls.logFiles, "auto")
 		}
 
 		ret = append(ret, ls)

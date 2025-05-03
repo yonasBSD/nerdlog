@@ -7,17 +7,12 @@ import (
 	_ "embed"
 	"fmt"
 	"io"
-	"net"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/juju/errors"
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/agent"
 
 	"github.com/dimonomid/nerdlog/log"
 )
@@ -64,7 +59,9 @@ var syslogRegex = regexp.MustCompile(`^(\S+)\s+(\S+?)(?:\[(\d+)\])?:\s+(.*)`)
 type LStreamClient struct {
 	params LStreamClientParams
 
-	connectResCh chan lstreamConnRes
+	transport ShellTransport
+
+	connectResCh chan ShellConnResult
 	enqueueCmdCh chan lstreamCmd
 
 	// timezone is a string received from the logstream
@@ -112,11 +109,16 @@ type disconnectReq struct {
 }
 
 type connCtx struct {
-	sshClient  *ssh.Client
-	sshSession *ssh.Session
-	stdinBuf   io.WriteCloser
+	// conn is the actual underlying connection that we've established.
+	conn ShellConn
 
+	// stdoutLinesCh receives lines from conn.Stdout(). If stdout had some
+	// gzipped portion, the lines arrive to stdoutLinesCh already gunzipped.
 	stdoutLinesCh chan string
+
+	// stderrLinesCh receives lines from conn.Stderr(). Technically, the same
+	// gunzipping logic as in stdout applies here as well, however in practice
+	// we don't send gzipped data over stderr.
 	stderrLinesCh chan string
 }
 
@@ -206,13 +208,51 @@ type LStreamClientParams struct {
 	UpdatesCh chan<- *LStreamClientUpdate
 }
 
+// createTransport creates a shell transport accordingly to the provided
+// config. The config must be valid (e.g. it should contain exactly one item),
+// otherwise createTransport panics.
+func createTransport(config ConfigLogStreamShellTransport, logger *log.Logger) ShellTransport {
+	var transport ShellTransport
+
+	if config.SSH != nil {
+		if transport != nil {
+			panic("transport config is ambiguous")
+		}
+
+		transport = NewShellTransportSSH(ShellTransportSSHParams{
+			ConnDetails: *config.SSH,
+
+			Logger: logger,
+		})
+	}
+
+	if config.Localhost != nil {
+		if transport != nil {
+			panic("transport config is ambiguous")
+		}
+
+		// TODO(https://github.com/dimonomid/nerdlog/issues/22)
+		panic("localhost transport is not yet implemented")
+	}
+
+	if transport == nil {
+		panic("transport config is empty")
+	}
+
+	return transport
+}
+
 func NewLStreamClient(params LStreamClientParams) *LStreamClient {
 	params.Logger = params.Logger.WithNamespaceAppended(
 		fmt.Sprintf("LSClient_%s", params.LogStream.Name),
 	)
 
+	transport := createTransport(params.LogStream.Transport, params.Logger)
+
 	lsc := &LStreamClient{
 		params: params,
+
+		transport: transport,
 
 		timezone: "UTC",
 		location: time.UTC,
@@ -258,9 +298,7 @@ func (lsc *LStreamClient) changeState(newState LStreamClientState) {
 
 	if isStateConnected(oldState) && !isStateConnected(newState) {
 		// Initiate disconnect
-		lsc.conn.stdinBuf.Close()
-		lsc.conn.sshSession.Close()
-		lsc.conn.sshClient.Close()
+		lsc.conn.conn.Close()
 	}
 
 	switch oldState {
@@ -284,8 +322,8 @@ func (lsc *LStreamClient) changeState(newState LStreamClientState) {
 	switch lsc.state {
 	case LStreamClientStateConnecting:
 		lsc.numConnAttempts++
-		lsc.connectResCh = make(chan lstreamConnRes, 1)
-		go connectToLogStream(lsc.params.Logger, lsc.params.LogStream, lsc.connectResCh)
+		lsc.connectResCh = make(chan ShellConnResult, 1)
+		lsc.transport.Connect(lsc.connectResCh)
 
 	case LStreamClientStateConnectedIdle:
 		if len(lsc.cmdQueue) > 0 {
@@ -331,10 +369,10 @@ func (lsc *LStreamClient) run() {
 	for {
 		select {
 		case res := <-lsc.connectResCh:
-			if res.err != nil {
+			if res.Err != nil {
 				lsc.sendUpdate(&LStreamClientUpdate{
 					ConnDetails: &ConnDetails{
-						Err: fmt.Sprintf("attempt %d: %s", lsc.numConnAttempts, res.err.Error()),
+						Err: fmt.Sprintf("attempt %d: %s", lsc.numConnAttempts, res.Err.Error()),
 					},
 				})
 
@@ -352,7 +390,17 @@ func (lsc *LStreamClient) run() {
 
 			lastUpdTime = time.Now()
 
-			lsc.conn = res.conn
+			stdoutLinesCh := make(chan string, 32)
+			stderrLinesCh := make(chan string, 32)
+
+			go getScannerFunc("stdout", res.Conn.Stdout(), stdoutLinesCh)()
+			go getScannerFunc("stderr", res.Conn.Stderr(), stderrLinesCh)()
+
+			lsc.conn = &connCtx{
+				conn:          res.Conn,
+				stdoutLinesCh: stdoutLinesCh,
+				stderrLinesCh: stderrLinesCh,
+			}
 			lsc.changeState(LStreamClientStateConnectedIdle)
 
 			// Send bootstrap command
@@ -746,227 +794,6 @@ func (lsc *LStreamClient) sendUpdate(upd *LStreamClientUpdate) {
 	lsc.params.UpdatesCh <- upd
 }
 
-type lstreamConnRes struct {
-	conn *connCtx
-	err  error
-}
-
-func connectToLogStream(
-	logger *log.Logger,
-	logStream LogStream,
-	resCh chan<- lstreamConnRes,
-) (res lstreamConnRes) {
-	defer func() {
-		if res.err != nil {
-			logger.Errorf("Connection failed: %s", res.err)
-		}
-
-		resCh <- res
-	}()
-
-	var sshClient *ssh.Client
-
-	conf := getClientConfig(logger, logStream.Host.User)
-
-	if logStream.Jumphost != nil {
-		logger.Infof("Connecting via jumphost")
-		// Use jumphost
-		jumphost, err := getJumphostClient(logger, logStream.Jumphost)
-		if err != nil {
-			logger.Errorf("Jumphost connection failed: %s", err)
-			res.err = errors.Annotatef(err, "getting jumphost client")
-			return res
-		}
-
-		conn, err := dialWithTimeout(jumphost, "tcp", logStream.Host.Addr, connectionTimeout)
-		if err != nil {
-			res.err = errors.Trace(err)
-			return res
-		}
-
-		authConn, chans, reqs, err := ssh.NewClientConn(conn, logStream.Host.Addr, conf)
-		if err != nil {
-			res.err = errors.Trace(err)
-			return res
-		}
-
-		sshClient = ssh.NewClient(authConn, chans, reqs)
-	} else {
-		logger.Infof("Connecting to %s (%+v)", logStream.Host.Addr, conf)
-		var err error
-		sshClient, err = ssh.Dial("tcp", logStream.Host.Addr, conf)
-		if err != nil {
-			res.err = errors.Trace(err)
-			return res
-		}
-	}
-	//defer client.Close()
-
-	logger.Infof("Connected to %s", logStream.Host.Addr)
-
-	sshSession, err := sshClient.NewSession()
-	if err != nil {
-		res.err = errors.Trace(err)
-		return res
-	}
-
-	//defer sess.Close()
-
-	stdinBuf, err := sshSession.StdinPipe()
-	if err != nil {
-		res.err = errors.Trace(err)
-		return res
-	}
-
-	stdoutBuf, err := sshSession.StdoutPipe()
-	if err != nil {
-		res.err = errors.Trace(err)
-		return res
-	}
-
-	stderrBuf, err := sshSession.StderrPipe()
-	if err != nil {
-		res.err = errors.Trace(err)
-		return res
-	}
-
-	err = sshSession.Shell()
-	if err != nil {
-		res.err = errors.Trace(err)
-		return res
-	}
-
-	stdoutLinesCh := make(chan string, 32)
-	stderrLinesCh := make(chan string, 32)
-
-	go getScannerFunc("stdout", stdoutBuf, stdoutLinesCh)()
-	go getScannerFunc("stderr", stderrBuf, stderrLinesCh)()
-
-	res.conn = &connCtx{
-		sshClient:  sshClient,
-		sshSession: sshSession,
-		stdinBuf:   stdinBuf,
-
-		stdoutLinesCh: stdoutLinesCh,
-		stderrLinesCh: stderrLinesCh,
-	}
-
-	return res
-}
-
-func getClientConfig(logger *log.Logger, username string) *ssh.ClientConfig {
-	auth, err := getSSHAgentAuth(logger)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	return &ssh.ClientConfig{
-		User: username,
-		Auth: []ssh.AuthMethod{auth},
-
-		// TODO: fix it
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-
-		Timeout: connectionTimeout,
-	}
-}
-
-var (
-	jumphostsShared    = map[string]*ssh.Client{}
-	jumphostsSharedMtx sync.Mutex
-)
-
-func getJumphostClient(logger *log.Logger, jhConfig *ConfigHost) (*ssh.Client, error) {
-	jumphostsSharedMtx.Lock()
-	defer jumphostsSharedMtx.Unlock()
-
-	key := jhConfig.Key()
-	jh := jumphostsShared[key]
-	if jh == nil {
-		logger.Infof("Connecting to jumphost... %+v", jhConfig)
-
-		parts := strings.Split(jhConfig.Addr, ":")
-		if len(parts) != 2 {
-			return nil, errors.Errorf("malformed jumphost address %q", jhConfig.Addr)
-		}
-
-		addrs, err := net.LookupHost(parts[0])
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-
-		if len(addrs) != 1 {
-			return nil, errors.New("Address not found")
-		}
-
-		conf := getClientConfig(logger, jhConfig.User)
-
-		jh, err = ssh.Dial("tcp", jhConfig.Addr, conf)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-
-		jumphostsShared[key] = jh
-
-		logger.Infof("Jumphost ok")
-	}
-
-	return jh, nil
-}
-
-var (
-	sshAuthMethodShared    ssh.AuthMethod
-	sshAuthMethodSharedMtx sync.Mutex
-)
-
-func getSSHAgentAuth(logger *log.Logger) (ssh.AuthMethod, error) {
-	sshAuthMethodSharedMtx.Lock()
-	defer sshAuthMethodSharedMtx.Unlock()
-
-	if sshAuthMethodShared == nil {
-		logger.Infof("Initializing sshAuthMethodShared...")
-		sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
-		if err != nil {
-			logger.Infof("Failed to initialize sshAuthMethodShared: %s", err.Error())
-			return nil, errors.Trace(err)
-		}
-
-		sshAuthMethodShared = ssh.PublicKeysCallback(agent.NewClient(sshAgent).Signers)
-	}
-
-	return sshAuthMethodShared, nil
-}
-
-// dialWithTimeout is a hack needed to get a timeout for the ssh client.
-// https://stackoverflow.com/questions/31554196/ssh-connection-timeout
-//
-// It's possible we could accomplish the same thing by using NewClient() with Conn.SetDeadline(), but that requires
-// some refactoring.
-func dialWithTimeout(client *ssh.Client, protocol, hostAddr string, timeout time.Duration) (net.Conn, error) {
-	finishedChan := make(chan net.Conn)
-	errChan := make(chan error)
-	go func() {
-		conn, err := client.Dial(protocol, hostAddr)
-		if err != nil {
-			errChan <- err
-			return
-		}
-		finishedChan <- conn
-	}()
-
-	select {
-	case conn := <-finishedChan:
-		return conn, nil
-
-	case err := <-errChan:
-		return nil, errors.Trace(err)
-
-	case <-time.After(connectionTimeout):
-		// Don't close the connection here since it's reused
-		return nil, errors.New("ssh client dial timed out")
-	}
-}
-
 // scanLinesPreserveCarriageReturn is the same as bufio.ScanLines, but it does
 // not strip the \r characters: it's just a hack to support gzipping. In fact,
 // since we sometimes read text lines and sometimes gzipped data, we'd better
@@ -1112,11 +939,13 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 	case cmdCtx.cmd.bootstrap != nil:
 		cmdCtx.bootstrapCtx = &lstreamCmdCtxBootstrap{}
 
-		lsc.conn.stdinBuf.Write([]byte("echo reset_output\n"))
-		lsc.conn.stdinBuf.Write([]byte("echo reset_output 1>&2\n"))
-		lsc.conn.stdinBuf.Write([]byte("("))
-		lsc.conn.stdinBuf.Write([]byte("  cat <<- 'EOF' > " + lsc.getLStreamNerdlogAgentPath() + "\n" + nerdlogAgentSh + "EOF\n"))
-		lsc.conn.stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
+		stdinBuf := lsc.conn.conn.Stdin()
+
+		stdinBuf.Write([]byte("echo reset_output\n"))
+		stdinBuf.Write([]byte("echo reset_output 1>&2\n"))
+		stdinBuf.Write([]byte("("))
+		stdinBuf.Write([]byte("  cat <<- 'EOF' > " + lsc.getLStreamNerdlogAgentPath() + "\n" + nerdlogAgentSh + "EOF\n"))
+		stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
 
 		var parts []string
 
@@ -1136,19 +965,20 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 			parts = append(parts, "--logfile-prev", shellQuote(logFilePrev))
 		}
 
-		lsc.conn.stdinBuf.Write([]byte(strings.Join(parts, " ") + "\n"))
-		lsc.conn.stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
+		stdinBuf.Write([]byte(strings.Join(parts, " ") + "\n"))
+		stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
 
-		lsc.conn.stdinBuf.Write([]byte("  echo 'bootstrap ok'\n"))
-		lsc.conn.stdinBuf.Write([]byte(")\n"))
-		lsc.conn.stdinBuf.Write([]byte("echo exit_code:$?\n"))
+		stdinBuf.Write([]byte("  echo 'bootstrap ok'\n"))
+		stdinBuf.Write([]byte(")\n"))
+		stdinBuf.Write([]byte("echo exit_code:$?\n"))
 
 	case cmdCtx.cmd.ping != nil:
 		cmdCtx.pingCtx = &lstreamCmdCtxPing{}
 
 		cmd := "whoami\n"
-		lsc.conn.stdinBuf.Write([]byte(cmd))
-		lsc.conn.stdinBuf.Write([]byte("echo exit_code:$?\n"))
+		stdinBuf := lsc.conn.conn.Stdin()
+		stdinBuf.Write([]byte(cmd))
+		stdinBuf.Write([]byte("echo exit_code:$?\n"))
 
 	case cmdCtx.cmd.queryLogs != nil:
 		cmdCtx.queryLogsCtx = &lstreamCmdCtxQueryLogs{
@@ -1220,7 +1050,7 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		cmd := strings.Join(parts, " ") + "\n"
 		lsc.params.Logger.Verbose2f("Executing query command(%s): %s", lsc.params.LogStream.Name, cmd)
 
-		lsc.conn.stdinBuf.Write([]byte(cmd))
+		lsc.conn.conn.Stdin().Write([]byte(cmd))
 
 		// NOTE: we don't print the "exit_code:" here, because we can't reliably
 		// do that across all possible shells, due to gzipping: the agent script
@@ -1233,8 +1063,9 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		panic(fmt.Sprintf("invalid command %+v", cmdCtx.cmd))
 	}
 
-	lsc.conn.stdinBuf.Write([]byte(fmt.Sprintf("echo 'command_done:%d'\n", cmdCtx.idx)))
-	lsc.conn.stdinBuf.Write([]byte(fmt.Sprintf("echo 'command_done:%d' 1>&2\n", cmdCtx.idx)))
+	stdinBuf := lsc.conn.conn.Stdin()
+	stdinBuf.Write([]byte(fmt.Sprintf("echo 'command_done:%d'\n", cmdCtx.idx)))
+	stdinBuf.Write([]byte(fmt.Sprintf("echo 'command_done:%d' 1>&2\n", cmdCtx.idx)))
 
 	lsc.changeState(LStreamClientStateConnectedBusy)
 }
