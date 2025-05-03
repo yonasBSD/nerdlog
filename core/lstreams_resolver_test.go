@@ -1201,3 +1201,131 @@ func TestLStreamsResolverGlobBothNerdlogAndSSHConfigs(t *testing.T) {
 		})
 	}
 }
+
+func TestLStreamsResolverLocalhost(t *testing.T) {
+	tests := []resolverTestCase{
+		{
+			name:   "single localhost entry",
+			osUser: "osuser",
+			input:  "localhost",
+			wantStreams: map[string]LogStream{
+				"localhost": {
+					Name: "localhost",
+					Transport: ConfigLogStreamShellTransport{
+						Localhost: &ConfigLogStreamShellTransportLocalhost{},
+					},
+					LogFiles: []string{"auto", "auto"},
+				},
+			},
+		},
+		{
+			name:   "localhost with user, which is ignored",
+			osUser: "osuser",
+			input:  "myuser@localhost",
+			wantStreams: map[string]LogStream{
+				"myuser@localhost": {
+					Name: "myuser@localhost",
+					Transport: ConfigLogStreamShellTransport{
+						Localhost: &ConfigLogStreamShellTransportLocalhost{},
+					},
+					LogFiles: []string{"auto", "auto"},
+				},
+			},
+		},
+		{
+			name:   "hostname with user and port, which are ignored",
+			osUser: "osuser",
+			input:  "myuser@localhost:777",
+			wantStreams: map[string]LogStream{
+				"myuser@localhost:777": {
+					Name: "myuser@localhost:777",
+					Transport: ConfigLogStreamShellTransport{
+						Localhost: &ConfigLogStreamShellTransportLocalhost{},
+					},
+					LogFiles: []string{"auto", "auto"},
+				},
+			},
+		},
+		{
+			name:   "hostname with port, which is ignored",
+			osUser: "osuser",
+			input:  "localhost:777",
+			wantStreams: map[string]LogStream{
+				"localhost:777": {
+					Name: "localhost:777",
+					Transport: ConfigLogStreamShellTransport{
+						Localhost: &ConfigLogStreamShellTransportLocalhost{},
+					},
+					LogFiles: []string{"auto", "auto"},
+				},
+			},
+		},
+		{
+			name:   "hostname with user, port, and log file; user and port are ignored",
+			osUser: "osuser",
+			input:  "myuser@localhost:22:/var/log/syslog",
+			wantStreams: map[string]LogStream{
+				"myuser@localhost:22:/var/log/syslog": {
+					Name: "myuser@localhost:22:/var/log/syslog",
+					Transport: ConfigLogStreamShellTransport{
+						Localhost: &ConfigLogStreamShellTransportLocalhost{},
+					},
+					LogFiles: []string{"/var/log/syslog", "auto"},
+				},
+			},
+		},
+		{
+			name:   "hostname with user, port, and different log file; user and port are ignored",
+			osUser: "osuser",
+			input:  "myuser@localhost:22:/var/log/auth.log",
+			wantStreams: map[string]LogStream{
+				"myuser@localhost:22:/var/log/auth.log": {
+					Name: "myuser@localhost:22:/var/log/auth.log",
+					Transport: ConfigLogStreamShellTransport{
+						Localhost: &ConfigLogStreamShellTransportLocalhost{},
+					},
+					LogFiles: []string{"/var/log/auth.log", "auto"},
+				},
+			},
+		},
+		{
+			name:   "hostname with user, port, and two log files; user and port are ignored",
+			osUser: "osuser",
+			input:  "myuser@localhost:22:/var/log/mylog_last:/var/log/mylog_prev",
+			wantStreams: map[string]LogStream{
+				"myuser@localhost:22:/var/log/mylog_last:/var/log/mylog_prev": {
+					Name: "myuser@localhost:22:/var/log/mylog_last:/var/log/mylog_prev",
+					Transport: ConfigLogStreamShellTransport{
+						Localhost: &ConfigLogStreamShellTransportLocalhost{},
+					},
+					LogFiles: []string{"/var/log/mylog_last", "/var/log/mylog_prev"},
+				},
+			},
+		},
+		{
+			name:   "127.0.0.1 still goes via ssh",
+			osUser: "osuser",
+			input:  "127.0.0.1",
+			wantStreams: map[string]LogStream{
+				"127.0.0.1": {
+					Name: "127.0.0.1",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "127.0.0.1:22",
+								User: "osuser",
+							},
+						},
+					},
+					LogFiles: []string{"auto", "auto"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runResolverTestCase(t, tt)
+		})
+	}
+}

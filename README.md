@@ -114,7 +114,8 @@ few fields:
 Time range is self-explanatory.
 
 Next one is "Logstreams": shortly, as the name suggests, a logstream is a
-contiguous stream of log messages, on a particular server accessible via ssh.
+contiguous stream of log messages, on a particular server accessible via ssh
+(or on the local server).
 As of now, two kinds of logstreams are supported:
 
 - One or more _consecutive_ log files like `/var/log/syslog` and
@@ -212,7 +213,7 @@ reading the [Core concepts](https://dmitryfrank.com/projects/nerdlog/article#cor
 
 ## Requirements
 
-- SSH access to the remote hosts is required. You can read about the related limitations and possible workarounds here: [Consequences of requiring SSH access](https://dmitryfrank.com/projects/nerdlog/article#consequences_of_requiring_ssh_access);
+- SSH access to the hosts is required (except for `localhost`). You can read about the related limitations and possible workarounds here: [Consequences of requiring SSH access](https://dmitryfrank.com/projects/nerdlog/article#consequences_of_requiring_ssh_access);
 - SSH agent must be running locally;
 - Gawk (GNU awk) is a requirement on the hosts, since nerlog relies on the `-b`
   option. So notably, `mawk` will not work. You need `gawk`;

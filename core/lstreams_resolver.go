@@ -311,19 +311,39 @@ func (r *LStreamsResolver) parseLogStreamSpecEntry(s string) ([]LogStream, error
 		}
 	}
 
-	// Convert partial logstreams to the actual ones.
+	// Convert draft logstreams to the actual ones.
 	ret := make([]LogStream, 0, len(lstreams))
 	for _, ls := range lstreams {
-		ret = append(ret, LogStream{
-			Name: ls.name,
-			Transport: ConfigLogStreamShellTransport{
+
+		var transport ConfigLogStreamShellTransport
+		// Using kinda hackish logic: if the hostname part is "localhost", then
+		// ignore the port and user completely, and just use local shell.
+		//
+		// Maybe we need to treat some other strings similarly, like
+		// "localhost.localdomain", or "127.0.0.1", or "::1"; but not sure if it
+		// would actually bring any value. So for now, only "localhost" has this
+		// special treatment (which is also the default when one opens Nerdlog for
+		// the first time).
+		if strings.HasPrefix(ls.host.Addr, "localhost:") {
+			// Use local shell
+			transport = ConfigLogStreamShellTransport{
+				Localhost: &ConfigLogStreamShellTransportLocalhost{},
+			}
+		} else {
+			// Use ssh
+			transport = ConfigLogStreamShellTransport{
 				SSH: &ConfigLogStreamShellTransportSSH{
 					Host:     ls.host,
 					Jumphost: ls.jumphost,
 				},
-			},
-			LogFiles: ls.logFiles,
-			Options:  ls.options,
+			}
+		}
+
+		ret = append(ret, LogStream{
+			Name:      ls.name,
+			Transport: transport,
+			LogFiles:  ls.logFiles,
+			Options:   ls.options,
 		})
 	}
 

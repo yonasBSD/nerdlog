@@ -231,8 +231,9 @@ func createTransport(config ConfigLogStreamShellTransport, logger *log.Logger) S
 			panic("transport config is ambiguous")
 		}
 
-		// TODO(https://github.com/dimonomid/nerdlog/issues/22)
-		panic("localhost transport is not yet implemented")
+		transport = NewShellTransportLocal(ShellTransportLocalParams{
+			Logger: logger,
+		})
 	}
 
 	if transport == nil {
