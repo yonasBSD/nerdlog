@@ -243,7 +243,7 @@ func runNerdlogAgent(
 	stderrFile, err := os.Create(stderrFname)
 	defer stderrFile.Close()
 
-	cmd := exec.Command("/bin/bash", bashArgs...)
+	cmd := exec.Command("/usr/bin/env", append([]string{"bash"}, bashArgs...)...)
 
 	curYear := tc.CurYear
 	if curYear == 0 {
@@ -301,7 +301,7 @@ func runNerdlogAgent(
 func runNerdlogAgentForBenchmark(
 	bashArgs []string,
 ) error {
-	cmd := exec.Command("/bin/bash", bashArgs...)
+	cmd := exec.Command("/usr/bin/env", append([]string{"bash"}, bashArgs...)...)
 
 	cmd.Env = append(os.Environ(), "TZ=UTC")
 
