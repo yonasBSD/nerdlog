@@ -25,6 +25,11 @@ type QueryLogsParams struct {
 	// populated with a new item (it should be used exactly when we're navigating
 	// this browser-like history back and forth)
 	DontAddHistoryItem bool
+
+	// If RefreshIndex is true, we'll drop the index file for all logstreams, and
+	// rebuild it from scratch (no-op for journalctl logstreams, because there's
+	// no nerdlog-maintained index for journalctl).
+	RefreshIndex bool
 }
 
 // LogResp is a log response from a single logstream

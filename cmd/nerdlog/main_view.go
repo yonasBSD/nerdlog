@@ -246,7 +246,7 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mv.queryInput = tview.NewInputField()
 	mv.queryInput.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		event = mv.eventHandlerBackForward(event)
+		event = mv.eventHandlerBrowserLike(event)
 		if event == nil {
 			return nil
 		}
@@ -354,7 +354,7 @@ func NewMainView(params *MainViewParams) *MainView {
 
 	mv.queryEditBtn = tview.NewButton("Edit")
 	mv.queryEditBtn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		event = mv.eventHandlerBackForward(event)
+		event = mv.eventHandlerBrowserLike(event)
 		if event == nil {
 			return nil
 		}
@@ -395,7 +395,7 @@ func NewMainView(params *MainViewParams) *MainView {
 	mv.menuDropdown.SetListStyles(menuUnselected, menuSelected)
 	mv.menuDropdown.SetTextOptions(" ", " ", " ", " ", " Menu ")
 	mv.menuDropdown.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		event = mv.eventHandlerBackForward(event)
+		event = mv.eventHandlerBrowserLike(event)
 		if event == nil {
 			return nil
 		}
@@ -544,7 +544,7 @@ func NewMainView(params *MainViewParams) *MainView {
 	})
 	mv.histogram.SetDataBinsSnapper(snapDataBinsInChartDot)
 	mv.histogram.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		event = mv.eventHandlerBackForward(event)
+		event = mv.eventHandlerBrowserLike(event)
 		if event == nil {
 			return nil
 		}
@@ -608,7 +608,7 @@ func NewMainView(params *MainViewParams) *MainView {
 	})
 
 	mv.logsTable.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		event = mv.eventHandlerBackForward(event)
+		event = mv.eventHandlerBrowserLike(event)
 		if event == nil {
 			return nil
 		}
@@ -814,14 +814,16 @@ func NewMainView(params *MainViewParams) *MainView {
 	return mv
 }
 
-// eventHandlerBackForward handles keyboard events for the browser-like history:
+// eventHandlerBrowserLike handles browser-like keyboard shortcuts:
 //
 // - Alt+Left: Go back
 // - Alt+Right: Go forward
+// - F5 or Ctrl+R: Refresh
+// - Shift+F5 or Alt+Ctrl+R: Hard refresh (also rebuild the index)
 //
 // If the event is handled, nil is returned; otherwise, the original event is
 // returned.
-func (mv *MainView) eventHandlerBackForward(event *tcell.EventKey) *tcell.EventKey {
+func (mv *MainView) eventHandlerBrowserLike(event *tcell.EventKey) *tcell.EventKey {
 	if event.Modifiers()&tcell.ModAlt > 0 {
 		switch event.Key() {
 		case tcell.KeyLeft:
@@ -834,8 +836,28 @@ func (mv *MainView) eventHandlerBackForward(event *tcell.EventKey) *tcell.EventK
 	}
 
 	switch event.Key() {
-	case tcell.KeyCtrlR, tcell.KeyF5:
-		mv.params.OnCmd("refresh", CmdOpts{Internal: true})
+	case tcell.KeyCtrlR:
+		cmd := "refresh"
+
+		// I'd like to support Shift+Ctrl+R here instead, but unfortunately
+		// most terminals don't distinguish between Ctrl+R and Shift+Ctrl+R,
+		// so gotta find some other shortcut. Using Alt+Ctrl+R because of this.
+		if event.Modifiers()&tcell.ModAlt > 0 {
+			cmd += "!"
+		}
+		mv.params.OnCmd(cmd, CmdOpts{Internal: true})
+		return nil
+
+	case tcell.KeyF5:
+		cmd := "refresh"
+
+		// I'd like to support Ctrl+F5 here as well, but unfortunately
+		// most terminals don't allow to capture that. Shift+F5 works though,
+		// so that's what we use.
+		if event.Modifiers()&tcell.ModShift > 0 {
+			cmd += "!"
+		}
+		mv.params.OnCmd(cmd, CmdOpts{Internal: true})
 		return nil
 	}
 
@@ -1548,6 +1570,11 @@ type doQueryParams struct {
 	// populated with a new item (it should be used exactly when we're navigating
 	// this browser-like history back and forth)
 	dontAddHistoryItem bool
+
+	// If refreshIndex is true, we'll drop the index file for all logstreams, and
+	// rebuild it from scratch (no-op for journalctl logstreams, because there's
+	// no nerdlog-maintained index for journalctl).
+	refreshIndex bool
 }
 
 func (mv *MainView) doQuery(params doQueryParams) {
@@ -1557,6 +1584,7 @@ func (mv *MainView) doQuery(params doQueryParams) {
 		Query: mv.query,
 
 		DontAddHistoryItem: params.dontAddHistoryItem,
+		RefreshIndex:       params.refreshIndex,
 	})
 }
 

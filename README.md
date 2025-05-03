@@ -255,9 +255,12 @@ The most conventional one is to just use Tab and Shift+Tab to switch between wid
 Some browser-like keyboard shortcuts are also supported (after all, one of the
 inspirations for Nerdlog were browser-based tools like Graylog):
 
-- `F5` or `Ctrl+R`: Refresh (i.e. rerun the same query again)
 - `Alt+Left`: Go back in history
 - `Alt+Right`: Go forward in history
+- `F5` or `Ctrl+R`: Refresh (i.e. rerun the same query again)
+- `Shift+F5` or `Alt+Ctrl+R`: Hard refresh, i.e. also rebuild the index for
+  every logstream (the index is only relevant for plain log files; so for
+  `journalctl`-powered logstreams, it's the same as regular Refresh)
 
 If you know Vim though, you'll feel right at home in nerdlog too since it supports a bunch of Vim-like keybindings:
 

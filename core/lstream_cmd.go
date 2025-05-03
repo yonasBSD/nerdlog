@@ -88,6 +88,11 @@ type lstreamCmdQueryLogs struct {
 	// --timestamp-until. It serves the same purpose as linesUntil for cases when
 	// we don't have line numbers (e.g. when using journalctl).
 	timestampUntil *timeAndNumMsgs
+
+	// If refreshIndex is true, we'll drop the index file, and rebuild it from
+	// scratch (no-op for journalctl logstreams, because there's no
+	// nerdlog-maintained index for journalctl).
+	refreshIndex bool
 }
 
 type lstreamCmdCtxQueryLogs struct {

@@ -1203,6 +1203,10 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 			)
 		}
 
+		if cmdCtx.cmd.queryLogs.refreshIndex {
+			parts = append(parts, "--refresh-index")
+		}
+
 		parts = append(parts, agentQueryTimeFormatArgs(&lsc.timeFormat.AWKExpr)...)
 
 		if cmdCtx.cmd.queryLogs.query != "" {

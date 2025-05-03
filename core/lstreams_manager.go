@@ -337,6 +337,8 @@ func (lsman *LStreamsManager) run() {
 						from:  req.queryLogs.From,
 						to:    req.queryLogs.To,
 						query: req.queryLogs.Query,
+
+						refreshIndex: req.queryLogs.RefreshIndex,
 					}
 
 					if req.queryLogs.LoadEarlier {

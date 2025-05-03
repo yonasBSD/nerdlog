@@ -185,6 +185,11 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 	case "refresh":
 		app.mainView.doQuery(doQueryParams{})
 
+	case "refresh!":
+		app.mainView.doQuery(doQueryParams{
+			refreshIndex: true,
+		})
+
 	default:
 		app.printError(fmt.Sprintf("unknown command %q", parts[0]))
 	}

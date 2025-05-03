@@ -19,9 +19,15 @@ var mainMenu = []menuItem{
 		},
 	},
 	{
-		Title: "Refresh              <Ctrl+R>   ",
+		Title: "Refresh              <F5>       ",
 		Handler: func(mv *MainView) {
 			mv.params.OnCmd("refresh", CmdOpts{Internal: true})
+		},
+	},
+	{
+		Title: "Hard refresh         <Shift+F5> ",
+		Handler: func(mv *MainView) {
+			mv.params.OnCmd("refresh!", CmdOpts{Internal: true})
 		},
 	},
 	{
