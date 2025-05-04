@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kevinburke/ssh_config"
+	"github.com/dimonomid/ssh_config"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,7 +17,7 @@ var testSSHConfig1 *ssh_config.Config
 func init() {
 	buf := bytes.NewBuffer(testSSHConfig1Str)
 	var err error
-	testSSHConfig1, err = ssh_config.Decode(buf)
+	testSSHConfig1, err = ssh_config.Decode(buf, false)
 	if err != nil {
 		panic(fmt.Sprintf("embedded ssh_config_1 is broken: %s", err.Error()))
 	}

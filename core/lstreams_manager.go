@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimonomid/ssh_config"
 	"github.com/juju/errors"
-	"github.com/kevinburke/ssh_config"
 
 	"github.com/dimonomid/nerdlog/log"
 )

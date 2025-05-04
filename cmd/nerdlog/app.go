@@ -12,8 +12,8 @@ import (
 	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/dimonomid/nerdlog/log"
+	"github.com/dimonomid/ssh_config"
 	"github.com/juju/errors"
-	"github.com/kevinburke/ssh_config"
 	"github.com/rivo/tview"
 )
 
