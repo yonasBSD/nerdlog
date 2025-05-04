@@ -97,7 +97,7 @@ func main() {
 	}
 
 	var clipboardInitErr error
-	if err := initClipboard(); err != nil {
+	if err := clipboardInit(); err != nil {
 		clipboardInitErr = err
 		fmt.Printf("NOTE: X Clipboard is not available: %s\n", clipboardInitErr.Error())
 	}

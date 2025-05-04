@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"golang.design/x/clipboard"
 )
 
 type MyTextViewParams struct {
@@ -124,7 +123,7 @@ func NewMyTextView(
 		switch event.Key() {
 		case tcell.KeyEnter:
 			// TODO: check if clipboard is actually available
-			clipboard.Write(clipboard.FmtText, []byte(rdv.params.Text))
+			clipboardWriteText([]byte(rdv.params.Text))
 			rdv.copyToClipboardBtn.SetLabel("Copied!")
 			return nil
 		}

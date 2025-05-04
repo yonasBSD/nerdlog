@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/juju/errors"
-	"golang.design/x/clipboard"
 )
 
 // NOTE: handleCmd is always called from the tview's event loop, so it's safe
@@ -122,7 +121,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 		qf := app.mainView.getQueryFull()
 		shellCmd := qf.MarshalShellCmd()
 		if app.params.clipboardInitErr == nil {
-			clipboard.Write(clipboard.FmtText, []byte(shellCmd))
+			clipboardWriteText([]byte(shellCmd))
 			app.printMsg("Copied to clipboard")
 		} else {
 			app.printError(fmt.Sprintf("Clipboard is not available: %s", app.params.clipboardInitErr.Error()))
