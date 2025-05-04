@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/dimonomid/nerdlog/log"
@@ -51,6 +52,11 @@ func main() {
 
 	initialTime := "-1h"
 	initialLStreams := "localhost"
+	if runtime.GOOS == "windows" {
+		// On Windows, "localhost" doesn't make much sense, since there are usually no
+		// plain log files and no journalctl, so using a different default here.
+		initialLStreams = "myserver.com:22"
+	}
 	initialQuery := ""
 	initialSelectQuery := DefaultSelectQuery
 	connectRightAway := false
