@@ -35,6 +35,7 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+      - "\(minor\)"
 
 binary_signs:
   - cmd: cosign

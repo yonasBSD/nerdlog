@@ -1023,7 +1023,15 @@ func (mv *MainView) applyHMState(lsmanState *core.LStreamsManagerState) {
 
 		sb.WriteString("Connecting to hosts...")
 
-		for logstream, connDetails := range lsmanState.ConnDetailsByLStream {
+		logstreams := make([]string, 0, len(lsmanState.ConnDetailsByLStream))
+		for logstream := range lsmanState.ConnDetailsByLStream {
+			logstreams = append(logstreams, logstream)
+		}
+
+		sort.Strings(logstreams)
+
+		for _, logstream := range logstreams {
+			connDetails := lsmanState.ConnDetailsByLStream[logstream]
 			sb.WriteString("\n")
 			sb.WriteString(fmt.Sprintf("%s: %s", logstream, connDetails.Err))
 		}
