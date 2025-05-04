@@ -10,12 +10,24 @@ import (
 type MessageViewParams struct {
 	App *tview.Application
 
-	MessageID       string
-	Title           string
-	Message         string
+	MessageID string
+	Title     string
+	Message   string
+
+	InputFields []MessageViewInputFieldParams
+
+	// OnInputFieldPressed is called whenever any key is pressed on any of the
+	// input fields, except for Tab / Shift+Tab.
+	//
+	// It can choose to handle the keypress, and return either the same or
+	// modified event (in which case the default handler will run), or nil
+	// (in which case, nothing else will run).
+	OnInputFieldPressed func(label string, idx int, value string, event *tcell.EventKey) *tcell.EventKey
+
 	Buttons         []string
 	OnButtonPressed func(label string, idx int)
-	OnEsc           func()
+
+	OnEsc func()
 
 	// Width and Height are 40 and 10 by default
 	Width, Height int
@@ -28,6 +40,11 @@ type MessageViewParams struct {
 	BackgroundColor tcell.Color
 }
 
+type MessageViewInputFieldParams struct {
+	Label      string
+	IsPassword bool
+}
+
 type MessageView struct {
 	params   MessageViewParams
 	mainView *MainView
@@ -36,8 +53,9 @@ type MessageView struct {
 	buttonsFlex *tview.Flex
 	frame       *tview.Frame
 
-	textView *tview.TextView
-	focusers []tview.Primitive
+	textView    *tview.TextView
+	inputFields []*tview.InputField
+	focusers    []tview.Primitive
 }
 
 // getMaxLineLength returns the length of the longest line in the given string.
@@ -82,15 +100,12 @@ func getNumLines(s string, screenWidth int) int {
 
 // GetOptimalMessageViewSize returns the optimal width and height for a
 // MessageView based on the screen width and the text to show.
-func GetOptimalMessageViewSize(screenWidth int, text string) (int, int) {
-	// extraWidth covers padding and border
-	extraWidth := 4
-	// extraHeight covers padding, border and buttons
-	extraHeight := 6
-
+//
+// extraWidth and extraHeight specify the width and height needed for other
+// elements, padding, border etc.
+func GetOptimalMessageViewSize(screenWidth, extraWidth, extraHeight int, text string) (int, int) {
 	width := getMaxLineLength(text) + extraWidth
 	height := extraHeight + getNumLines(text, screenWidth-extraWidth)
-
 	return width, height
 }
 
@@ -102,8 +117,32 @@ func NewMessageView(
 		mainView: mainView,
 	}
 
+	// Calculate how much height will be taken by all the input fields.
+	inputFieldsHeight := 0
+	for i, field := range msgv.params.InputFields {
+		// Except for the first field, there is a spacing.
+		if i > 0 {
+			inputFieldsHeight++
+		}
+
+		// One line for the field itself
+		inputFieldsHeight++
+
+		// If the label is present, then one more line.
+		if field.Label != "" {
+			inputFieldsHeight++
+		}
+	}
+
+	// extraWidth covers padding and border
+	extraWidth := 4
+	// extraHeight covers padding, border, buttons, and fields.
+	extraHeight := 6 + inputFieldsHeight
+
 	optimalWidth, optimalHeight := GetOptimalMessageViewSize(
 		mainView.screenWidth,
+		extraWidth,
+		extraHeight,
 		params.Message,
 	)
 
@@ -126,10 +165,61 @@ func NewMessageView(
 		msgv.textView.SetBackgroundColor(msgv.params.BackgroundColor)
 	}
 
-	msgv.msgboxFlex.AddItem(msgv.textView, 0, 1, len(params.Buttons) == 0)
+	msgv.msgboxFlex.AddItem(msgv.textView, 0, 1, len(params.Buttons) == 0 && len(params.InputFields) == 0)
+
+	for i, fieldParams := range msgv.params.InputFields {
+		fieldIdx := i
+
+		// Spacer
+		if fieldIdx > 0 {
+			msgv.msgboxFlex.AddItem(nil, 1, 0, false)
+		}
+
+		// Label
+		if fieldParams.Label != "" {
+			label := tview.NewTextView()
+			label.SetText(fieldParams.Label)
+			msgv.msgboxFlex.AddItem(label, 1, 0, false)
+		}
+
+		// Field itself
+		field := tview.NewInputField()
+		msgv.inputFields = append(msgv.inputFields, field)
+		msgv.msgboxFlex.AddItem(field, 1, 0, fieldIdx == 0)
+		msgv.focusers = append(msgv.focusers, field)
+		tabHandler := msgv.getGenericTabHandler(field)
+		if fieldParams.IsPassword {
+			field.SetMaskCharacter('*')
+		}
+		field.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			// Handle Esc key
+			switch event.Key() {
+			case tcell.KeyEsc:
+				if params.OnEsc != nil {
+					params.OnEsc()
+				}
+			}
+
+			// Handle Tab and Shift+Tab
+			event = tabHandler(event)
+			if event == nil {
+				return nil
+			}
+
+			// Call user-specified event handler
+			event = msgv.params.OnInputFieldPressed(
+				fieldParams.Label, fieldIdx, field.GetText(), event,
+			)
+			if event == nil {
+				return nil
+			}
+
+			return event
+		})
+	}
 
 	msgv.buttonsFlex = tview.NewFlex().SetDirection(tview.FlexColumn)
-	msgv.msgboxFlex.AddItem(msgv.buttonsFlex, 1, 1, len(params.Buttons) != 0)
+	msgv.msgboxFlex.AddItem(msgv.buttonsFlex, 1, 1, len(params.Buttons) != 0 && len(params.InputFields) == 0)
 
 	// Add a spacer at the left of the buttons, to make them centered
 	// (there's also a spacer at the right, added later)
@@ -171,7 +261,7 @@ func NewMessageView(
 		if buttonSize < 10 {
 			buttonSize = 10
 		}
-		msgv.buttonsFlex.AddItem(btn, buttonSize, 0, i == 0)
+		msgv.buttonsFlex.AddItem(btn, buttonSize, 0, i == 0 && len(params.InputFields) == 0)
 	}
 
 	// Add a spacer at the right of the buttons, to make them centered

@@ -61,7 +61,7 @@ type LStreamClient struct {
 
 	transport ShellTransport
 
-	connectResCh chan ShellConnResult
+	connectUpdCh chan ShellConnUpdate
 	enqueueCmdCh chan lstreamCmd
 
 	// timezone is a string received from the logstream
@@ -184,6 +184,8 @@ type LStreamClientUpdate struct {
 	BootstrapDetails *BootstrapDetails
 	BusyStage        *BusyStage
 
+	DataRequest *ShellConnDataRequest
+
 	// If TornDown is true, it means it's the last update from that client.
 	TornDown bool
 }
@@ -195,6 +197,10 @@ type LStreamClientUpdateState struct {
 
 type LStreamClientParams struct {
 	LogStream LogStream
+
+	// SSHKeys specifies paths to ssh keys to try, in the given order, until
+	// an existing key is found.
+	SSHKeys []string
 
 	Logger *log.Logger
 
@@ -211,7 +217,9 @@ type LStreamClientParams struct {
 // createTransport creates a shell transport accordingly to the provided
 // config. The config must be valid (e.g. it should contain exactly one item),
 // otherwise createTransport panics.
-func createTransport(config ConfigLogStreamShellTransport, logger *log.Logger) ShellTransport {
+func createTransport(
+	config ConfigLogStreamShellTransport, sshKeys []string, logger *log.Logger,
+) ShellTransport {
 	var transport ShellTransport
 
 	if config.SSH != nil {
@@ -220,6 +228,7 @@ func createTransport(config ConfigLogStreamShellTransport, logger *log.Logger) S
 		}
 
 		transport = NewShellTransportSSH(ShellTransportSSHParams{
+			SSHKeys:     sshKeys,
 			ConnDetails: *config.SSH,
 
 			Logger: logger,
@@ -248,7 +257,7 @@ func NewLStreamClient(params LStreamClientParams) *LStreamClient {
 		fmt.Sprintf("LSClient_%s", params.LogStream.Name),
 	)
 
-	transport := createTransport(params.LogStream.Transport, params.Logger)
+	transport := createTransport(params.LogStream.Transport, params.SSHKeys, params.Logger)
 
 	lsc := &LStreamClient{
 		params: params,
@@ -304,7 +313,7 @@ func (lsc *LStreamClient) changeState(newState LStreamClientState) {
 
 	switch oldState {
 	case LStreamClientStateConnecting:
-		lsc.connectResCh = nil
+		lsc.connectUpdCh = nil
 	case LStreamClientStateConnectedBusy:
 		lsc.curCmdCtx = nil
 		lsc.busyStage = BusyStage{}
@@ -323,8 +332,8 @@ func (lsc *LStreamClient) changeState(newState LStreamClientState) {
 	switch lsc.state {
 	case LStreamClientStateConnecting:
 		lsc.numConnAttempts++
-		lsc.connectResCh = make(chan ShellConnResult, 1)
-		lsc.transport.Connect(lsc.connectResCh)
+		lsc.connectUpdCh = make(chan ShellConnUpdate, 1)
+		lsc.transport.Connect(lsc.connectUpdCh)
 
 	case LStreamClientStateConnectedIdle:
 		if len(lsc.cmdQueue) > 0 {
@@ -369,45 +378,55 @@ func (lsc *LStreamClient) run() {
 
 	for {
 		select {
-		case res := <-lsc.connectResCh:
-			if res.Err != nil {
-				lsc.sendUpdate(&LStreamClientUpdate{
-					ConnDetails: &ConnDetails{
-						Err: fmt.Sprintf("attempt %d: %s", lsc.numConnAttempts, res.Err.Error()),
-					},
-				})
+		case upd := <-lsc.connectUpdCh:
+			if dataReq := upd.DataRequest; dataReq != nil {
+				// We need some data from the user.
 
-				lsc.changeState(LStreamClientStateDisconnected)
-				if lsc.tearingDown {
-					close(lsc.disconnectedBeforeTeardownCh)
+				lsc.sendUpdate(&LStreamClientUpdate{
+					DataRequest: dataReq,
+				})
+			} else if res := upd.Result; res != nil {
+				// The connection has either succeeded or failed.
+
+				if res.Err != nil {
+					lsc.sendUpdate(&LStreamClientUpdate{
+						ConnDetails: &ConnDetails{
+							Err: fmt.Sprintf("attempt %d: %s", lsc.numConnAttempts, res.Err.Error()),
+						},
+					})
+
+					lsc.changeState(LStreamClientStateDisconnected)
+					if lsc.tearingDown {
+						close(lsc.disconnectedBeforeTeardownCh)
+						continue
+					}
+
+					connectAfter = time.Now().Add(2 * time.Second)
 					continue
 				}
 
-				connectAfter = time.Now().Add(2 * time.Second)
-				continue
+				lsc.numConnAttempts = 0
+
+				lastUpdTime = time.Now()
+
+				stdoutLinesCh := make(chan string, 32)
+				stderrLinesCh := make(chan string, 32)
+
+				go getScannerFunc("stdout", res.Conn.Stdout(), stdoutLinesCh)()
+				go getScannerFunc("stderr", res.Conn.Stderr(), stderrLinesCh)()
+
+				lsc.conn = &connCtx{
+					conn:          res.Conn,
+					stdoutLinesCh: stdoutLinesCh,
+					stderrLinesCh: stderrLinesCh,
+				}
+				lsc.changeState(LStreamClientStateConnectedIdle)
+
+				// Send bootstrap command
+				lsc.startCmd(lstreamCmd{
+					bootstrap: &lstreamCmdBootstrap{},
+				})
 			}
-
-			lsc.numConnAttempts = 0
-
-			lastUpdTime = time.Now()
-
-			stdoutLinesCh := make(chan string, 32)
-			stderrLinesCh := make(chan string, 32)
-
-			go getScannerFunc("stdout", res.Conn.Stdout(), stdoutLinesCh)()
-			go getScannerFunc("stderr", res.Conn.Stderr(), stderrLinesCh)()
-
-			lsc.conn = &connCtx{
-				conn:          res.Conn,
-				stdoutLinesCh: stdoutLinesCh,
-				stderrLinesCh: stderrLinesCh,
-			}
-			lsc.changeState(LStreamClientStateConnectedIdle)
-
-			// Send bootstrap command
-			lsc.startCmd(lstreamCmd{
-				bootstrap: &lstreamCmdBootstrap{},
-			})
 
 		case cmd := <-lsc.enqueueCmdCh:
 			// Require a connection.

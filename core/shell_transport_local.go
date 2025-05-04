@@ -26,12 +26,12 @@ func NewShellTransportLocal(params ShellTransportLocalParams) *ShellTransportLoc
 }
 
 // Connect starts the local shell and sends the result to the provided channel.
-func (s *ShellTransportLocal) Connect(resCh chan<- ShellConnResult) {
+func (s *ShellTransportLocal) Connect(resCh chan<- ShellConnUpdate) {
 	go s.doConnect(resCh)
 }
 
 func (s *ShellTransportLocal) doConnect(
-	resCh chan<- ShellConnResult,
+	resCh chan<- ShellConnUpdate,
 ) (res ShellConnResult) {
 	logger := s.params.Logger
 
@@ -40,7 +40,9 @@ func (s *ShellTransportLocal) doConnect(
 			logger.Errorf("Connection failed: %s", res.Err)
 		}
 
-		resCh <- res
+		resCh <- ShellConnUpdate{
+			Result: &res,
+		}
 	}()
 
 	// Start the local shell command

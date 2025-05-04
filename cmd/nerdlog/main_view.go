@@ -1604,6 +1604,16 @@ type MessageboxParams struct {
 	OnButtonPressed func(label string, idx int)
 	OnEsc           func()
 
+	InputFields []MessageViewInputFieldParams
+
+	// OnInputFieldPressed is called whenever any key is pressed on any of the
+	// input fields, except for Tab / Shift+Tab.
+	//
+	// It can choose to handle the keypress, and return either the same or
+	// modified event (in which case the default handler will run), or nil
+	// (in which case, nothing else will run).
+	OnInputFieldPressed func(label string, idx int, value string, event *tcell.EventKey) *tcell.EventKey
+
 	Width, Height int
 
 	// By default, tview.AlignLeft (because it happens to be 0)
@@ -1623,11 +1633,11 @@ func (mv *MainView) showMessagebox(
 		params = &MessageboxParams{}
 	}
 
-	if params.Buttons == nil {
+	if params.Buttons == nil && len(params.InputFields) == 0 {
 		params.Buttons = []string{"OK"}
 	}
 
-	if params.OnButtonPressed == nil {
+	if len(params.Buttons) > 0 && params.OnButtonPressed == nil {
 		params.OnButtonPressed = func(label string, idx int) {
 			msgv.Hide()
 		}
@@ -1642,12 +1652,14 @@ func (mv *MainView) showMessagebox(
 	msgv = NewMessageView(mv, &MessageViewParams{
 		App: mv.params.App,
 
-		MessageID:       msgID,
-		Title:           title,
-		Message:         message,
-		Buttons:         params.Buttons,
-		OnButtonPressed: params.OnButtonPressed,
-		OnEsc:           params.OnEsc,
+		MessageID:           msgID,
+		Title:               title,
+		Message:             message,
+		InputFields:         params.InputFields,
+		OnInputFieldPressed: params.OnInputFieldPressed,
+		Buttons:             params.Buttons,
+		OnButtonPressed:     params.OnButtonPressed,
+		OnEsc:               params.OnEsc,
 
 		Width:  params.Width,
 		Height: params.Height,
@@ -1880,6 +1892,38 @@ func (mv *MainView) handleBootstrapError(err error) {
 func (mv *MainView) handleBootstrapWarning(err error) {
 	mv.showMessagebox("err", "Bootstrap warning", err.Error(), &MessageboxParams{
 		BackgroundColor: tcell.ColorDarkOrchid,
+	})
+}
+
+func (mv *MainView) handleDataRequest(dataReq *core.ShellConnDataRequest) {
+	msgID := "dataRequest"
+	title := dataReq.Title
+	if title == "" {
+		title = "Data request"
+	}
+	mv.showMessagebox(msgID, title, dataReq.Message, &MessageboxParams{
+		InputFields: []MessageViewInputFieldParams{
+			{
+				IsPassword: dataReq.DataKind == core.ShellConnDataKindPassword,
+			},
+		},
+		OnInputFieldPressed: func(label string, idx int, value string, event *tcell.EventKey) *tcell.EventKey {
+			switch event.Key() {
+			case tcell.KeyEnter:
+				dataReq.ResponseCh <- value
+				mv.hideModal(pageNameMessage+msgID, true)
+				return nil
+			}
+
+			return event
+		},
+		OnEsc: func() {
+			// We need to send an empty response to indicate that the user has refused
+			// to provide the info.
+			dataReq.ResponseCh <- ""
+			mv.hideModal(pageNameMessage+msgID, true)
+		},
+		BackgroundColor: tcell.ColorDarkGreen,
 	})
 }
 

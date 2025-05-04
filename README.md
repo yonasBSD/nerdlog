@@ -214,7 +214,6 @@ reading the [Core concepts](https://dmitryfrank.com/projects/nerdlog/article#cor
 ## Requirements
 
 - SSH access to the hosts is required (except for `localhost`). You can read about the related limitations and possible workarounds here: [Consequences of requiring SSH access](https://dmitryfrank.com/projects/nerdlog/article#consequences_of_requiring_ssh_access);
-- SSH agent must be running locally;
 - Gawk (GNU awk) is a requirement on the hosts, since nerlog relies on the `-b`
   option. So notably, `mawk` will not work. You need `gawk`;
 

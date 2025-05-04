@@ -21,6 +21,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	defaultSSHKeys := []string{
+		filepath.Join(homeDir, ".ssh", "id_ed25519"),
+		filepath.Join(homeDir, ".ssh", "id_ecdsa"),
+		filepath.Join(homeDir, ".ssh", "id_rsa"),
+	}
+
 	var (
 		flagTime        = pflag.StringP("time", "t", "", "Time range in the same format as accepted by the UI. Examples: '1h', 'Mar27 12:00'")
 		flagLStreams    = pflag.StringP("lstreams", "h", "", "Logstreams to connect to, as comma-separated glob patterns, e.g. 'foo-*,bar-*'")
@@ -28,6 +34,7 @@ func main() {
 		flagSelectQuery = pflag.StringP("selquery", "s", "", "SELECT-like query to specify which fields to show, like 'time STICKY, message, lstream, level_name AS level, *'")
 		flagLogLevel    = pflag.String("loglevel", "error", "This is NOT about the logs that nerdlog fetches from the remote servers, it's rather about nerdlog's own log. Valid values are: error, warning, info, verbose1, verbose2 or verbose3")
 		flagSSHConfig   = pflag.String("ssh-config", filepath.Join(homeDir, ".ssh", "config"), "ssh config file to use; set to an empty string to disable reading ssh config")
+		flagSSHKeys     = pflag.StringSlice("ssh-key", defaultSSHKeys, "ssh keys to use; only the first existing file will be used")
 
 		flagNoJournalctlAccessWarn = pflag.Bool("no-journalctl-access-warning", false, "Suppress the warning when journalctl is being used by the user who can't read all system logs")
 	)
@@ -120,6 +127,7 @@ func main() {
 			clipboardInitErr: clipboardInitErr,
 			logLevel:         logLevel,
 			sshConfigPath:    *flagSSHConfig,
+			sshKeys:          *flagSSHKeys,
 
 			noJournalctlAccessWarn: *flagNoJournalctlAccessWarn,
 		},

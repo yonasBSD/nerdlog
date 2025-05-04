@@ -52,6 +52,7 @@ type nerdlogAppParams struct {
 	clipboardInitErr error
 	logLevel         log.LogLevel
 	sshConfigPath    string
+	sshKeys          []string
 
 	noJournalctlAccessWarn bool
 }
@@ -190,6 +191,7 @@ func (app *nerdlogApp) initLStreamsManager(
 		var logResps []*core.LogRespTotal // TODO: perhaps we should also only keep the last one?
 		var bootstrapErrors []error
 		var bootstrapWarnings []error
+		var dataRequests []*core.ShellConnDataRequest
 
 		handleUpdate := func(upd core.LStreamsManagerUpdate) {
 			switch {
@@ -212,6 +214,9 @@ func (app *nerdlogApp) initLStreamsManager(
 					)
 				}
 
+			case upd.DataRequest != nil:
+				dataRequests = append(dataRequests, upd.DataRequest)
+
 			default:
 				panic("empty lstreams manager update")
 			}
@@ -229,7 +234,11 @@ func (app *nerdlogApp) initLStreamsManager(
 				// still receiving updates during the teardown; so if that's the case,
 				// just don't update the TUI.
 				if app.tviewApp != nil &&
-					(lastState != nil || len(logResps) > 0 || len(bootstrapErrors) > 0 || len(bootstrapWarnings) > 0) {
+					(lastState != nil ||
+						len(logResps) > 0 ||
+						len(bootstrapErrors) > 0 ||
+						len(bootstrapWarnings) > 0 ||
+						len(dataRequests) > 0) {
 
 					app.tviewApp.QueueUpdateDraw(func() {
 						if lastState != nil {
@@ -253,12 +262,17 @@ func (app *nerdlogApp) initLStreamsManager(
 						if len(bootstrapWarnings) > 0 {
 							app.mainView.handleBootstrapWarning(combineErrors(bootstrapWarnings))
 						}
+
+						for _, dataReq := range dataRequests {
+							app.mainView.handleDataRequest(dataReq)
+						}
 					})
 
 					lastState = nil
 					logResps = nil
 					bootstrapErrors = nil
 					bootstrapWarnings = nil
+					dataRequests = nil
 				}
 
 				// The same select again, but without the default case.
@@ -317,6 +331,7 @@ func (app *nerdlogApp) initLStreamsManager(
 
 		ConfigLogStreams: logstreamsCfg,
 		SSHConfig:        sshConfig,
+		SSHKeys:          params.sshKeys,
 
 		InitialLStreams: initialLStreams,
 

@@ -67,6 +67,10 @@ type LStreamsManagerParams struct {
 	// ~/.ssh/config.
 	SSHConfig *ssh_config.Config
 
+	// SSHKeys specifies paths to ssh keys to try, in the given order, until
+	// an existing key is found.
+	SSHKeys []string
+
 	Logger *log.Logger
 
 	InitialLStreams string
@@ -169,6 +173,7 @@ func (lsman *LStreamsManager) updateHAs() {
 		// We need to create a new logstream client
 		lsc := NewLStreamClient(LStreamClientParams{
 			LogStream: ls,
+			SSHKeys:   lsman.params.SSHKeys,
 			Logger:    lsman.params.Logger,
 			ClientID:  lsman.params.ClientID, //fmt.Sprintf("%s-%d", lsman.params.ClientID, rand.Int()),
 			UpdatesCh: lsman.lstreamUpdatesCh,
@@ -241,6 +246,10 @@ func (lsman *LStreamsManager) run() {
 			} else if upd.BusyStage != nil {
 				lsman.lscBusyStages[upd.Name] = *upd.BusyStage
 				lsman.sendStateUpdate()
+			} else if upd.DataRequest != nil {
+				lsman.params.UpdatesCh <- LStreamsManagerUpdate{
+					DataRequest: upd.DataRequest,
+				}
 			} else if upd.TornDown {
 				// One of our LStreamClient-s has just shut down, account for it properly.
 				lsman.lscPendingTeardown[upd.Name] -= 1
@@ -631,6 +640,8 @@ type LStreamsManagerUpdate struct {
 	LogResp *LogRespTotal
 
 	BootstrapIssue *BootstrapIssue
+
+	DataRequest *ShellConnDataRequest
 }
 
 type LStreamsManagerState struct {
