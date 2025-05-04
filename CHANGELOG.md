@@ -1,7 +1,7 @@
 # Changelog
 
 
-## [1.5.0](https://github.com/dimonomid/nerdlog/compare/v1.4.0...v1.5.0) (2025-05-04)
+## [1.5.0](https://github.com/dimonomid/nerdlog/compare/v1.3.0...v1.5.0) (2025-05-04)
 
 
 ### Features
