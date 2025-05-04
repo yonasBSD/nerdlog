@@ -56,7 +56,11 @@ func (st *ShellTransportSSH) doConnect(
 
 	var sshClient *ssh.Client
 
-	conf := getClientConfig(logger, connDetails.Host.User)
+	conf, err := getClientConfig(logger, connDetails.Host.User)
+	if err != nil {
+		res.Err = errors.Annotatef(err, "getting ssh client for %s", connDetails.Host.User)
+		return res
+	}
 
 	if connDetails.Jumphost != nil {
 		logger.Infof("Connecting via jumphost")
@@ -165,10 +169,10 @@ func dialWithTimeout(client *ssh.Client, protocol, hostAddr string, timeout time
 	}
 }
 
-func getClientConfig(logger *log.Logger, username string) *ssh.ClientConfig {
+func getClientConfig(logger *log.Logger, username string) (*ssh.ClientConfig, error) {
 	auth, err := getSSHAgentAuth(logger)
 	if err != nil {
-		panic(err.Error())
+		return nil, errors.Trace(err)
 	}
 
 	return &ssh.ClientConfig{
@@ -179,7 +183,7 @@ func getClientConfig(logger *log.Logger, username string) *ssh.ClientConfig {
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 
 		Timeout: connectionTimeout,
-	}
+	}, nil
 }
 
 var (
@@ -188,12 +192,17 @@ var (
 )
 
 func getSSHAgentAuth(logger *log.Logger) (ssh.AuthMethod, error) {
+	sshAuthSock := os.Getenv("SSH_AUTH_SOCK")
+	if sshAuthSock == "" {
+		return nil, errors.Errorf("ssh-agent and SSH_AUTH_SOCK env var are required for ssh connection")
+	}
+
 	sshAuthMethodSharedMtx.Lock()
 	defer sshAuthMethodSharedMtx.Unlock()
 
 	if sshAuthMethodShared == nil {
 		logger.Infof("Initializing sshAuthMethodShared...")
-		sshAgent, err := net.Dial("unix", os.Getenv("SSH_AUTH_SOCK"))
+		sshAgent, err := net.Dial("unix", sshAuthSock)
 		if err != nil {
 			logger.Infof("Failed to initialize sshAuthMethodShared: %s", err.Error())
 			return nil, errors.Trace(err)
@@ -233,7 +242,10 @@ func getJumphostClient(logger *log.Logger, jhConfig *ConfigHost) (*ssh.Client, e
 			return nil, errors.New("Address not found")
 		}
 
-		conf := getClientConfig(logger, jhConfig.User)
+		conf, err := getClientConfig(logger, jhConfig.User)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
 
 		jh, err = ssh.Dial("tcp", jhConfig.Addr, conf)
 		if err != nil {
