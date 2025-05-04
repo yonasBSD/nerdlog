@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -303,8 +304,6 @@ func (app *nerdlogApp) initLStreamsManager(
 		sshConfigFile, err := os.Open(params.sshConfigPath)
 		if err != nil {
 			if !os.IsNotExist(err) {
-				// TODO: would perhaps be more useful if we warn the user about it,
-				// but still proceed.
 				return errors.Annotatef(
 					err,
 					"reading ssh config from %s (path is configurable via --ssh-config)",
@@ -312,16 +311,32 @@ func (app *nerdlogApp) initLStreamsManager(
 				)
 			}
 		} else {
+			defer sshConfigFile.Close()
 			var err error
-			sshConfig, err = ssh_config.Decode(sshConfigFile)
+			sshConfig, err = ssh_config.Decode(sshConfigFile, false)
 			if err != nil {
-				// TODO: would perhaps be more useful if we warn the user about it,
-				// but still proceed.
-				return errors.Annotatef(
-					err,
-					"parsing ssh config from %s (path is configurable via --ssh-config)",
-					params.sshConfigPath,
-				)
+				// Try again but ignoring Match
+				sshConfigFile, _ := os.Open(params.sshConfigPath)
+				defer sshConfigFile.Close()
+				var err error
+				sshConfig, err = ssh_config.Decode(sshConfigFile, true)
+				if err != nil {
+					return errors.Annotatef(
+						err,
+						"parsing ssh config from %s (path is configurable via --ssh-config)",
+						params.sshConfigPath,
+					)
+				}
+
+				if os.Getenv("NERDLOG_NO_WARN_SSH_MATCH") == "" {
+					// Apparently there is a Match directive. Let's warn the user about it,
+					// but still continue.
+					fmt.Printf("Your SSH config %s has a Match directive, fyi it'll be ignored, since Nerdlog can't parse this directive yet (see https://github.com/kevinburke/ssh_config/issues/6).\n", params.sshConfigPath)
+					fmt.Printf("Fyi you can provide a different ssh config with the --ssh-config flag.\n")
+					fmt.Printf("To disable this warning, set NERDLOG_NO_WARN_SSH_MATCH environment variable to 1.\n")
+					fmt.Printf("Press Enter to continue.\n")
+					bufio.NewReader(os.Stdin).ReadBytes('\n')
+				}
 			}
 		}
 	}
