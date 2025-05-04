@@ -154,6 +154,7 @@ type MainView struct {
 type modalFocusItem struct {
 	pageName          string
 	modal             tview.Primitive
+	modalGrid         *tview.Grid
 	previouslyFocused tview.Primitive
 }
 
@@ -948,7 +949,7 @@ func (mv *MainView) bumpOverlay() {
 	// otherwise, print a message in the command line.
 	text := string(mv.overlaySpinner) + " " + mv.overlayText
 	if !mv.overlayMsgViewIsMinimized {
-		mv.overlayMsgView.textView.SetText(text)
+		mv.overlayMsgView.SetText(text, true)
 	} else {
 		mv.printOverlayMsgInCmdline(text)
 	}
@@ -1713,22 +1714,19 @@ func (mv *MainView) showOriginalMsg(msg core.LogMsg) {
 }
 
 func (mv *MainView) showModal(pageName string, primitive tview.Primitive, width, height int, focus bool) {
+	modalGrid := tview.NewGrid().
+		SetColumns(0, width, 0).
+		SetRows(0, height, 0).
+		AddItem(primitive, 1, 1, 1, 1, 0, 0, true)
+
 	mv.modalsFocusStack = append(mv.modalsFocusStack, modalFocusItem{
 		pageName:          pageName,
 		modal:             primitive,
+		modalGrid:         modalGrid,
 		previouslyFocused: mv.params.App.GetFocus(),
 	})
 
-	// Returns a new primitive which puts the provided primitive in the center and
-	// sets its size to the given width and height.
-	modal := func(p tview.Primitive, width, height int) tview.Primitive {
-		return tview.NewGrid().
-			SetColumns(0, width, 0).
-			SetRows(0, height, 0).
-			AddItem(p, 1, 1, 1, 1, 0, 0, true)
-	}
-
-	mv.rootPages.AddPage(pageName, modal(primitive, width, height), true, true)
+	mv.rootPages.AddPage(pageName, modalGrid, true, true)
 
 	if focus {
 		mv.params.App.SetFocus(primitive)
@@ -1748,6 +1746,16 @@ func (mv *MainView) hideModal(pageName string, focusAfterPageRemoval bool) {
 		// pages inevitably messes with focus, and so if we want to keep it
 		// unchanged, we have to set it back manually.
 		mv.params.App.SetFocus(prevFocused)
+	}
+}
+
+func (mv *MainView) resizeModal(pageName string, width, height int) {
+	for _, item := range mv.modalsFocusStack {
+		if item.pageName == pageName {
+			item.modalGrid.SetColumns(0, width, 0)
+			item.modalGrid.SetRows(0, height, 0)
+			break
+		}
 	}
 }
 

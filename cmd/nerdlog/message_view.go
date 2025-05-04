@@ -56,6 +56,9 @@ type MessageView struct {
 	textView    *tview.TextView
 	inputFields []*tview.InputField
 	focusers    []tview.Primitive
+
+	curWidth  int
+	curHeight int
 }
 
 // getMaxLineLength returns the length of the longest line in the given string.
@@ -117,34 +120,7 @@ func NewMessageView(
 		mainView: mainView,
 	}
 
-	// Calculate how much height will be taken by all the input fields.
-	inputFieldsHeight := 0
-	for i, field := range msgv.params.InputFields {
-		// Except for the first field, there is a spacing.
-		if i > 0 {
-			inputFieldsHeight++
-		}
-
-		// One line for the field itself
-		inputFieldsHeight++
-
-		// If the label is present, then one more line.
-		if field.Label != "" {
-			inputFieldsHeight++
-		}
-	}
-
-	// extraWidth covers padding and border
-	extraWidth := 4
-	// extraHeight covers padding, border, buttons, and fields.
-	extraHeight := 6 + inputFieldsHeight
-
-	optimalWidth, optimalHeight := GetOptimalMessageViewSize(
-		mainView.screenWidth,
-		extraWidth,
-		extraHeight,
-		params.Message,
-	)
+	optimalWidth, optimalHeight := msgv.getOptimalSize(params.Message)
 
 	if msgv.params.Width == 0 {
 		msgv.params.Width = optimalWidth
@@ -275,6 +251,9 @@ func NewMessageView(
 		msgv.frame.SetBackgroundColor(msgv.params.BackgroundColor)
 	}
 
+	msgv.curWidth = msgv.params.Width
+	msgv.curHeight = msgv.params.Height
+
 	return msgv
 }
 
@@ -289,6 +268,70 @@ func (msgv *MessageView) Show() {
 
 func (msgv *MessageView) Hide() {
 	msgv.mainView.hideModal(pageNameMessage+msgv.params.MessageID, !msgv.params.NoFocus)
+}
+
+// SetText updates the text on the messagebox, and if resizeIfNeeded is true
+// and the messagebox is not big enough, then also expands itself.
+func (msgv *MessageView) SetText(text string, resizeIfNeeded bool) {
+	msgv.textView.SetText(text)
+
+	if resizeIfNeeded {
+		optimalWidth, optimalHeight := msgv.getOptimalSize(text)
+
+		needResize := false
+		if msgv.curWidth < optimalWidth {
+			msgv.curWidth = optimalWidth
+			needResize = true
+		}
+
+		if msgv.curHeight < optimalHeight {
+			msgv.curHeight = optimalHeight
+			needResize = true
+		}
+
+		if needResize {
+			msgv.mainView.resizeModal(
+				pageNameMessage+msgv.params.MessageID,
+				msgv.curWidth,
+				msgv.curHeight,
+			)
+		}
+	}
+}
+
+// getOptimalSize returns optimal width and height for the message box with
+// its input fields etc.
+func (msgv *MessageView) getOptimalSize(text string) (int, int) {
+	// Calculate how much height will be taken by all the input fields.
+	inputFieldsHeight := 0
+	for i, field := range msgv.params.InputFields {
+		// Except for the first field, there is a spacing.
+		if i > 0 {
+			inputFieldsHeight++
+		}
+
+		// One line for the field itself
+		inputFieldsHeight++
+
+		// If the label is present, then one more line.
+		if field.Label != "" {
+			inputFieldsHeight++
+		}
+	}
+
+	// extraWidth covers padding and border
+	extraWidth := 4
+	// extraHeight covers padding, border, buttons, and fields.
+	extraHeight := 6 + inputFieldsHeight
+
+	optimalWidth, optimalHeight := GetOptimalMessageViewSize(
+		msgv.mainView.screenWidth,
+		extraWidth,
+		extraHeight,
+		text,
+	)
+
+	return optimalWidth, optimalHeight
 }
 
 func (msgv *MessageView) getGenericTabHandler(curPrimitive tview.Primitive) func(event *tcell.EventKey) *tcell.EventKey {
