@@ -26,6 +26,7 @@ archives:
       - tar.gz
     name_template: >-
       {{ .ProjectName }}_
+      {{- tolower .Version }}_
       {{- tolower .Os }}_
       {{- if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
@@ -51,8 +52,8 @@ binary_signs:
       - --output-certificate=${certificate}
       - ${artifact}
       - --yes
-    certificate: '${artifact}_{{- tolower .Os }}_{{- if eq .Arch "386" }}i386{{- else }}{{ .Arch }}{{ end }}{{- if .Arm }}v{{ .Arm }}{{ end }}.pem'
-    signature: '${artifact}_{{- tolower .Os }}_{{- if eq .Arch "386" }}i386{{- else }}{{ .Arch }}{{ end }}{{- if .Arm }}v{{ .Arm }}{{ end }}.sig'
+    certificate: '${artifact}_{{- tolower .Version }}_{{- tolower .Os }}_{{- if eq .Arch "386" }}i386{{- else }}{{ .Arch }}{{ end }}{{- if .Arm }}v{{ .Arm }}{{ end }}.pem'
+    signature: '${artifact}_{{- tolower .Version }}_{{- tolower .Os }}_{{- if eq .Arch "386" }}i386{{- else }}{{ .Arch }}{{ end }}{{- if .Arm }}v{{ .Arm }}{{ end }}.sig'
     output: true
 
 checksum:
