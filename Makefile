@@ -1,12 +1,23 @@
+VERSION := $(shell git describe --dirty --tags --always)
+COMMIT := $(shell git rev-parse HEAD)
+DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+
 all: clean nerdlog
 
 .PHONY: nerdlog
 nerdlog:
-	go build -o bin/nerdlog ./cmd/nerdlog
+	@go build \
+		-o bin/nerdlog \
+		-ldflags "\
+			-X 'github.com/dimonomid/nerdlog/version.version=$(VERSION)' \
+			-X 'github.com/dimonomid/nerdlog/version.commit=$(COMMIT)' \
+			-X 'github.com/dimonomid/nerdlog/version.date=$(DATE)'\
+		" \
+		./cmd/nerdlog
 
 .PHONY: clean
 clean:
-	rm -rf bin
+	@rm -rf bin
 
 PREFIX ?= /usr/local
 DESTDIR ?=

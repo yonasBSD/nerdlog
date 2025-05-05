@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/dimonomid/nerdlog/version"
+	"github.com/gdamore/tcell/v2"
 	"github.com/juju/errors"
 )
 
@@ -187,6 +189,11 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 	case "refresh!":
 		app.mainView.doQuery(doQueryParams{
 			refreshIndex: true,
+		})
+
+	case "version", "about":
+		app.mainView.showMessagebox("version", "Version", version.VersionFullDescr(), &MessageboxParams{
+			BackgroundColor: tcell.ColorDarkBlue,
 		})
 
 	default:

@@ -8,6 +8,7 @@ import (
 
 	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/dimonomid/nerdlog/log"
+	"github.com/dimonomid/nerdlog/version"
 	"github.com/spf13/pflag"
 )
 
@@ -29,6 +30,8 @@ func main() {
 	}
 
 	var (
+		flagVersion = pflag.BoolP("version", "v", false, "Print version info and exit")
+
 		flagTime        = pflag.StringP("time", "t", "", "Time range in the same format as accepted by the UI. Examples: '1h', 'Mar27 12:00'")
 		flagLStreams    = pflag.StringP("lstreams", "h", "", "Logstreams to connect to, as comma-separated glob patterns, e.g. 'foo-*,bar-*'")
 		flagQuery       = pflag.StringP("pattern", "p", "", "Initial awk pattern to use")
@@ -41,6 +44,11 @@ func main() {
 	)
 
 	pflag.Parse()
+
+	if *flagVersion {
+		fmt.Print(version.VersionFullDescr())
+		os.Exit(0)
+	}
 
 	queryCLHistory, err := clhistory.New(clhistory.CLHistoryParams{
 		Filename: filepath.Join(homeDir, ".nerdlog_query_history"),

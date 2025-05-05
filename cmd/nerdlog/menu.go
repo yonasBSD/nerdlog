@@ -36,6 +36,12 @@ var mainMenu = []menuItem{
 			mv.params.OnCmd("xclip", CmdOpts{Internal: true})
 		},
 	},
+	{
+		Title: "About                :version   ",
+		Handler: func(mv *MainView) {
+			mv.params.OnCmd("version", CmdOpts{Internal: true})
+		},
+	},
 }
 
 func getMainMenuTitles() []string {

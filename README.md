@@ -316,6 +316,8 @@ can be done from the Menu too, or using a keyboard shortcut `Alt+Ctrl+R` or
 
 `:disconnect` Disconnect from all logstreams
 
+`:version` or `:about` Show version info
+
 `:set option=value` Set option to the new value
 
 `:set option?` Get current value of an option

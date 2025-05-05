@@ -14,6 +14,12 @@ builds:
       - windows
       - darwin
     main: ./cmd/nerdlog
+    ldflags:
+      - '-s -w'
+      - '-X github.com/dimonomid/nerdlog/version.version={{.Version}}{{- if .IsGitDirty }}-dirty{{- end }}'
+      - '-X github.com/dimonomid/nerdlog/version.commit={{.Commit}}'
+      - '-X github.com/dimonomid/nerdlog/version.date={{.Date}}'
+      - '-X github.com/dimonomid/nerdlog/version.builtBy=goreleaser'
 
 archives:
   - formats:
