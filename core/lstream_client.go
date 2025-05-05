@@ -963,6 +963,12 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 
 		stdinBuf.Write([]byte("echo reset_output\n"))
 		stdinBuf.Write([]byte("echo reset_output 1>&2\n"))
+
+		// Make sure that we're in the user's home directory. In most cases it's
+		// redundant: when we connect via ssh, we're already in the home dir; but
+		// for localhost, it's not; so setting it explicitly.
+		stdinBuf.Write([]byte("cd\n"))
+
 		stdinBuf.Write([]byte("("))
 		stdinBuf.Write([]byte("  cat <<- 'EOF' > " + lsc.getLStreamNerdlogAgentPath() + "\n" + nerdlogAgentSh + "EOF\n"))
 		stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
