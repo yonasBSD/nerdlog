@@ -1,0 +1,25 @@
+logfile:/tmp/nerdlog_agent_test_output/decreased_timestamps/01_basic/logfile.1:0
+logfile:/tmp/nerdlog_agent_test_output/decreased_timestamps/01_basic/logfile:287
+s:Mar 10 15:10,1
+s:Mar 10 15:20,1
+s:Mar 10 14:17,1
+s:Mar 10 15:03,1
+s:Mar 10 14:55,1
+s:Mar 10 14:49,1
+s:Mar 10 15:18,1
+s:Mar 10 14:11,1
+s:Mar 10 14:30,1
+s:Mar 10 14:03,2
+s:Mar 10 15:29,1
+s:Mar 10 14:40,5
+s:Mar 10 14:31,1
+s:Mar 10 14:24,1
+m:371:Mar 10 14:40:31 myhost cron[5954]: <emerg> API request failed
+m:372:Mar 10 14:49:39 myhost cron[3244]: <err> Maintenance mode enabled
+m:373:Mar 10 14:55:47 myhost authpriv[6417]: <emerg> File not found
+m:374:Mar 10 15:03:29 myhost lpr[3475]: <warning> System configuration restored
+m:375:Mar 10 15:10:41 myhost daemon[7047]: <err> Data corruption detected
+m:376:Mar 10 15:18:01 myhost kern[4985]: <emerg> DNS resolution failed
+m:377:Mar 10 15:20:48 myhost user[7937]: <err> User password changed
+m:378:Mar 10 15:29:45 myhost authpriv[7718]: <emerg> Database query failed
+exit_code:0

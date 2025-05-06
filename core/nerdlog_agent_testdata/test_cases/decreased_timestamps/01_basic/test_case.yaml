@@ -1,0 +1,7 @@
+descr: "Initial basic test case, no messages with decreased timestamp are requested"
+logfiles:
+  kind: all_from_dir
+  dir: ../../../logfiles/small_with_decreased_timestamp
+cur_year: 2025
+cur_month: 3
+args: ["--max-num-lines", "8", "--from", "2025-03-10-14:00"]

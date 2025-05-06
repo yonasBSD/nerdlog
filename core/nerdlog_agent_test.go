@@ -158,6 +158,16 @@ func runTestCase(t *testing.T, nerdlogAgentShFname, testCasesDir, testName strin
 	// TODO: add an env var or something to disable the tests for indexing up.
 	//return nil
 
+	// indexReduceStep specifies how many lines we remove from the index at every
+	// step here. For most tests, it's 25.
+	indexReduceStep := 25
+
+	// For the tests of handling decreased timestamps, reduce the index by a single
+	// line, to make sure that some corner case doesn't slip through.
+	if strings.Contains(testName, "decreased") {
+		indexReduceStep = 1
+	}
+
 	// Backup the resulting fully-built index
 	indexFullFname := filepath.Join(testOutputDir, "nerdlog_agent_index_full")
 	if err := copyFile(indexFname, indexFullFname); err != nil {
@@ -184,7 +194,7 @@ func runTestCase(t *testing.T, nerdlogAgentShFname, testCasesDir, testName strin
 	// so we increment it.
 	minLineno += 1
 
-	for keepLines := numLines - 1; ; keepLines -= 25 {
+	for keepLines := numLines - 1; ; keepLines -= indexReduceStep {
 		// If we step too much below the min, use the min (and we'll break below).
 		if keepLines < minLineno {
 			keepLines = minLineno

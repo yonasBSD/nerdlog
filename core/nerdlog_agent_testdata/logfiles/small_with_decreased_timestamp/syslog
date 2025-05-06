@@ -1,0 +1,91 @@
+Mar 10 10:00:01 myhost kern[5159]: <emerg> Disk space reclaimed
+Mar 10 10:14:05 myhost auth[8368]: <err> Database schema updated
+Mar 10 10:20:17 myhost syslog[4163]: <emerg> System health check failed
+Mar 10 10:20:46 myhost lpr[891]: <warning> User session timed out
+Mar 10 10:24:32 myhost user[8515]: <warning> Cache cleared
+Mar 10 10:27:26 myhost kern[2205]: <crit> Session token expired
+Mar 10 10:27:26 myhost cron[9005]: <notice> File transfer completed
+Mar 10 10:32:21 myhost daemon[8000]: <notice> Failed login attempt
+Mar 10 10:32:21 myhost mail[7726]: <notice> Error reading file
+Mar 10 10:33:00 myhost kern[4506]: <emerg> Service request queued
+Mar 10 10:34:31 myhost cron[935]: <err> Database connection error
+Mar 10 10:36:14 myhost user[2831]: <debug> File system full
+Mar 10 10:38:25 myhost mail[8342]: <emerg> User account disabled
+Mar 10 10:45:04 myhost authpriv[7892]: <err> Memory usage high
+Mar 10 10:51:01 myhost user[3758]: <crit> System running low on resources
+Mar 10 10:57:37 myhost news[5185]: <alert> Insufficient privileges
+Mar 10 11:00:27 myhost authpriv[2865]: <alert> Database migration failed
+Mar 10 11:00:27 myhost mail[639]: <err> Resource utilization warning
+Mar 10 11:02:22 myhost mail[4173]: <notice> Database query failed
+Mar 10 11:02:35 myhost ftp[8645]: <info> File not found
+Mar 10 11:11:53 myhost uucp[1219]: <warning> File transfer completed
+Mar 10 11:17:27 myhost syslog[5562]: <info> Database migration completed
+Mar 10 11:26:38 myhost cron[5171]: <notice> Database schema updated
+Mar 10 11:33:00 myhost daemon[8540]: <emerg> User login successful
+Mar 10 11:39:29 myhost ftp[8120]: <debug> Process started
+Mar 10 11:41:03 myhost lpr[5285]: <notice> User session started
+Mar 10 11:46:34 myhost user[7798]: <err> Application crash reported
+Mar 10 11:47:58 myhost news[3646]: <notice> Disk space reclaimed
+Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:49:44 myhost authpriv[2883]: non-ascii chars: тест тест
+Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:45:01 myhost syslog[581]: <alert> Some decreased timestamp 1
+Mar 10 11:45:01 myhost syslog[581]: <alert> Some decreased timestamp 2
+Mar 10 11:46:28 myhost syslog[581]: <alert> Some decreased timestamp 3
+Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:49:44 myhost syslog[581]: <emerg> User login successful
+Mar 10 11:58:51 myhost cron[3860]: <emerg> File download started
+Mar 10 12:07:19 myhost cron[8011]: <warning> Scheduled task executed
+Mar 10 12:14:29 myhost auth[1100]: <debug> Database connection error
+Mar 10 12:23:53 myhost lpr[8595]: <crit> IP address conflict detected
+Mar 10 12:32:50 myhost user[1625]: <emerg> Security alert raised
+Mar 10 12:34:00 myhost news[2627]: <debug> Disk space reclaimed
+Mar 10 12:40:35 myhost syslog[7547]: <notice> Configuration applied successfully
+Mar 10 12:49:19 myhost ftp[7645]: <crit> Service dependency failure
+Mar 10 12:57:19 myhost kern[3195]: <warning> Disk space reclaimed
+Mar 10 12:59:28 myhost lpr[1742]: <info> File system full
+Mar 10 13:03:17 myhost auth[1923]: <alert> User session ended
+Mar 10 13:06:35 myhost ftp[2193]: <debug> Hardware upgrade completed
+Mar 10 13:15:35 myhost daemon[9098]: <emerg> Database schema updated
+Mar 10 13:20:54 myhost authpriv[6551]: <alert> Configuration reload successful
+Mar 10 13:20:54 myhost ftp[1165]: <crit> File checksum mismatch
+Mar 10 13:24:15 myhost kern[3144]: <warning> Service dependency failure
+Mar 10 13:30:09 myhost news[4041]: <alert> Scheduled task failed
+Mar 10 13:30:09 myhost ftp[757]: <alert> User authentication successful
+Mar 10 13:35:38 myhost ftp[7343]: <debug> Database connection error
+Mar 10 13:39:41 myhost lpr[7601]: <crit> Scheduled task executed
+Mar 10 13:44:01 myhost cron[1073]: <notice> Network speed reduced
+Mar 10 13:44:01 myhost auth[6933]: <warning> Resource utilization warning
+Mar 10 13:44:01 myhost cron[8282]: <err> Software version updated
+Mar 10 13:46:03 myhost news[2951]: <emerg> Firewall rule deleted
+Mar 10 13:53:59 myhost news[4023]: <warning> IP address conflict detected
+Mar 10 13:55:36 myhost mail[2816]: <err> Authentication failure
+Mar 10 13:56:26 myhost news[3992]: <notice> Cache cleared
+Mar 10 14:03:15 myhost kern[6107]: <notice> Unauthorized access attempt
+Mar 10 14:03:15 myhost daemon[4875]: <alert> API request failed
+Mar 10 14:11:06 myhost news[8452]: <warning> Connection established
+Mar 10 14:17:20 myhost mail[6016]: <alert> File download started
+Mar 10 14:24:04 myhost user[1101]: <warning> Service health check failed
+Mar 10 14:30:41 myhost uucp[8848]: <emerg> Backup completed
+Mar 10 14:31:43 myhost uucp[6798]: <alert> Resource utilization warning
+Mar 10 14:40:07 myhost daemon[1292]: <err> Scheduled task failed
+Mar 10 14:40:07 myhost ftp[8281]: <notice> Service initialization failed
+Mar 10 14:40:07 myhost news[3332]: <crit> Session token expired
+Mar 10 14:40:31 myhost daemon[7633]: <debug> Process crashed
+Mar 10 14:40:31 myhost cron[5954]: <emerg> API request failed
+Mar 10 14:49:39 myhost cron[3244]: <err> Maintenance mode enabled
+Mar 10 14:55:47 myhost authpriv[6417]: <emerg> File not found
+Mar 10 15:03:29 myhost lpr[3475]: <warning> System configuration restored
+Mar 10 15:10:41 myhost daemon[7047]: <err> Data corruption detected
+Mar 10 15:18:01 myhost kern[4985]: <emerg> DNS resolution failed
+Mar 10 15:20:48 myhost user[7937]: <err> User password changed
+Mar 10 15:29:45 myhost authpriv[7718]: <emerg> Database query failed

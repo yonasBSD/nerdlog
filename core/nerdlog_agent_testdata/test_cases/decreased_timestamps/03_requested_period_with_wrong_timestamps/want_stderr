@@ -1,0 +1,27 @@
+debug:index file doesn't exist or is empty, gonna refresh it
+p:stage:1:indexing from scratch
+p:p:5
+p:p:10
+p:p:15
+p:p:20
+p:p:25
+p:p:30
+p:p:35
+p:p:40
+p:p:45
+p:p:50
+p:p:55
+p:p:60
+p:p:65
+p:p:70
+p:p:75
+p:p:75
+p:p:80
+p:p:85
+p:p:90
+p:p:95
+debug:the from 2025-03-10-11:45 is found: 314 (20869)
+debug:the to 2025-03-10-11:47 is found: 315 (20937)
+p:stage:3:querying logs
+debug:Getting logs from offset 1713, only 68 bytes, all in the latest /tmp/nerdlog_agent_test_output/decreased_timestamps/03_requested_period_with_wrong_timestamps/logfile
+p:stage:4:done

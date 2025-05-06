@@ -401,14 +401,31 @@ function run_awk_script_logfiles {
   awk_script='
   '$awk_func_print_percentage'
 
-  BEGIN { bytenr=1; curline=0; maxlines='$max_num_lines'; lastPercent=0 }
+  BEGIN {
+    bytenr=1; curline=0; maxlines='$max_num_lines'; lastPercent=0;
+    prevMinKey="";
+  }
   { bytenr += length($0)+1 }
   NR % 100 == 0 {
     printPercentage(bytenr, '$num_bytes_to_scan')
   }
   '$awk_pattern'
   {
-    stats['"$awktime_minute_key"']++;
+    # Account for decreased timestamps.
+    #
+    # NOTE: to make it produce the correct result in all cases, this check
+    # needs to be before the pattern check, but we intentionally avoid doing
+    # that because it slows things down by 5-10% when the pattern filters out
+    # most of the lines, which I think is not worth it to account for this
+    # corner case.
+    curMinKey = '"$awktime_minute_key"';
+    if (curMinKey < prevMinKey) {
+      curMinKey = prevMinKey;
+    } else {
+      prevMinKey = curMinKey;
+    }
+
+    stats[curMinKey]++;
 
     '$lines_until_check'
 
@@ -778,11 +795,10 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
 # NOTE: this script MUST be executed with the "-b" awk key, which means that
 # awk will work in terms of bytes, not characters. We use length($0) there and
 # we rely on it being number of bytes.
-# TODO: better rewrite this indexing stuff in perl.
 
   scriptInitFromLastTimestr='
     lastHHMM = substr(lastTimestr, 8, 5);
-    last3 = lastHHMM ":00"'
+    '
 
   scriptSetCurTimestr='
     bytenr_cur = bytenr_next - length($0) - 1;
@@ -793,9 +809,12 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
     hhmm = '"$awktime_hhmm"';
 
     curTimestr = year "-" month "-" day "-" hhmm;
+
+    # Ignore decreased timestamps: treat them as if the timestamp did not change.
     if (curTimestr < lastTimestr) {
-      print "error:timestamp decreased from " lastTimestr " to " curTimestr ", might be using inconsistent timestamp formats" > "/dev/stderr"
-      exit 1
+      # TODO: make sure to print that once per occurrence, and uncomment.
+      # print "warn_timestamp_decreased:from " lastTimestr " to " curTimestr > "/dev/stderr"
+      next;
     }
   '
   scriptSetLastTimestrEtc='
@@ -841,7 +860,7 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
 
     echo "prevlog_modtime	$(get_file_modtime $logfile_prev)" > $indexfile
 
-    "$awk_binary" -b "$awk_functions BEGIN { $awk_vars lastHHMM=\"\"; last3=\"\" }"'
+    "$awk_binary" -b "$awk_functions BEGIN { $awk_vars lastHHMM=\"\"; }"'
   '"$script1"'
   ( lastHHMM != curHHMM ) {
     '"$scriptSetCurTimestr"';

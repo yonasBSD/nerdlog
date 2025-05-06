@@ -1,0 +1,21 @@
+# NOTE: it can be seen as a bug (if we want the effective timestamp of the
+# misplaced lines to be the same in all queries), but:
+#
+# - We'd have to check every single line regardless of the pattern, and 2hen we
+#   filter out a lot of lines, this adds like 5-10% of overhead, for probably
+#   no good reason (accounting for this corner case)
+# - Even if we do that, we'd probably also need to communicate that to the
+#   client, otherwise the mstats will mismatch the messages. Again, I doubt it's
+#   worth for this corner case.
+descr: "Filter only messages with decreased timestamps, the decreasing is not detected then"
+logfiles:
+  kind: all_from_dir
+  dir: ../../../logfiles/small_with_decreased_timestamp
+cur_year: 2025
+cur_month: 3
+args: [
+  "--max-num-lines", "8",
+  "--from", "2025-03-10-11:30",
+  "--to",   "2025-03-10-12:00",
+  '/decreased/'
+]
