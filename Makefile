@@ -9,9 +9,10 @@ nerdlog:
 	@go build \
 		-o bin/nerdlog \
 		-ldflags "\
-			-X 'github.com/dimonomid/nerdlog/version.version=$(VERSION)' \
+			-X 'github.com/dimonomid/nerdlog/version.version=$(patsubst v%,%,$(VERSION))' \
 			-X 'github.com/dimonomid/nerdlog/version.commit=$(COMMIT)' \
-			-X 'github.com/dimonomid/nerdlog/version.date=$(DATE)'\
+			-X 'github.com/dimonomid/nerdlog/version.date=$(DATE)' \
+			-X 'github.com/dimonomid/nerdlog/version.builtBy=make' \
 		" \
 		./cmd/nerdlog
 
