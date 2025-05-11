@@ -1,0 +1,11 @@
+descr: "Initial basic test case"
+logfiles:
+  kind: journalctl
+  journalctl_data_file: ../../../journalctl_data/small_mar/journalctl_data_small_mar.txt
+cur_year: 2025
+cur_month: 3
+args: [
+  "--max-num-lines", "20",
+  "--from", "2025-03-11-00:50",
+  "--to",   "2025-03-11-01:10",
+]

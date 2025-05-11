@@ -1,0 +1,15 @@
+logfile:journalctl:0
+s:03-12T10:10,8
+s:03-12T10:14,1
+s:03-12T10:16,1
+m:0:2025-03-12T10:10:05.608677+00:00 myhost authpriv[3500]: <notice> System clock synchronized
+m:0:2025-03-12T10:10:05.608677+00:00 myhost authpriv[3500]: <notice> System clock synchronized
+m:0:2025-03-12T10:10:05.608677+00:00 myhost authpriv[3500]: <notice> System clock synchronized
+m:0:2025-03-12T10:10:10.799867+00:00 myhost authpriv[3500]: <notice> Database query failed
+m:0:2025-03-12T10:10:12.504896+00:00 myhost authpriv[3500]: <notice> System clock synchronized
+m:0:2025-03-12T10:10:15.421705+00:00 myhost authpriv[3500]: <notice> System clock synchronized
+m:0:2025-03-12T10:10:15.421705+00:00 myhost authpriv[3500]: <notice> System clock synchronized
+m:0:2025-03-12T10:10:15.893737+00:00 myhost authpriv[3500]: <notice> System clock synchronized
+m:0:2025-03-12T10:14:06.831226+00:00 myhost mail[173]: <warning> User session ended
+m:0:2025-03-12T10:16:00.397135+00:00 myhost ftp[8866]: <emerg> User session started
+exit_code:0

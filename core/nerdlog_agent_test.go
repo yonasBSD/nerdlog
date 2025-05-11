@@ -33,25 +33,36 @@ type TestCaseYaml struct {
 	CurYear  int `yaml:"cur_year"`
 	CurMonth int `yaml:"cur_month"`
 
+	// Env can contain extra environment variables to set, in the format
+	// VARIABLE=VALUE. It'll be passed to cmd.Env directly.
+	Env []string `yaml:"env"`
+
 	Args []string `yaml:"args"`
 }
 
 type TestCaseLogfiles struct {
 	Kind LogfilesKind `yaml:"kind"`
-	Dir  string       `yaml:"dir"`
+
+	// Dir is only relevant for LogfilesKindAllFromDir
+	Dir string `yaml:"dir"`
+
+	// JournalctlDataFile is only relevant for LogfilesKindJournalctl
+	JournalctlDataFile string `yaml:"journalctl_data_file"`
 }
 
 type LogfilesKind string
 
 const (
 	LogfilesKindAllFromDir LogfilesKind = "all_from_dir"
+	LogfilesKindJournalctl LogfilesKind = "journalctl"
 )
 
 var AllLogfilesKinds = map[LogfilesKind]struct{}{
 	LogfilesKindAllFromDir: {},
+	LogfilesKindJournalctl: {},
 }
 
-func TestReadFileRelativeToThisFile(t *testing.T) {
+func TestNerdlogAgent(t *testing.T) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("unable to get caller info")
@@ -61,6 +72,8 @@ func TestReadFileRelativeToThisFile(t *testing.T) {
 	parentDir := filepath.Dir(filename)
 	testCasesDir := filepath.Join(parentDir, "nerdlog_agent_testdata", "test_cases")
 	nerdlogAgentShFname := filepath.Join(parentDir, "nerdlog_agent.sh")
+
+	repoRoot := filepath.Dir(filepath.Dir(filename))
 
 	if err := os.MkdirAll(testOutputRoot, 0755); err != nil {
 		t.Fatalf("unable to create test output root dir %s: %s", testOutputRoot, err.Error())
@@ -73,14 +86,14 @@ func TestReadFileRelativeToThisFile(t *testing.T) {
 
 	for _, testCaseDir := range testCaseDirs {
 		t.Run(testCaseDir, func(t *testing.T) {
-			if err := runTestCase(t, nerdlogAgentShFname, testCasesDir, testCaseDir); err != nil {
+			if err := runTestCase(t, nerdlogAgentShFname, testCasesDir, repoRoot, testCaseDir); err != nil {
 				t.Fatalf("running test case %s: %s", testCaseDir, err.Error())
 			}
 		})
 	}
 }
 
-func runTestCase(t *testing.T, nerdlogAgentShFname, testCasesDir, testName string) error {
+func runTestCase(t *testing.T, nerdlogAgentShFname, testCasesDir, repoRoot, testName string) error {
 	testCaseDir := filepath.Join(testCasesDir, testName)
 	testCaseDescrFname := filepath.Join(testCaseDir, testCaseYamlFname)
 
@@ -99,61 +112,105 @@ func runTestCase(t *testing.T, nerdlogAgentShFname, testCasesDir, testName strin
 		return errors.Annotatef(err, "unmarshaling yaml from %s", testCaseDescrFname)
 	}
 
-	logfiles, err := resolveLogfiles(testCaseDir, &tc.Logfiles)
+	resolved, err := resolveLogfiles(testCaseDir, &tc.Logfiles)
 	if err != nil {
 		return errors.Annotatef(err, "resolving logfiles")
 	}
 
-	if len(logfiles) == 0 || len(logfiles) > 2 {
-		return errors.Errorf(
-			"For now, there must be exactly 1 or 2 logfiles, but got %d: %v",
-			len(logfiles), logfiles,
-		)
-	}
+	var logfileLast, logfilePrev string
 
-	logfileLast := filepath.Join(testOutputDir, "logfile")
-	logfilePrev := filepath.Join(testOutputDir, "logfile.1")
+	// extraEnv contains extra env vars in the format "VARIABLE=VALUE"
+	var extraEnv []string
 
-	if err := copyFile(logfiles[0], logfileLast); err != nil {
-		return errors.Annotatef(err, "copying logfile last: from %s to %s", logfiles[0], logfileLast)
-	}
-
-	if err := setSyslogFileModTime(logfileLast); err != nil {
-		return errors.Trace(err)
-	}
-
-	if len(logfiles) > 1 {
-		if err := copyFile(logfiles[1], logfilePrev); err != nil {
-			return errors.Annotatef(err, "copying logfile prev: from %s to %s", logfiles[1], logfilePrev)
+	if len(resolved.files) > 0 {
+		logfiles := resolved.files
+		if len(logfiles) == 0 || len(logfiles) > 2 {
+			return errors.Errorf(
+				"For now, there must be exactly 1 or 2 logfiles, but got %d: %v",
+				len(logfiles), logfiles,
+			)
 		}
 
-		if err := setSyslogFileModTime(logfilePrev); err != nil {
+		logfileLast = filepath.Join(testOutputDir, "logfile")
+		logfilePrev = filepath.Join(testOutputDir, "logfile.1")
+
+		if err := copyFile(logfiles[0], logfileLast); err != nil {
+			return errors.Annotatef(err, "copying logfile last: from %s to %s", logfiles[0], logfileLast)
+		}
+
+		if err := setSyslogFileModTime(logfileLast); err != nil {
 			return errors.Trace(err)
 		}
+
+		if len(logfiles) > 1 {
+			if err := copyFile(logfiles[1], logfilePrev); err != nil {
+				return errors.Annotatef(err, "copying logfile prev: from %s to %s", logfiles[1], logfilePrev)
+			}
+
+			if err := setSyslogFileModTime(logfilePrev); err != nil {
+				return errors.Trace(err)
+			}
+		}
+	} else if resolved.journalctlDataFile != "" {
+		journalctlMockFname := filepath.Join(repoRoot, "cmd", "journalctl_mock", "journalctl_mock.sh")
+
+		// Special case for the journalctl, no need to copy any files.
+		logfileLast = "journalctl"
+		logfilePrev = "journalctl"
+		extraEnv = append(
+			extraEnv,
+			fmt.Sprintf("NERDLOG_JOURNALCTL_MOCK=%s", journalctlMockFname),
+			fmt.Sprintf("NERDLOG_JOURNALCTL_MOCK_DATA=%s", resolved.journalctlDataFile),
+		)
+	} else {
+		return errors.Errorf(
+			"For now, there must be exactly 1 or 2 logfiles, or journalctl data file, but got nothing",
+		)
 	}
 
 	indexFname := filepath.Join(testOutputDir, "nerdlog_agent_index")
 
 	os.Remove(indexFname)
 
-	cmdArgs := append(
-		[]string{
-			nerdlogAgentShFname,
-			"query",
-			"--logfile-last", logfileLast,
-			"--logfile-prev", logfilePrev,
-			"--index-file", indexFname,
-		},
-		tc.Args...,
-	)
+	cmdArgs := []string{
+		nerdlogAgentShFname,
+		"query",
+		"--logfile-last", logfileLast,
+		"--logfile-prev", logfilePrev,
+		"--index-file", indexFname,
+	}
+
+	if logfileLast == "journalctl" {
+		// Specify time format (normally LStreamClient autodetects the time format
+		// and provides these).
+		cmdArgs = append(
+			cmdArgs,
+			"--awktime-month", "substr($0, 6, 2)",
+			"--awktime-year", "substr($0, 1, 4)",
+			"--awktime-day", "substr($0, 9, 2)",
+			"--awktime-hhmm", "substr($0, 12, 5)",
+			"--awktime-minute-key", "substr($0, 6, 11)",
+		)
+	}
+
+	cmdArgs = append(cmdArgs, tc.Args...)
 
 	// Do the full run, with the provided initial index (which in most cases
 	// means, without any index)
-	if err := runNerdlogAgent(t, &tc, cmdArgs, testCaseDir, testName, testNerdlogAgentParams{
+	if err := runNerdlogAgent(t, &tc, cmdArgs, testCaseDir, extraEnv, testName, testNerdlogAgentParams{
 		checkStderr: true,
 	}); err != nil {
 		return errors.Trace(err)
 	}
+
+	// For journalctl tests, there is no index, and therefore nothing else to do.
+	if logfileLast == "journalctl" {
+		return nil
+	}
+
+	// For log files tests, we rerun the test multiple times after removing some
+	// latest lines from the index, expecting it to index up and to produce the same
+	// result.
 
 	// TODO: add an env var or something to disable the tests for indexing up.
 	//return nil
@@ -209,7 +266,7 @@ func runTestCase(t *testing.T, nerdlogAgentShFname, testCasesDir, testName strin
 		}
 
 		t.Run(fmt.Sprintf("keep_%d_lines", keepLines), func(t *testing.T) {
-			if err := runNerdlogAgent(t, &tc, cmdArgs, testCaseDir, testName, testNerdlogAgentParams{
+			if err := runNerdlogAgent(t, &tc, cmdArgs, testCaseDir, extraEnv, testName, testNerdlogAgentParams{
 				// When changing the index, stderr would change too.
 				checkStderr: false,
 			}); err != nil {
@@ -235,7 +292,9 @@ type testNerdlogAgentParams struct {
 }
 
 func runNerdlogAgent(
-	t *testing.T, tc *TestCaseYaml, bashArgs []string, testCaseDir, testName string,
+	t *testing.T, tc *TestCaseYaml, bashArgs []string, testCaseDir string,
+	extraEnv []string,
+	testName string,
 	params testNerdlogAgentParams,
 ) error {
 	assertArgs := []interface{}{"test case %s", testName}
@@ -265,11 +324,18 @@ func runNerdlogAgent(
 		curMonth = 1
 	}
 
-	cmd.Env = append(
-		os.Environ(),
+	agentEnv := []string{
 		"TZ=UTC",
 		fmt.Sprintf("CUR_YEAR=%d", curYear),
 		fmt.Sprintf("CUR_MONTH=%d", curMonth),
+	}
+
+	agentEnv = append(agentEnv, tc.Env...)
+	agentEnv = append(agentEnv, extraEnv...)
+
+	cmd.Env = append(
+		os.Environ(),
+		agentEnv...,
 	)
 	cmd.Stdout = stdoutFile
 	cmd.Stderr = stderrFile
@@ -322,9 +388,18 @@ func runNerdlogAgentForBenchmark(
 	return nil
 }
 
+type resolvedLogFiles struct {
+	// If files is not empty, we need to use these files.
+	files []string
+
+	// If journalctlDataFile is not empty, we need to use that file
+	// as the data for mocked journalctl.
+	journalctlDataFile string
+}
+
 func resolveLogfiles(
 	testCaseDir string, logfilesDescr *TestCaseLogfiles,
-) ([]string, error) {
+) (*resolvedLogFiles, error) {
 	switch logfilesDescr.Kind {
 	case LogfilesKindAllFromDir:
 		logfilesDir := filepath.Join(testCaseDir, logfilesDescr.Dir)
@@ -334,18 +409,32 @@ func resolveLogfiles(
 			return nil, errors.Annotatef(err, "reading logfiles dir %q", logfilesDir)
 		}
 
-		var ret []string
+		var files []string
 		for _, entry := range entries {
 			if entry.IsDir() {
 				return nil, errors.Errorf("a dir %q in the logfiles dir %q", entry.Name(), logfilesDir)
 			}
 
-			ret = append(ret, filepath.Join(logfilesDir, entry.Name()))
+			files = append(files, filepath.Join(logfilesDir, entry.Name()))
 		}
 
-		sort.Strings(ret)
+		sort.Strings(files)
 
-		return ret, nil
+		return &resolvedLogFiles{
+			files: files,
+		}, nil
+
+	case LogfilesKindJournalctl:
+		if logfilesDescr.JournalctlDataFile == "" {
+			return nil, errors.Errorf("kind is journalctl, but JournalctlDataFile is empty")
+		}
+
+		return &resolvedLogFiles{
+			journalctlDataFile: filepath.Join(
+				testCaseDir, logfilesDescr.JournalctlDataFile,
+			),
+		}, nil
+
 	default:
 		return nil, errors.Errorf("invalid logfiles kind %q", logfilesDescr.Kind)
 	}

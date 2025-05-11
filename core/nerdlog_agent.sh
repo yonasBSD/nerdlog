@@ -219,6 +219,12 @@ if [[ $? != 0 ]]; then
   exit 1
 fi
 
+# Use either a real journalctl, or a mocked one.
+journalctl_binary="journalctl"
+if [[ "${NERDLOG_JOURNALCTL_MOCK}" != "" ]]; then
+  journalctl_binary="${NERDLOG_JOURNALCTL_MOCK}"
+fi
+
 os_kind=""
 case "$(uname -s)" in
   Linux)
@@ -643,7 +649,7 @@ if [[ "$logfile_last" == "${SPECIAL_FILENAME_JOURNALCTL}" ]]; then
   # files); and also when we're just getting the next page and not interested
   # in timeline histogram data for the full period, we just exit early after
   # accumulating $max_num_lines.
-  cmd=("journalctl" "$JOURNALCTL_FORMAT_FLAG" "--quiet" "--reverse")
+  cmd=("$journalctl_binary" "$JOURNALCTL_FORMAT_FLAG" "--quiet" "--reverse")
 
   if [[ -n "$journalctl_from" ]]; then
     cmd+=("--since" "$journalctl_from")
@@ -673,6 +679,8 @@ if [[ "$logfile_last" == "${SPECIAL_FILENAME_JOURNALCTL}" ]]; then
       exit 1
     fi
   done
+
+  echo "p:stage:$STAGE_DONE:done" 1>&2
 
   exit 0
 fi
