@@ -1,6 +1,6 @@
-VERSION := $(shell git describe --dirty --tags --always)
-COMMIT := $(shell git rev-parse HEAD)
-DATE := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+VERSION != git describe --dirty --tags --always
+COMMIT != git rev-parse HEAD
+DATE != date -u +"%Y-%m-%dT%H:%M:%SZ"
 
 all: clean nerdlog
 
