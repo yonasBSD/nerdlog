@@ -21,8 +21,14 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 
 	switch parts[0] {
 	case "h", "help":
-		app.mainView.showMessagebox("err", "Fyi", "The only help for now is the README.md in the repo, so check it out", &MessageboxParams{
-			Width: 49,
+		var sb strings.Builder
+		sb.WriteString("There is no built-in help yet, but check out these resources:\n")
+		sb.WriteString("\n")
+		sb.WriteString("README.md in the repo:\n    https://github.com/dimonomid/nerdlog\n")
+		sb.WriteString("Documentation:\n    https://github.com/dimonomid/nerdlog/blob/master/docs/index.md")
+
+		app.mainView.showMessagebox("err", "Help", sb.String(), &MessageboxParams{
+			BackgroundColor: tcell.ColorDarkBlue,
 		})
 
 	case "time":
