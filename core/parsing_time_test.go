@@ -40,6 +40,11 @@ func TestDetectTimeFormat(t *testing.T) {
 			wantLayout: "2006-01-02T15:04:05Z07:00",
 		},
 		{
+			name:       "older journalctl with --output=short-iso-precise",
+			logLine:    "2025-05-11T21:33:13.924352+0200 Starting server",
+			wantLayout: "2006-01-02T15:04:05.000000-0700",
+		},
+		{
 			name:       "No timestamp in line",
 			logLine:    "This is a log line without a timestamp.",
 			wantLayout: "",
