@@ -212,11 +212,21 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 	}
 	tview.Print(screen, maxLabel, x+maxLabelOffset, y, width-maxLabelOffset, tview.AlignLeft, tcell.ColorWhite)
 
-	h.curMarks = h.getXMarks(h.from, h.to, width-fldMarginLeft)
+	// Print the ruler background under the histogram, to make it clear
+	// where the bounds of the working area are.
+	//
+	// We do it separately from printing the actual ruler data below, because
+	// this way it's easy to control the right edge of the ruler: we just print
+	// a string with a fixed number of spaces, and that's it.
+	maxCoord := h.valToCoord(h.to)
+	maxOffset := (maxCoord + 1) / 2
+	rulerBlank := "[:#444444]" + strings.Repeat(" ", maxOffset) + "[:-]"
+	tview.Print(screen, rulerBlank, x+fldMarginLeft, y+height-1, width-fldMarginLeft, tview.AlignLeft, tcell.ColorWhite)
 
 	// Print the ruler under the histogram.
+	h.curMarks = h.getXMarks(h.from, h.to, width-fldMarginLeft)
+
 	sb := strings.Builder{}
-	sb.WriteString("[:#444444]")
 	numRunes := 0
 
 	// rulerBuffer contains the "ruler" line that we'll print right below the
@@ -248,13 +258,6 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 		numRunes += 2
 		sb.WriteString(markStr)
 		numRunes += len(clearTviewFormatting(markStr))
-	}
-
-	// Fill up the ruler with spaces until the end.
-	maxCoord := h.valToCoord(h.to)
-	maxOffset := maxCoord / 2
-	for i := numRunes; i <= maxOffset; i++ {
-		sb.WriteRune(' ')
 	}
 
 	rulerStr := sb.String()
