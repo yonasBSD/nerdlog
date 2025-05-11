@@ -21,7 +21,8 @@ It does support some other log formats and can use any log files, but that was t
 - No centralized server required; nerdlog establishes an ssh connection to
   every node that the user wants to collect logs from, and keeps them idle in
   the background (although a separate server to store the log files might still
-  help in some cases; see the [Requirements and limitations](https://dmitryfrank.com/projects/nerdlog/article#requirements) sections in the article);
+  help in some cases; see the [Limitations](./docs/limitations.md) section in
+  the docs);
 - Logs are not downloaded to the local machine in full: all the log analysis
   is done on the remote nodes, and on each query, only the following data is
   downloaded from each node: up to 250 messages from every logstream
@@ -40,20 +41,23 @@ Here’s a quick demo showing how Nerdlog works across four remote nodes:
 ## Project history
 
 It might be useful to know the history to understand the project motivation and
-overall direction, you can read it
-[here in the full article](https://dmitryfrank.com/projects/nerdlog/article#project_history).
+overall direction, you can read it in the article:
+[Implementing a Radically Simple Alternative to Graylog](https://dmitryfrank.com/projects/nerdlog/article).
 
 ## Project state
 
 Originally hacked together in 2022 to replace painfully slow Splunk setups.
 Revisited in 2025 to clean it up to a certain extent, and open source it.
 
-It's still kinda in a proof-of-concept stage though. Implemented as fast as
-possible, spaghetti code abounds, could be covered with more tests, a lot more
-features could be implemented, etc. Was only tested for real on Linux, and with
-Linux hosts to get the logs from.
+Tested on various Linux distros, FreeBSD and Windows (only the client app can
+run on Windows though, we can't get logs from Windows hosts). Should work on
+MacOS too, however I didn't test it myself (let me know if you did).
 
-But it works. It's pretty usable and surprisingly fast.
+It's still kinda in a proof-of-concept stage though. Implemented as fast as
+possible, spaghetti code abounds, could be covered with more tests, more
+features could be implemented, etc.
+
+But it works. It's pretty usable and surprisingly fast. I've been using it at work and for my personal projects for a few years now, and I consider it ready to be used in the wild on production systems.
 
 ## Installation
 
@@ -209,15 +213,16 @@ Another supported keyword here is `AS`, so e.g. `message AS msg` is a valid
 syntax.
 
 For a more extensive discussion on the logstreams and other core concepts, and advanced options like using `sudo` to read log files, consider
-reading the [Core concepts](https://dmitryfrank.com/projects/nerdlog/article#core_concepts) section in the article.
+reading the [Core concepts](./docs/core_concepts.md) section in the docs.
 
 ## Requirements
 
-- SSH access to the hosts is required (except for `localhost`). You can read about the related limitations and possible workarounds here: [Consequences of requiring SSH access](https://dmitryfrank.com/projects/nerdlog/article#consequences_of_requiring_ssh_access);
+- SSH access to the hosts is required (except for `localhost`). You can read about the related limitations and possible workarounds here: [Consequences of requiring SSH access](./docs/limitations.md#consequences-of-requiring-ssh-access);
 - Gawk (GNU awk) is a requirement on the hosts, since nerlog relies on the `-b`
   option. So notably, `mawk` will not work. You need `gawk`;
 
-For more extensive discussion about these requirements, the consequent limitations, and possible ways to address them, see the [Requirements and Limitations](https://dmitryfrank.com/projects/nerdlog/article#requirements) sections in the article.
+For more details, see [Requirements](./docs/requirements.md) and
+[Limitations](./docs/limitations.md) in the docs.
 
 ## UI
 
@@ -343,4 +348,4 @@ Currently supported options are:
 
 ## More details
 
-[Check out the Nerdlog article](https://dmitryfrank.com/projects/nerdlog/article) for more in-depth look at the core concepts, limitations and workarounds, and implementation details.
+[Check out the documentation](./docs/index.md) for more in-depth look at the core concepts, limitations and workarounds, implementation details, etc.
