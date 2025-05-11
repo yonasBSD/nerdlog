@@ -13,7 +13,7 @@ By default, nerdlog checks available logstreams in the following order:
   * If available, use the `/var/log/syslog` file (and the older `/var/log/syslog.1`)
   * As the last resort, use `journalctl` if available.
 
-Why preferring the logfiles instead of `journalctl`: because [[https://github.com/dimonomid/nerdlog/issues/7#issuecomment-2820521885|log files work much faster and are more reliable]]. For some benchmarks, [[https://github.com/dimonomid/nerdlog/issues/7#issuecomment-2823303380|also see this comment]].  However, `journalctl` is more universally available these days, and it often also has longer log history, so nerdlog has full support for it.
+Why preferring the logfiles instead of `journalctl`: because [log files work much faster and are more reliable](https://github.com/dimonomid/nerdlog/issues/7#issuecomment-2820521885). For some benchmarks, [also see this comment](https://github.com/dimonomid/nerdlog/issues/7#issuecomment-2823303380).  However, `journalctl` is more universally available these days, and it often also has longer log history, so nerdlog has full support for it.
 
 In order to collect data from a logstream, Nerdlog needs to know a few things: first the ssh connection details (hostname, user and port), filename of the last log file, and filename of the previous log file (in the future there might be support for more older files). In the most explicit form, here's how a single logstream specification would look like:
 
@@ -65,7 +65,7 @@ Globs are supported too, so if we want to get logs from both hosts in this ssh c
 myuser@actualhost1.com:1234,myuser@actualhost2.com:7890
 ```
 
-Keep in mind though that as of today, ssh config parsing unfortunately has some major limitations; check out [[https://github.com/dimonomid/nerdlog/issues/12|this issue on Github]] for more details.
+Keep in mind though that as of today, ssh config parsing unfortunately has some major limitations; check out [this issue on Github](https://github.com/dimonomid/nerdlog/issues/12) for more details.
 
 ### Nerdlog logstreams config
 
