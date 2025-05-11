@@ -7,6 +7,7 @@ import (
 	"runtime"
 
 	"github.com/dimonomid/nerdlog/clhistory"
+	"github.com/dimonomid/nerdlog/clipboard"
 	"github.com/dimonomid/nerdlog/log"
 	"github.com/dimonomid/nerdlog/version"
 	"github.com/spf13/pflag"
@@ -110,10 +111,8 @@ func main() {
 		}
 	}
 
-	var clipboardInitErr error
-	if err := clipboardInit(); err != nil {
-		clipboardInitErr = err
-		fmt.Printf("NOTE: X Clipboard is not available: %s\n", clipboardInitErr.Error())
+	if clipboard.InitErr != nil {
+		fmt.Printf("NOTE: X Clipboard is not available: %s\n", clipboard.InitErr.Error())
 	}
 
 	logLevel := log.Info
@@ -138,7 +137,7 @@ func main() {
 		nerdlogAppParams{
 			initialQueryData: initialQueryData,
 			connectRightAway: connectRightAway,
-			clipboardInitErr: clipboardInitErr,
+			clipboardInitErr: clipboard.InitErr,
 			logLevel:         logLevel,
 			sshConfigPath:    *flagSSHConfig,
 			sshKeys:          *flagSSHKeys,

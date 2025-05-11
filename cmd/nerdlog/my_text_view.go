@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/dimonomid/nerdlog/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -123,7 +124,7 @@ func NewMyTextView(
 		switch event.Key() {
 		case tcell.KeyEnter:
 			// TODO: check if clipboard is actually available
-			clipboardWriteText([]byte(rdv.params.Text))
+			clipboard.WriteText([]byte(rdv.params.Text))
 			rdv.copyToClipboardBtn.SetLabel("Copied!")
 			return nil
 		}

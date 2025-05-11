@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/dimonomid/nerdlog/clipboard"
 	"github.com/dimonomid/nerdlog/version"
 	"github.com/gdamore/tcell/v2"
 	"github.com/juju/errors"
@@ -123,7 +124,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 		qf := app.mainView.getQueryFull()
 		shellCmd := qf.MarshalShellCmd()
 		if app.params.clipboardInitErr == nil {
-			clipboardWriteText([]byte(shellCmd))
+			clipboard.WriteText([]byte(shellCmd))
 			app.printMsg("Copied to clipboard")
 		} else {
 			app.printError(fmt.Sprintf("Clipboard is not available: %s", app.params.clipboardInitErr.Error()))
