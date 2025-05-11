@@ -220,7 +220,7 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 	// a string with a fixed number of spaces, and that's it.
 	maxCoord := h.valToCoord(h.to)
 	maxOffset := (maxCoord + 1) / 2
-	rulerBlank := "[:#444444]" + strings.Repeat(" ", maxOffset) + "[:-]"
+	rulerBlank := "[:#656565]" + strings.Repeat(" ", maxOffset) + "[:-]"
 	tview.Print(screen, rulerBlank, x+fldMarginLeft, y+height-1, width-fldMarginLeft, tview.AlignLeft, tcell.ColorWhite)
 
 	// Print the ruler under the histogram.
@@ -281,7 +281,7 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 
 		leftOffset := fldMarginLeft + fldData.selScaleOffset/2
 
-		tview.Print(screen, line, x+leftOffset, y+height-1, width-leftOffset, tview.AlignLeft, tcell.ColorGreen)
+		tview.Print(screen, line, x+leftOffset, y+height-1, width-leftOffset, tview.AlignLeft, tcell.ColorLightGreen)
 
 		// Print the selection range description
 		selMarkOffset := leftOffset + lineLen + 1
@@ -297,7 +297,7 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 			selMarkOffset--
 			selMark = " " + selMark
 		}
-		tview.Print(screen, selMark, x+selMarkOffset, y+height-1, width-selMarkOffset, tview.AlignLeft, tcell.ColorGreen)
+		tview.Print(screen, selMark, x+selMarkOffset, y+height-1, width-selMarkOffset, tview.AlignLeft, tcell.ColorLightGreen)
 
 		// Also print the bar value (or sum of all selected values, if selection is active)
 		var valToPrint string
@@ -314,7 +314,7 @@ func (h *Histogram) Draw(screen tcell.Screen) {
 			// the right edge.
 			totalMarkOffset += freeSpaceRight
 		}
-		tview.Print(screen, valToPrint, totalMarkOffset, y, width-totalMarkOffset, tview.AlignLeft, tcell.ColorGreen)
+		tview.Print(screen, valToPrint, totalMarkOffset, y, width-totalMarkOffset, tview.AlignLeft, tcell.ColorLightGreen)
 	}
 
 	// Draw a pointer to the external cursor.
