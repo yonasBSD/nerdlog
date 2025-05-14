@@ -11,6 +11,7 @@ args: [
 
   # Provide time of the earliest message in previous response,
   # and the number of messages already seen with that timestamp.
-  "--timestamp-until", "2025-03-11 00:54:23.658592",
+  "--timestamp-until-seconds", "2025-03-11 00:54:24",
+  "--timestamp-until-precise", "2025-03-11T00:54:23.658592",
   "--skip-n-latest", "8",
 ]

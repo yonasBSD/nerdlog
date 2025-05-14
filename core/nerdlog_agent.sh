@@ -139,8 +139,92 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
-    --timestamp-until)
-      timestamp_until="$2"
+
+    # The 3 arguments below:
+    # --timestamp-until-seconds, --timestamp-until-precise, --skip-n-latest
+    # are needed specifically for pagination in journalctl.
+    #
+    # It's all very ugly, but works correctly, and so far I'm not able to come
+    # up with better alternatives (see below why --cursor etc isn't helpful for us).
+    #
+    # Let me explain what they mean exactly. Let's consider that we have the following
+    # logs, some of which we already have loaded, and now we need to get the next page:
+    #
+    #    ........
+    #    2025-03-10T11:49:44.123456+00:00 myhost myapp[123]: NEXT PAGE message
+    #    2025-03-10T11:49:44.838785+00:00 myhost myapp[123]: NEXT PAGE message
+    #    2025-03-10T11:49:44.838785+00:00 myhost myapp[123]: LOADED message
+    #    2025-03-10T11:49:44.838785+00:00 myhost myapp[123]: LOADED message
+    #    2025-03-10T11:49:44.988548+00:00 myhost myapp[123]: LOADED message
+    #    2025-03-10T11:49:44.988548+00:00 myhost myapp[123]: LOADED message
+    #    2025-03-10T11:49:44.999000+00:00 myhost myapp[123]: LOADED message
+    #    2025-03-10T11:49:44.999000+00:00 myhost myapp[123]: LOADED message
+    #    2025-03-10T11:49:45.002143+00:00 myhost myapp[123]: LOADED message
+    #
+    # So we already have two messages at the "2025-03-10T11:49:44.838785"
+    # timestamp, and the next page should start from the remaining one message
+    # on the same timestamp.
+    #
+    # So first, even though we technically can pass the --until '2025-03-10 11:49:44.838785
+    # argument to journalctl, which takes it without errors, it doesn't work
+    # reliably: apparently the time indexing journalctl is doing does not have
+    # microsecond precision, and it will actually stop EARLIER than the given
+    # timestamp, missing arbitrary number of messages.
+    #
+    # To make sure that we do get all the messages we need, we have to request
+    # a bit more, and round the --until timestamp to the next whole second:
+    # '2025-03-10 11:49:45'. This is precisely what needs to be passed as the
+    # --timestamp-until-seconds flag.
+    #
+    # And having that, we also need to know how many latest messages to filter
+    # out, because we already have them. There are a few ways of doing it, but
+    # currently implemented as follows:
+    #
+    # 1) --timestamp-until-precise is the exact timestamp of the very latest
+    #    message we have, formatted the way journalctl formats it, i.e.
+    #    '2025-03-10T11:49:44.838785'
+    # 2) --skip-n-latest is how many messages we already have on this timestamp,
+    #    i.e. '2' in this case.
+    #
+    # Having that, the agent script knows everything it needs to know, and the
+    # logic is as follows (btw don't forget that we call journalctl with the
+    # --reverse, so we first get the latest messages, which we need to skip):
+    #
+    # - Check if the current timestamp from journalctl string is
+    #   lexicographically larger than the given --timestamp-until-precise. If
+    #   so, just skip it: we're only receiving this line because our
+    #   --timestamp-until-seconds was rounded up to the whole second
+    # - Check if the current timestamp from journalctl string is exactly the
+    #   same as the given --timestamp-until-precise. If so, skip up to the
+    #   --skip-n-latest of such messages.
+    # - Otherwise, we're good to include this message in the output.
+    #
+    # Now, why the journalctl built-in pagination mechanism (the --cursor and
+    # related flags) doesn't work. Two primary reasons:
+    #
+    # - Journalctl only allows us to see the cursor of the *latest* message in
+    #   the output;
+    # - We apply our filters, and limit number of lines, *after* journalctl,
+    #   using the awk script.
+    #
+    # So, there's no reliable way to say "print the latest N messages maching
+    # this awk pattern, and show me the cursor of the first one, so that I can
+    # later get next page".
+    #
+    # If there was a way to show the cursor for every single line that
+    # journalctl outputs, then it might be possible, but then it would likely
+    # make things even slower.
+    #
+    # So for now, we just have to hack around with the timestamps. Ugly, but
+    # works, and covered with tests.
+
+    --timestamp-until-seconds)
+      timestamp_until_seconds="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    --timestamp-until-precise)
+      timestamp_until_precise="$2"
       if [[ "$skip_n_latest" == "" ]]; then
         skip_n_latest=1
       fi
@@ -152,6 +236,7 @@ while [[ $# -gt 0 ]]; do
       shift # past argument
       shift # past value
       ;;
+
     --refresh-index)
       refresh_index="1"
       shift # past argument
@@ -200,6 +285,23 @@ while [[ $# -gt 0 ]]; do
 done
 
 set -- "${positional_args[@]}" # restore positional parameters
+
+if [[ $timestamp_until_precise != "" || $timestamp_until_seconds != "" || $skip_n_latest != "" ]]; then
+  if [[ "$timestamp_until_precise" == "" ]]; then
+    echo "error:--timestamp-until-seconds, --timestamp-until-precise, --skip-n-latest should all be given together, but --timestamp-until-precise is not set" 1>&2
+    exit 1
+  fi
+
+  if [[ "$timestamp_until_seconds" == "" ]]; then
+    echo "error:--timestamp-until-seconds, --timestamp-until-precise, --skip-n-latest should all be given together, but --timestamp-until-seconds is not set" 1>&2
+    exit 1
+  fi
+
+  if [[ "$skip_n_latest" == "" ]]; then
+    echo "error:--timestamp-until-seconds, --timestamp-until-precise, --skip-n-latest should all be given together, but --skip-n-latest is not set" 1>&2
+    exit 1
+  fi
+fi
 
 # Either use the provided current year and month (for tests), or get the actual ones.
 if [[ "$CUR_YEAR" == "" ]]; then
@@ -483,8 +585,37 @@ function run_awk_script_journalctl {
   fi
 
   awk_skip_n_latest_check=''
-  if [[ "$skip_n_latest" != "" ]]; then
-    awk_skip_n_latest_check="NR <= $skip_n_latest {next}"
+  if [[ "$timestamp_until_precise" != "" && "$skip_n_latest" != "" ]]; then
+    awk_skip_n_latest_check='
+    (needToSkip) {
+      curtime = substr($0, 1, timestampUntilPreciseLen);
+
+      # If the timestamp is larger than what we already have, just skip.
+      if (curtime > timestampUntilPrecise) {
+        next;
+      }
+
+      # If the timestamp is exactly the same as what we already have,
+      # skip the skip_n_latest lines.
+      if (curtime == timestampUntilPrecise) {
+        numSameTimestamp++;
+        if (numSameTimestamp <= '"$skip_n_latest"') {
+          next;
+        }
+
+        # We have skipped enough lines, remember that
+        print "debug:Skipped " NR-1 " latest lines"
+        needToSkip = 0;
+      }
+
+      # If the timestamp is earlier than what we already have,
+      # remember that we are done skipping, to avoid doing useless work.
+      if (curtime < timestampUntilPrecise) {
+        print "debug:Skipped " NR-1 " latest lines"
+        needToSkip = 0;
+      }
+    }
+    '
   fi
 
   early_exit_check=''
@@ -513,6 +644,10 @@ function run_awk_script_journalctl {
     lastline="";
     maxlines='$max_num_lines';
     lastPercent=-1;
+    timestampUntilPrecise="'"$timestamp_until_precise"'";
+    timestampUntilPreciseLen=length(timestampUntilPrecise);
+    numSameTimestamp=0;
+    needToSkip = timestampUntilPreciseLen > 0 ? 1 : 0;
 
     # Find out earliest and latest timestamp for percentage calculations.
     earliestTimestamp=0;
@@ -655,8 +790,8 @@ if [[ "$logfile_last" == "${SPECIAL_FILENAME_JOURNALCTL}" ]]; then
     cmd+=("--since" "$journalctl_from")
   fi
 
-  if [[ -n "$timestamp_until" ]]; then
-    cmd+=("--until" "$timestamp_until")
+  if [[ -n "$timestamp_until_seconds" ]]; then
+    cmd+=("--until" "$timestamp_until_seconds")
     stop_after_max_num_lines="1"
     # NOTE: we'll also skip the $skip_n_latest messages with the latest timestamp.
   elif [[ -n "$journalctl_to" ]]; then
@@ -667,6 +802,7 @@ if [[ "$logfile_last" == "${SPECIAL_FILENAME_JOURNALCTL}" ]]; then
     user_pattern="$user_pattern"     \
     max_num_lines="$max_num_lines"   \
     stop_after_max_num_lines="$stop_after_max_num_lines"   \
+    timestamp_until_precise="$timestamp_until_precise"   \
     skip_n_latest="$skip_n_latest"   \
     run_awk_script_journalctl -
 

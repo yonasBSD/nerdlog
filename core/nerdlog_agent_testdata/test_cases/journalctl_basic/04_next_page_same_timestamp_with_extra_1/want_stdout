@@ -1,0 +1,12 @@
+debug:Skipped 7 latest lines
+logfile:journalctl:0
+s:03-10T11:49,8
+m:0:2025-03-10T11:49:44.640416+00:00 myhost syslog[581]: <emerg> User login successful
+m:0:2025-03-10T11:49:44.640416+00:00 myhost syslog[581]: <emerg> User login successful
+m:0:2025-03-10T11:49:44.838785+00:00 myhost syslog[581]: <emerg> User login successful
+m:0:2025-03-10T11:49:44.838785+00:00 myhost authpriv[2883]: non-ascii chars: тест тест
+m:0:2025-03-10T11:49:44.838785+00:00 myhost syslog[581]: <emerg> User login successful
+m:0:2025-03-10T11:49:44.838785+00:00 myhost syslog[581]: <emerg> User login successful
+m:0:2025-03-10T11:49:44.988548+00:00 myhost syslog[581]: <emerg> User login successful
+m:0:2025-03-10T11:49:44.988548+00:00 myhost syslog[581]: <emerg> User login successful
+exit_code:0

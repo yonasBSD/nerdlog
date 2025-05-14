@@ -159,12 +159,8 @@ func main() {
 //	"2006-01-02 15:04:00.000000"
 func parseJournalctlTimeArg(s string) (time.Time, error) {
 	const layout1 = "2006-01-02 15:04:05"
-	const layout2 = "2006-01-02 15:04:05.000000"
 
 	if t, err := time.Parse(layout1, s); err == nil {
-		return t, nil
-	}
-	if t, err := time.Parse(layout2, s); err == nil {
 		return t, nil
 	}
 

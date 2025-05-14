@@ -1,0 +1,17 @@
+debug:Skipped 13 latest lines
+logfile:journalctl:0
+s:03-10T11:33,1
+s:03-10T11:46,1
+s:03-10T11:47,1
+s:03-10T11:39,1
+s:03-10T11:49,3
+s:03-10T11:41,1
+m:0:2025-03-10T11:33:00.346741+00:00 myhost daemon[8540]: <emerg> User login successful
+m:0:2025-03-10T11:39:29.084072+00:00 myhost ftp[8120]: <debug> Process started
+m:0:2025-03-10T11:41:03.766746+00:00 myhost lpr[5285]: <notice> User session started
+m:0:2025-03-10T11:46:34.264573+00:00 myhost user[7798]: <err> Application crash reported
+m:0:2025-03-10T11:47:58.949303+00:00 myhost news[3646]: <notice> Disk space reclaimed
+m:0:2025-03-10T11:49:44.640416+00:00 myhost syslog[581]: <emerg> User login successful
+m:0:2025-03-10T11:49:44.640416+00:00 myhost syslog[581]: <emerg> User login successful
+m:0:2025-03-10T11:49:44.640416+00:00 myhost syslog[581]: <emerg> User login successful
+exit_code:0

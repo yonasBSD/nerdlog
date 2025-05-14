@@ -1,0 +1,17 @@
+descr: "We're skipping messages with the exact precise timestamp (and skip ALL of them), PLUS some more messages on later timestamps in the same whole second"
+logfiles:
+  kind: journalctl
+  journalctl_data_file: ../../../journalctl_data/small_mar/journalctl_data_small_mar.txt
+cur_year: 2025
+cur_month: 3
+args: [
+  "--max-num-lines", "8",
+  "--from", "2025-03-10-10:00",
+  "--to",   "2025-03-10-12:00",
+
+  # Provide time of the earliest message in previous response,
+  # and the number of messages already seen with that timestamp.
+  "--timestamp-until-seconds", "2025-03-10 11:49:45",
+  "--timestamp-until-precise", "2025-03-10T11:49:44.640416",
+  "--skip-n-latest", "3",
+]

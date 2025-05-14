@@ -9,5 +9,6 @@ args: [
   "--from", "2025-03-12-10:00",
 
   # Provide time of the earliest message in previous response.
-  "--timestamp-until", "2025-03-12 10:16:59.046801",
+  "--timestamp-until-seconds", "2025-03-12 10:17:00",
+  "--timestamp-until-precise", "2025-03-12T10:16:59.046801",
 ]

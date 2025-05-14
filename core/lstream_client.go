@@ -47,9 +47,17 @@ const (
 // (which has it space-padded, not zero-padded).
 const queryLogsArgsTimeLayout = "2006-01-02-15:04"
 
-// queryLogsTimestampUntilTimeLayout is used to format the --timestamp-until
-// arguments for nerdlog_agent.sh.
-const queryLogsTimestampUntilTimeLayout = "2006-01-02 15:04:05.000000"
+// queryLogsTimestampUntilSecondsTimeLayout is used to format the
+// --timestamp-until-seconds arguments for nerdlog_agent.sh.
+// It needs to match what journalctl *takes as an argument*.
+// TODO: better naming.
+const queryLogsTimestampUntilSecondsTimeLayout = "2006-01-02 15:04:05"
+
+// queryLogsTimestampUntilPreciseTimeLayout is used to format the
+// --timestamp-until-precise arguments for nerdlog_agent.sh.
+// It needs to match what journalctl *outputs with --output=short-iso-precise*.
+// TODO: better naming.
+const queryLogsTimestampUntilPreciseTimeLayout = "2006-01-02T15:04:05.000000"
 
 //go:embed nerdlog_agent.sh
 var nerdlogAgentSh string
@@ -1050,11 +1058,19 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		}
 
 		if tu := cmdCtx.cmd.queryLogs.timestampUntil; tu != nil {
+			nextWholeSecondTime := roundUpToNextSecond(tu.time)
+
 			parts = append(parts,
-				"--timestamp-until",
+				"--timestamp-until-seconds",
 				shellQuote(
-					tu.time.In(lsc.location).Format(queryLogsTimestampUntilTimeLayout),
+					nextWholeSecondTime.In(lsc.location).Format(queryLogsTimestampUntilSecondsTimeLayout),
 				),
+
+				"--timestamp-until-precise",
+				shellQuote(
+					tu.time.In(lsc.location).Format(queryLogsTimestampUntilPreciseTimeLayout),
+				),
+
 				"--skip-n-latest", shellQuote(strconv.Itoa(tu.numMsgs)),
 			)
 		}
@@ -1094,6 +1110,13 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 	stdinBuf.Write([]byte(fmt.Sprintf("echo 'command_done:%d' 1>&2\n", cmdCtx.idx)))
 
 	lsc.changeState(LStreamClientStateConnectedBusy)
+}
+
+func roundUpToNextSecond(t time.Time) time.Time {
+	if t.Nanosecond() == 0 {
+		return t
+	}
+	return t.Truncate(time.Second).Add(time.Second)
 }
 
 // getLStreamNerdlogAgentPath returns the logstream-side path to the nerdlog_agent.sh

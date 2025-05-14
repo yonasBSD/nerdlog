@@ -85,8 +85,9 @@ type lstreamCmdQueryLogs struct {
 	linesUntil int
 
 	// timestampUntil is not zero, it'll be passed to nerdlog_agent as
-	// --timestamp-until. It serves the same purpose as linesUntil for cases when
-	// we don't have line numbers (e.g. when using journalctl).
+	// --timestamp-until-precise and --timestamp-until-seconds. It serves the
+	// same purpose as linesUntil for cases when we don't have line numbers (e.g.
+	// when using journalctl).
 	timestampUntil *timeAndNumMsgs
 
 	// If refreshIndex is true, we'll drop the index file, and rebuild it from
