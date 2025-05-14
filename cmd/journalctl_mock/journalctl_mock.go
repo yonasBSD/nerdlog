@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sort"
 	"strings"
 	"time"
 
@@ -142,9 +141,9 @@ func main() {
 
 	// Reverse if needed
 	if reverse {
-		sort.Slice(filtered, func(i, j int) bool {
-			return filtered[i].Timestamp.After(filtered[j].Timestamp)
-		})
+		for i, j := 0, len(filtered)-1; i < j; i, j = i+1, j-1 {
+			filtered[i], filtered[j] = filtered[j], filtered[i]
+		}
 	}
 
 	// Print
