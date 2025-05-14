@@ -1,0 +1,19 @@
+logfile:journalctl:0
+s:03-11T01:05,1
+s:03-11T12:51,1
+s:03-11T05:09,1
+s:03-11T21:52,1
+s:03-11T19:25,1
+s:03-12T00:29,1
+s:03-12T01:54,1
+s:03-12T08:58,1
+s:03-11T23:50,1
+m:0:2025-03-11T05:09:06.284130+00:00 myhost syslog[3368]: <alert> User session started
+m:0:2025-03-11T12:51:06.522734+00:00 myhost syslog[3582]: <alert> New update available
+m:0:2025-03-11T19:25:07.372865+00:00 myhost syslog[5974]: <alert> Server stopped unexpectedly
+m:0:2025-03-11T21:52:41.700265+00:00 myhost syslog[138]: <warning> Security alert raised
+m:0:2025-03-11T23:50:03.795064+00:00 myhost syslog[757]: <alert> System reboot required
+m:0:2025-03-12T00:29:30.261894+00:00 myhost syslog[695]: <alert> Configuration updated
+m:0:2025-03-12T01:54:11.621202+00:00 myhost syslog[7404]: <debug> Security alert raised
+m:0:2025-03-12T08:58:34.649292+00:00 myhost syslog[7205]: <alert> Service request completed
+exit_code:0

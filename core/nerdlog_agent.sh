@@ -721,9 +721,9 @@ function run_awk_script_journalctl {
     }
   }
 
-  '$awk_skip_n_latest_check'
   '$early_exit_check'
   '$awk_pattern_check'
+  '$awk_skip_n_latest_check'
   {
     stats['"$awktime_minute_key"']++;
 

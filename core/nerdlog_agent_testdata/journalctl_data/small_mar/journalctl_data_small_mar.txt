@@ -34,11 +34,11 @@
 2025-03-10T11:49:44.838785+00:00 myhost syslog[581]: <emerg> User login successful
 2025-03-10T11:49:44.838785+00:00 myhost syslog[581]: <emerg> User login successful
 2025-03-10T11:49:44.988548+00:00 myhost syslog[581]: <emerg> User login successful
+2025-03-10T11:49:44.988548+00:00 myhost ftp[500]: <emerg> User login successful
 2025-03-10T11:49:44.988548+00:00 myhost syslog[581]: <emerg> User login successful
 2025-03-10T11:49:44.988548+00:00 myhost syslog[581]: <emerg> User login successful
-2025-03-10T11:49:44.988548+00:00 myhost syslog[581]: <emerg> User login successful
-2025-03-10T11:49:44.988548+00:00 myhost syslog[581]: <emerg> User login successful
-2025-03-10T11:49:44.988548+00:00 myhost syslog[581]: <emerg> User login successful
+2025-03-10T11:49:44.988548+00:00 myhost ftp[500]: <emerg> User login successful
+2025-03-10T11:49:44.988548+00:00 myhost ftp[500]: <emerg> User login successful
 2025-03-10T11:49:44.988548+00:00 myhost syslog[581]: <emerg> User login successful
 2025-03-10T11:49:44.999000+00:00 myhost syslog[581]: <emerg> User login successful
 2025-03-10T11:49:44.999000+00:00 myhost syslog[581]: <emerg> User login successful

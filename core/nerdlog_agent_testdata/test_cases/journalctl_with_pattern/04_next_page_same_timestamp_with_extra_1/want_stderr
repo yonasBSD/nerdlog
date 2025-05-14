@@ -1,0 +1,2 @@
+p:stage:3:querying logs:Note that journalctl can be SLOW. Consider using log files.
+p:stage:4:done
