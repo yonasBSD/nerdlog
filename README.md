@@ -36,7 +36,7 @@ It does support some other log formats and can use any log files, but that was t
 
 Here’s a quick demo showing how Nerdlog works across four remote nodes:
 
-![Nerdlog](images/nerdlog_demo.gif)
+![Nerdlog](https://dmitryfrank.com/_media/projects/nerdlog/nerdlog_demo.gif)
 
 ## Project history
 
