@@ -4,6 +4,16 @@
 
 Because, at least in the current implementation, it's the simplest and most efficient way to implement filtering. As you remember from the "How it works" section above, after cutting the logs outside of the requested time range, we do the filtering, generate timeline histogram data, and print the last N log lines, keeping track of where they were in the original file (so that in the UI we can point the user at that line, if they want to). All this is done using an awk script in a single pass, and obviously it's easier to have filtering as part of the same awk script.
 
+## Why does Nerdlog default to log files instead of `journalctl`?
+
+Because `journalctl` has some major drawbacks comparing to plain log files:
+
+- It's a lot slower, [see this comment](https://github.com/dimonomid/nerdlog/issues/7#issuecomment-2823303380) for some benchmarks;
+- It's less reliable (can miss some logs), [see this comment](https://github.com/dimonomid/nerdlog/issues/7#issuecomment-2820521885) for details;
+- Since it's another layer of complexity, it can have [bugs like this one](https://github.com/systemd/systemd/issues/37468), which cause very confusing behavior.
+
+My opinion in general (unrelated to Nerdlog specifically) is that `journalctl` creates more problems than it solves; it's a great example of the general trend in the industry to overcomplicate everything. We should learn to keep things simple.
+
 ## How is it better than lnav?
 
 It's not better, and not worse. It's just very different.

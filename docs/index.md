@@ -9,3 +9,4 @@ It's laser-focused on being efficient while querying logs from multiple remote m
 - [Requirements](./requirements.md)
 - [Limitations](./limitations.md)
 - [FAQ](./faq.md)
+- [Troubleshooting](./troubleshooting.md)

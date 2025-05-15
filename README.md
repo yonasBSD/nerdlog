@@ -133,15 +133,13 @@ By default, nerdlog checks available logstreams in the following order:
 - If available, use the `/var/log/syslog` file (and the older `/var/log/syslog.1`)
 - As the last resort, use `journalctl` if available.
 
-Why preferring the logfiles instead of `journalctl`: because [log files work
-much faster and are more
-reliable](https://github.com/dimonomid/nerdlog/issues/7#issuecomment-2820521885).
-For some benchmarks, [also see this
-comment](https://github.com/dimonomid/nerdlog/issues/7#issuecomment-2823303380).
-However, `journalctl` is more universally available these days, and it often also
-has longer history, so nerdlog has full support for it. So far there's no
-option to prefer `journalctl` instead of log files by default, lmk if you need it;
-shouldn't be hard to implement.
+Why preferring the logfiles instead of `journalctl`: shortly, because it's less
+reliable and much slower. See
+[FAQ](./docs/faq.md#why-does-nerdlog-default-to-log-files-instead-of-journalctl)
+for details. However, `journalctl` is more universally available these days
+(alas), and it often also has longer history, so nerdlog has full support for
+it. So far there's no option to prefer `journalctl` instead of log files by
+default, lmk if you need it; shouldn't be hard to implement.
 
 So if you have a server like `myserver.com` accessible via ssh on port 22, then
 the logstream to read its `/var/log/messages` file (or `/var/log/syslog` file,
@@ -348,4 +346,4 @@ Currently supported options are:
 
 ## More details
 
-[Check out the documentation](./docs/index.md) for more in-depth look at the core concepts, limitations and workarounds, implementation details, etc.
+[Check out the documentation](./docs/index.md) for more in-depth look at the core concepts, limitations and workarounds, implementation details, FAQ, troubleshooting, etc.
