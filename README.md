@@ -1,14 +1,14 @@
 # Nerdlog
 
+![Nerdlog](https://dmitryfrank.com/_media/projects/nerdlog/nerdlog_intro_2.png)
+
 Nerdlog is a fast, remote-first, multi-host TUI log viewer with timeline
 histogram and no central server. Loosely inspired by Graylog/Kibana, but
 without the bloat. Pretty much no setup needed, either.
 
 It's laser-focused on being efficient while querying logs from multiple remote
 machines simultaneously, filtering them by time range and patterns, while also
-drawing a timeline histogram for quick visual insight:
-
-![Nerdlog](images/nerdlog_intro.png)
+drawing an interactive timeline histogram for quick visual insight.
 
 Primary use case: reading system logs (from the files `/var/log/messages` or
 `/var/log/syslog`, or straight from `journalctl`) from one or more remote
@@ -36,7 +36,7 @@ It does support some other log formats and can use any log files, but that was t
 
 Here’s a quick demo showing how Nerdlog works across four remote nodes:
 
-![Nerdlog](https://dmitryfrank.com/_media/projects/nerdlog/nerdlog_demo.gif)
+![Nerdlog](https://dmitryfrank.com/_media/projects/nerdlog/nerdlog_demo.gif?v=2)
 
 ## Project history
 
