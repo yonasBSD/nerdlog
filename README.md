@@ -1,6 +1,6 @@
 # Nerdlog
 
-![Nerdlog](https://dmitryfrank.com/_media/projects/nerdlog/nerdlog_intro_2.png)
+![Nerdlog](https://dmitryfrank.com/_media/projects/nerdlog/nerdlog_intro_3.png)
 
 Nerdlog is a fast, remote-first, multi-host TUI log viewer with timeline
 histogram and no central server. Loosely inspired by Graylog/Kibana, but
