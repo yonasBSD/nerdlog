@@ -1,4 +1,3 @@
-debug:Skipped 16 latest lines
 logfile:journalctl:0
 s:03-10T11:33,1
 s:03-10T11:17,1

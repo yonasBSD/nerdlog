@@ -620,14 +620,14 @@ function run_awk_script_journalctl {
         }
 
         # We have skipped enough lines, remember that
-        print "debug:Skipped " NR-1 " latest lines"
+        print "debug:Skipped " NR-1 " latest lines" > "/dev/stderr"
         needToSkip = 0;
       }
 
       # If the timestamp is earlier than what we already have,
       # remember that we are done skipping, to avoid doing useless work.
       if (curtime < timestampUntilPrecise) {
-        print "debug:Skipped " NR-1 " latest lines"
+        print "debug:Skipped " NR-1 " latest lines" > "/dev/stderr"
         needToSkip = 0;
       }
     }
