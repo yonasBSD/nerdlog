@@ -26,4 +26,5 @@ p:stage:3:querying logs
 debug:Getting logs from offset 8680, only 1054 bytes, all in the prev /tmp/nerdlog_agent_test_output/year_infer_edge_of_two_years/01_logs_in_the_past_cur_jan/logfile.1
 debug:Command to filter logs by time range:
 debug: bash -c 'tail -c +8680 /tmp/nerdlog_agent_test_output/year_infer_edge_of_two_years/01_logs_in_the_past_cur_jan/logfile.1 | head -c 1054'
+debug:Filtered out 0 from 16 lines
 p:stage:4:done

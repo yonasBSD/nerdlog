@@ -25,4 +25,5 @@ p:stage:3:querying logs
 debug:Getting logs from offset 4818 until the end of latest /tmp/nerdlog_agent_test_output/decreased_timestamps/01_basic/logfile.
 debug:Command to filter logs by time range:
 debug: bash -c 'tail -c +4818 /tmp/nerdlog_agent_test_output/decreased_timestamps/01_basic/logfile'
+debug:Filtered out 0 from 19 lines
 p:stage:4:done

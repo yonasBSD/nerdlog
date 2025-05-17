@@ -510,7 +510,7 @@ function printPercentage(numCur, numTotal) {
 function run_awk_script_logfiles {
   awk_pattern=''
   if [[ "$user_pattern" != "" ]]; then
-    awk_pattern="!($user_pattern) {next}"
+    awk_pattern="!($user_pattern) {numFilteredOut++; next}"
   fi
 
   # NOTE: this script MUST be executed with the "-b" awk key, which means that
@@ -527,6 +527,7 @@ function run_awk_script_logfiles {
 
   BEGIN {
     bytenr=1; curline=0; maxlines='$max_num_lines'; lastPercent=0;
+    numFilteredOut=0;
     prevMinKey="";
   }
   { bytenr += length($0)+1 }
@@ -564,6 +565,8 @@ function run_awk_script_logfiles {
   }
 
   END {
+    print "debug:Filtered out " numFilteredOut " from " NR " lines" > "/dev/stderr"
+
     print "logfile:'$logfile_prev':0";
     print "logfile:'$logfile_last':'$prevlog_lines'";
 
@@ -597,7 +600,7 @@ function run_awk_script_logfiles {
 function run_awk_script_journalctl {
   awk_pattern_check=''
   if [[ "$user_pattern" != "" ]]; then
-    awk_pattern_check="!($user_pattern) {next}"
+    awk_pattern_check="!($user_pattern) {numFilteredOut++; next}"
   fi
 
   awk_skip_n_latest_check=''
@@ -636,7 +639,10 @@ function run_awk_script_journalctl {
 
   early_exit_check=''
   if [[ "$stop_after_max_num_lines" != "" ]]; then
-    early_exit_check="curline >= maxlines {exit}"
+    early_exit_check='curline >= maxlines {
+      print "debug:Exiting early after collecting " curline " lines" > "/dev/stderr"
+      exit
+    }'
   fi
 
   awk_script='
@@ -659,6 +665,7 @@ function run_awk_script_journalctl {
     curline=0;
     lastline="";
     maxlines='$max_num_lines';
+    numFilteredOut=0;
     lastPercent=-1;
     timestampUntilPrecise="'"$timestamp_until_precise"'";
     timestampUntilPreciseLen=length(timestampUntilPrecise);
@@ -737,7 +744,6 @@ function run_awk_script_journalctl {
     }
   }
 
-  '$early_exit_check'
   '$awk_pattern_check'
   '$awk_skip_n_latest_check'
   {
@@ -747,11 +753,12 @@ function run_awk_script_journalctl {
       lines[curline] = $0;
       curline++
     }
-
-    next;
   }
+  '$early_exit_check'
 
   END {
+    print "debug:Filtered out " numFilteredOut " from " NR " lines" > "/dev/stderr"
+
     print "logfile:'$logfile_last':0";
 
     for (x in stats) {

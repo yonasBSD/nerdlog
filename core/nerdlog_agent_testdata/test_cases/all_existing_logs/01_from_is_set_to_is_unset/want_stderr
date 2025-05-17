@@ -22,4 +22,5 @@ p:stage:3:querying logs
 debug:Getting logs from the very beginning in prev /tmp/nerdlog_agent_test_output/all_existing_logs/01_from_is_set_to_is_unset/logfile.1 until the end of latest /tmp/nerdlog_agent_test_output/all_existing_logs/01_from_is_set_to_is_unset/logfile
 debug:Command to filter logs by time range:
 debug: bash -c 'cat /tmp/nerdlog_agent_test_output/all_existing_logs/01_from_is_set_to_is_unset/logfile.1 && cat /tmp/nerdlog_agent_test_output/all_existing_logs/01_from_is_set_to_is_unset/logfile'
+debug:Filtered out 0 from 35 lines
 p:stage:4:done

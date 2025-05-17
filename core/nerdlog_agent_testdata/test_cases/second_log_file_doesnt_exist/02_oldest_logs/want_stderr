@@ -25,4 +25,5 @@ p:stage:3:querying logs
 debug:Getting logs from the very beginning in prev /tmp/nerdlog-empty-file to offset 458 in latest /tmp/nerdlog_agent_test_output/second_log_file_doesnt_exist/02_oldest_logs/logfile
 debug:Command to filter logs by time range:
 debug: bash -c 'cat /tmp/nerdlog-empty-file && head -c 458 /tmp/nerdlog_agent_test_output/second_log_file_doesnt_exist/02_oldest_logs/logfile'
+debug:Filtered out 0 from 7 lines
 p:stage:4:done

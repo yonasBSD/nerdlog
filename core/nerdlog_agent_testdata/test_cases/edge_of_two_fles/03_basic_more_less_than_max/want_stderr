@@ -26,4 +26,5 @@ p:stage:3:querying logs
 debug:Getting logs from offset 18618 in prev /tmp/nerdlog_agent_test_output/edge_of_two_fles/03_basic_more_less_than_max/logfile.1 to offset 458 in latest /tmp/nerdlog_agent_test_output/edge_of_two_fles/03_basic_more_less_than_max/logfile
 debug:Command to filter logs by time range:
 debug: bash -c 'tail -c +18618 /tmp/nerdlog_agent_test_output/edge_of_two_fles/03_basic_more_less_than_max/logfile.1 && head -c 458 /tmp/nerdlog_agent_test_output/edge_of_two_fles/03_basic_more_less_than_max/logfile'
+debug:Filtered out 0 from 15 lines
 p:stage:4:done

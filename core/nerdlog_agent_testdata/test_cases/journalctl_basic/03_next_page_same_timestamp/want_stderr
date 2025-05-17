@@ -2,4 +2,5 @@ p:stage:3:querying logs:Note that journalctl can be SLOW. Consider using log fil
 debug:Command to filter logs by time range:
 debug: ../cmd/journalctl_mock/journalctl_mock.sh --output=short-iso-precise --quiet --reverse --since "2025-03-12 09:50:00" --until "2025-03-12 10:10:06"
 debug:Skipped 3 latest lines
+debug:Filtered out 0 from 7 lines
 p:stage:4:done

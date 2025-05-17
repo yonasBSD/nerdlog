@@ -26,4 +26,5 @@ p:stage:3:querying logs
 debug:Getting logs from the very beginning to offset 740, all in the prev /tmp/nerdlog_agent_test_output/from_the_beginning_of_prev_file/01_basic/logfile.1.
 debug:Command to filter logs by time range:
 debug: bash -c 'head -c 740 /tmp/nerdlog_agent_test_output/from_the_beginning_of_prev_file/01_basic/logfile.1'
+debug:Filtered out 0 from 11 lines
 p:stage:4:done

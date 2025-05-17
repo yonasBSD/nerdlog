@@ -26,4 +26,5 @@ p:stage:3:querying logs
 debug:Getting logs from offset 1524, only 1532 bytes, all in the latest /tmp/nerdlog_agent_test_output/decreased_timestamps/05_filter_out_some_before_decreased/logfile
 debug:Command to filter logs by time range:
 debug: bash -c 'tail -c +1524 /tmp/nerdlog_agent_test_output/decreased_timestamps/05_filter_out_some_before_decreased/logfile | head -c 1532'
+debug:Filtered out 15 from 23 lines
 p:stage:4:done
