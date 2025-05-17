@@ -37,6 +37,12 @@ var mainMenu = []menuItem{
 		},
 	},
 	{
+		Title: "Query debug info     :debug     ",
+		Handler: func(mv *MainView) {
+			mv.params.OnCmd("debug", CmdOpts{Internal: true})
+		},
+	},
+	{
 		Title: "About                :version   ",
 		Handler: func(mv *MainView) {
 			mv.params.OnCmd("version", CmdOpts{Internal: true})

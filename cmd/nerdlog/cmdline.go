@@ -198,6 +198,9 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 			refreshIndex: true,
 		})
 
+	case "debug":
+		app.mainView.showLastQueryDebugInfo()
+
 	case "version", "about":
 		app.mainView.showMessagebox("version", "Version", version.VersionFullDescr(), &MessageboxParams{
 			BackgroundColor: tcell.ColorDarkBlue,

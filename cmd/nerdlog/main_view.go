@@ -1285,6 +1285,62 @@ func (mv *MainView) applyLogs(resp *core.LogRespTotal) {
 	mv.printMsg(fmt.Sprintf("Query took: %s", resp.QueryDur.Round(1*time.Millisecond)), nlMsgLevelInfo)
 }
 
+func (mv *MainView) getLastQueryDebugInfo() string {
+	if mv.curLogResp == nil {
+		return "-- No query results --"
+	}
+
+	lstreamNames := make([]string, 0, len(mv.curLogResp.DebugInfo))
+	for lstreamName := range mv.curLogResp.DebugInfo {
+		lstreamNames = append(lstreamNames, lstreamName)
+	}
+	sort.Strings(lstreamNames)
+
+	var sb strings.Builder
+
+	for _, lstreamName := range lstreamNames {
+		debugInfo := mv.curLogResp.DebugInfo[lstreamName]
+		if len(debugInfo.AgentStdout) > 0 {
+			if sb.Len() > 0 {
+				sb.WriteString("\n")
+			}
+
+			sb.WriteString(fmt.Sprintf("%s stdout:\n", lstreamName))
+			for _, line := range debugInfo.AgentStdout {
+				sb.WriteString(line)
+				sb.WriteString("\n")
+			}
+		}
+
+		if len(debugInfo.AgentStderr) > 0 {
+			if sb.Len() > 0 {
+				sb.WriteString("\n")
+			}
+
+			sb.WriteString(fmt.Sprintf("%s stderr:\n", lstreamName))
+			for _, line := range debugInfo.AgentStderr {
+				sb.WriteString(line)
+				sb.WriteString("\n")
+			}
+		}
+	}
+
+	ret := sb.String()
+	if ret == "" {
+		ret = "-- No debug info --"
+	}
+
+	return ret
+}
+
+func (mv *MainView) showLastQueryDebugInfo() {
+	text := mv.getLastQueryDebugInfo()
+
+	mv.showMessagebox("debug", "Debug info for the last query", text, &MessageboxParams{
+		BackgroundColor: tcell.ColorDarkBlue,
+	})
+}
+
 func (mv *MainView) formatLogs() {
 	resp := mv.curLogResp
 	if resp == nil {

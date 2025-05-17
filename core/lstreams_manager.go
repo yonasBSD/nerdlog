@@ -804,10 +804,17 @@ func (lsman *LStreamsManager) mergeLogRespsAndSend() {
 		}
 	}
 
+	// Collect debug info
+	debugInfo := make(map[string]LogstreamDebugInfo, len(resps))
+	for lstreamName, resp := range resps {
+		debugInfo[lstreamName] = resp.DebugInfo
+	}
+
 	ret := &LogRespTotal{
 		MinuteStats:   lsman.curLogs.minuteStats,
 		NumMsgsTotal:  lsman.curLogs.numMsgsTotal,
 		LoadedEarlier: lsman.curQueryLogsCtx.req.LoadEarlier,
+		DebugInfo:     debugInfo,
 	}
 
 	var logsCoveredSince time.Time

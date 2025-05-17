@@ -43,6 +43,16 @@ type LogResp struct {
 	// NumMsgsTotal is the total number of messages in the time range (and
 	// included in MinuteStats). This number is usually larger than len(Logs).
 	NumMsgsTotal int
+
+	// DebugInfo contains info collected during this particular query.
+	DebugInfo LogstreamDebugInfo
+}
+
+type LogstreamDebugInfo struct {
+	// AgentStdout and AgentStderr contain arbitrary human-readable debugging
+	// info printed by the agent script.
+	AgentStdout []string
+	AgentStderr []string
 }
 
 // LogRespTotal is a log response from a LStreamsManager. It's merged from
@@ -63,6 +73,10 @@ type LogRespTotal struct {
 	NumMsgsTotal int
 
 	Errs []error
+
+	// DebugInfo is a map from the logstream name to the corresponding debug info
+	// collected during this particular query.
+	DebugInfo map[string]LogstreamDebugInfo
 
 	// QueryDur shows how long the query took.
 	QueryDur time.Duration

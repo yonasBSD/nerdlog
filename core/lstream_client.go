@@ -487,10 +487,6 @@ func (lsc *LStreamClient) run() {
 					continue
 				}
 
-				if lsc.checkDebug(line, cmdCtx) {
-					continue
-				}
-
 				if lsc.checkExitCode(line, cmdCtx) {
 					continue
 				}
@@ -699,10 +695,6 @@ func (lsc *LStreamClient) run() {
 				}
 
 				if lsc.checkError(line, cmdCtx) {
-					continue
-				}
-
-				if lsc.checkDebug(line, cmdCtx) {
 					continue
 				}
 
@@ -1198,18 +1190,6 @@ func (lsc *LStreamClient) checkError(
 	return true
 }
 
-func (lsc *LStreamClient) checkDebug(
-	line string, cmdCtx *lstreamCmdCtx,
-) bool {
-	if !strings.HasPrefix(line, "debug:") {
-		return false
-	}
-
-	// TODO: save it somewhere. For now, it's ignored.
-
-	return true
-}
-
 func (lsc *LStreamClient) checkExitCode(
 	line string, cmdCtx *lstreamCmdCtx,
 ) bool {
@@ -1308,6 +1288,8 @@ func (lsc *LStreamClient) handleCommandResultsIfDone(cmdCtx *lstreamCmdCtx) {
 
 	case cmdCtx.cmd.queryLogs != nil:
 		resp := cmdCtx.queryLogsCtx.Resp
+		resp.DebugInfo.AgentStdout = cmdCtx.unhandledStdout
+		resp.DebugInfo.AgentStderr = cmdCtx.unhandledStderr
 		lsc.sendCmdResp(resp, summaryCmdError(cmdCtx))
 		lsc.changeState(LStreamClientStateConnectedIdle)
 
