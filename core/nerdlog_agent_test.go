@@ -152,7 +152,16 @@ func runTestCase(t *testing.T, nerdlogAgentShFname, testCasesDir, repoRoot, test
 			}
 		}
 	} else if resolved.journalctlDataFile != "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			panic(err)
+		}
+
 		journalctlMockFname := filepath.Join(repoRoot, "cmd", "journalctl_mock", "journalctl_mock.sh")
+		journalctlMockFname, err = filepath.Rel(cwd, journalctlMockFname)
+		if err != nil {
+			panic(err)
+		}
 
 		// Special case for the journalctl, no need to copy any files.
 		logfileLast = "journalctl"

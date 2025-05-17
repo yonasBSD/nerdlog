@@ -21,4 +21,6 @@ debug:the from 2025-03-10-00:00 isn't found, will use the beginning
 debug:the to 2025-03-11-00:00 isn't found, will use the end
 p:stage:3:querying logs
 debug:Getting logs from the very beginning in prev /tmp/nerdlog_agent_test_output/all_existing_logs/01_from_is_set_to_is_set/logfile.1 until the end of latest /tmp/nerdlog_agent_test_output/all_existing_logs/01_from_is_set_to_is_set/logfile
+debug:Command to filter logs by time range:
+debug: bash -c 'cat /tmp/nerdlog_agent_test_output/all_existing_logs/01_from_is_set_to_is_set/logfile.1 && cat /tmp/nerdlog_agent_test_output/all_existing_logs/01_from_is_set_to_is_set/logfile'
 p:stage:4:done

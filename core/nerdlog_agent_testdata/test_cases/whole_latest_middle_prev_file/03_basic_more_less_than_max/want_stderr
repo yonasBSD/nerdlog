@@ -20,4 +20,6 @@ p:p:95
 debug:the from 2025-03-10-09:30 is found: 12 (733)
 p:stage:3:querying logs
 debug:Getting logs from offset 733 in prev /tmp/nerdlog_agent_test_output/whole_latest_middle_prev_file/03_basic_more_less_than_max/logfile.1 until the end of latest /tmp/nerdlog_agent_test_output/whole_latest_middle_prev_file/03_basic_more_less_than_max/logfile
+debug:Command to filter logs by time range:
+debug: bash -c 'tail -c +733 /tmp/nerdlog_agent_test_output/whole_latest_middle_prev_file/03_basic_more_less_than_max/logfile.1 && cat /tmp/nerdlog_agent_test_output/whole_latest_middle_prev_file/03_basic_more_less_than_max/logfile'
 p:stage:4:done

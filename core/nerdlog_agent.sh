@@ -107,6 +107,22 @@ function detect_timezone() { # {{{
   exit 1
 } # }}}
 
+# function concat_cmds_array() {{{
+#
+# Concatenates the global `cmds` array into a single bash command, using " && ".
+# Escapes things properly. The result can be passed to "eval" or "bash -c".
+function concat_cmds_array() {
+  local first=1
+  for cmd in "${cmds[@]}"; do
+    if [[ $first == 1 ]]; then
+      first=0
+    else
+      echo -n " && "
+    fi
+    echo -n "${cmd//\'/\'\"\'\"\'}"
+  done
+} # }}}
+
 while [[ $# -gt 0 ]]; do
   case $1 in
     -c|--index-file)
@@ -784,21 +800,24 @@ if [[ "$logfile_last" == "${SPECIAL_FILENAME_JOURNALCTL}" ]]; then
   # files); and also when we're just getting the next page and not interested
   # in timeline histogram data for the full period, we just exit early after
   # accumulating $max_num_lines.
-  cmd=("$journalctl_binary" "$JOURNALCTL_FORMAT_FLAG" "--quiet" "--reverse")
+  cmd="$journalctl_binary $JOURNALCTL_FORMAT_FLAG --quiet --reverse"
 
   if [[ -n "$journalctl_from" ]]; then
-    cmd+=("--since" "$journalctl_from")
+    cmd="$cmd --since \"$journalctl_from\""
   fi
 
   if [[ -n "$timestamp_until_seconds" ]]; then
-    cmd+=("--until" "$timestamp_until_seconds")
+    cmd="$cmd --until \"$timestamp_until_seconds\""
     stop_after_max_num_lines="1"
     # NOTE: we'll also skip the $skip_n_latest messages with the latest timestamp.
   elif [[ -n "$journalctl_to" ]]; then
-    cmd+=("--until" "$journalctl_to")
+    cmd="$cmd --until \"$journalctl_to\""
   fi
 
-  "${cmd[@]}" |                      \
+  echo "debug:Command to filter logs by time range:" 1>&2
+  echo "debug: $cmd" 1>&2
+
+  eval "${cmd}" |                         \
     user_pattern="$user_pattern"     \
     max_num_lines="$max_num_lines"   \
     stop_after_max_num_lines="$stop_after_max_num_lines"   \
@@ -1295,9 +1314,13 @@ else
   echo "debug:$info" 1>&2
 fi
 
+cmds_concatenated="$(concat_cmds_array)"
+echo "debug:Command to filter logs by time range:" 1>&2
+echo "debug: bash -c '$cmds_concatenated'" 1>&2
+
 # Now execute all those commands, and feed those logs to the awk script
 # which will analyze them and produce the final output.
-for cmd in "${cmds[@]}"; do eval $cmd || exit 1; done | \
+eval $cmds_concatenated | \
   user_pattern="$user_pattern"                          \
   max_num_lines="$max_num_lines"                        \
   num_bytes_to_scan="$num_bytes_to_scan"                \

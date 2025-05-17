@@ -24,4 +24,6 @@ debug:the from 2025-03-10-11:30 is found: 311 (20680)
 debug:the to 2025-03-10-12:00 is found: 334 (22212)
 p:stage:3:querying logs
 debug:Getting logs from offset 1524, only 1532 bytes, all in the latest /tmp/nerdlog_agent_test_output/decreased_timestamps/04_filter_only_decreased/logfile
+debug:Command to filter logs by time range:
+debug: bash -c 'tail -c +1524 /tmp/nerdlog_agent_test_output/decreased_timestamps/04_filter_only_decreased/logfile | head -c 1532'
 p:stage:4:done

@@ -23,6 +23,8 @@ p:p:95
 debug:the from 2025-03-10-15:00 is found: 411 (27328)
 p:stage:3:querying logs
 debug:Getting logs from offset 8172 until the end of latest /tmp/nerdlog_agent_test_output/latest_logs_same_file_pattern1/03_basic_more_less_than_max/logfile.
+debug:Command to filter logs by time range:
+debug: bash -c 'tail -c +8172 /tmp/nerdlog_agent_test_output/latest_logs_same_file_pattern1/03_basic_more_less_than_max/logfile'
 p:p:15
 p:p:30
 p:p:45

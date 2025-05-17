@@ -23,4 +23,6 @@ debug:the from 2025-03-09-10:30 isn't found, will use the beginning
 debug:the to 2025-03-10-10:30 is found: 8 (459)
 p:stage:3:querying logs
 debug:Getting logs from the very beginning in prev /tmp/nerdlog-empty-file to offset 458 in latest /tmp/nerdlog_agent_test_output/second_log_file_doesnt_exist/02_oldest_logs/logfile
+debug:Command to filter logs by time range:
+debug: bash -c 'cat /tmp/nerdlog-empty-file && head -c 458 /tmp/nerdlog_agent_test_output/second_log_file_doesnt_exist/02_oldest_logs/logfile'
 p:stage:4:done

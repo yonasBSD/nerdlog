@@ -24,4 +24,6 @@ debug:the from 2025-03-12-10:00 is found: 1033 (68556)
 debug:the to 2025-05-01-00:00 isn't found, will use the end
 p:stage:3:querying logs
 debug:Getting logs from offset 49400 until the end of latest /tmp/nerdlog_agent_test_output/latest_logs_same_file/10_to_is_specified_and_is_in_the_future/logfile.
+debug:Command to filter logs by time range:
+debug: bash -c 'tail -c +49400 /tmp/nerdlog_agent_test_output/latest_logs_same_file/10_to_is_specified_and_is_in_the_future/logfile'
 p:stage:4:done
