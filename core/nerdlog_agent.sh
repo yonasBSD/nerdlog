@@ -78,7 +78,13 @@ function find_gawk_binary() { # {{{
 } # }}}
 
 function detect_timezone() { # {{{
-  # Prefer timedatectl if available
+  # Prefer TZ env var if available
+  if [[ "$TZ" != "" ]]; then
+    echo "$TZ"
+    exit 0
+  fi
+
+  # Next check timedatectl if available
   host_timezone="$(timedatectl show --property=Timezone --value)"
   if [[ $? == 0 ]]; then
     echo "$host_timezone"
