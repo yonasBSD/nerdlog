@@ -91,12 +91,18 @@ func getNumLines(s string, screenWidth int) int {
 		return 0
 	}
 
+	s = strings.TrimSpace(s)
 	lines := strings.Split(s, "\n")
 	numLines := 0
 	for _, line := range lines {
 		// Divide line length by screen width and round up
 		lineLen := len(line)
-		numLines += (lineLen + screenWidth - 1) / screenWidth
+		curNumLines := (lineLen + screenWidth - 1) / screenWidth
+		if curNumLines == 0 {
+			curNumLines = 1
+		}
+
+		numLines += curNumLines
 	}
 	return numLines
 }
@@ -108,6 +114,10 @@ func getNumLines(s string, screenWidth int) int {
 // elements, padding, border etc.
 func GetOptimalMessageViewSize(screenWidth, extraWidth, extraHeight int, text string) (int, int) {
 	width := getMaxLineLength(text) + extraWidth
+	if width > screenWidth {
+		width = screenWidth
+	}
+
 	height := extraHeight + getNumLines(text, screenWidth-extraWidth)
 	return width, height
 }
@@ -133,7 +143,7 @@ func NewMessageView(
 	msgv.msgboxFlex = tview.NewFlex().SetDirection(tview.FlexRow)
 
 	msgv.textView = tview.NewTextView()
-	msgv.textView.SetText(params.Message)
+	msgv.textView.SetText(strings.TrimSpace(params.Message))
 	msgv.textView.SetTextAlign(msgv.params.Align)
 	msgv.textView.SetDynamicColors(true)
 
@@ -273,7 +283,7 @@ func (msgv *MessageView) Hide() {
 // SetText updates the text on the messagebox, and if resizeIfNeeded is true
 // and the messagebox is not big enough, then also expands itself.
 func (msgv *MessageView) SetText(text string, resizeIfNeeded bool) {
-	msgv.textView.SetText(text)
+	msgv.textView.SetText(strings.TrimSpace(text))
 
 	if resizeIfNeeded {
 		optimalWidth, optimalHeight := msgv.getOptimalSize(text)
