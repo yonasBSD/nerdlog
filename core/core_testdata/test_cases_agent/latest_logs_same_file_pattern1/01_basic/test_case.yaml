@@ -1,0 +1,7 @@
+descr: ""
+logfiles:
+  kind: all_from_dir
+  dir: ../../../input_logfiles/small_mar
+cur_year: 2025
+cur_month: 3
+args: ["--max-num-lines", "5", "--from", "2025-03-10-15:00", "/Backup completed/"]

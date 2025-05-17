@@ -70,7 +70,7 @@ func TestNerdlogAgent(t *testing.T) {
 
 	// Get directory of the current file
 	parentDir := filepath.Dir(filename)
-	testCasesDir := filepath.Join(parentDir, "nerdlog_agent_testdata", "test_cases")
+	testCasesDir := filepath.Join(parentDir, "core_testdata", "test_cases_agent")
 	nerdlogAgentShFname := filepath.Join(parentDir, "nerdlog_agent.sh")
 
 	repoRoot := filepath.Dir(filepath.Dir(filename))
@@ -677,7 +677,7 @@ func BenchmarkNerdlogAgentSmallLogNoIndex(b *testing.B) {
 	}
 
 	parentDir := filepath.Dir(filename)
-	logfilesDir := filepath.Join(parentDir, "nerdlog_agent_testdata", "logfiles", "small_mar")
+	logfilesDir := filepath.Join(parentDir, "core_testdata", "input_logfiles", "small_mar")
 	nerdlogAgentShFname := filepath.Join(parentDir, "nerdlog_agent.sh")
 
 	indexFname := filepath.Join(testOutputRoot, "bench1_index")
@@ -711,7 +711,7 @@ func BenchmarkNerdlogAgentSmallLogCompleteIndex(b *testing.B) {
 	}
 
 	parentDir := filepath.Dir(filename)
-	logfilesDir := filepath.Join(parentDir, "nerdlog_agent_testdata", "logfiles", "small_mar")
+	logfilesDir := filepath.Join(parentDir, "core_testdata", "input_logfiles", "small_mar")
 	nerdlogAgentShFname := filepath.Join(parentDir, "nerdlog_agent.sh")
 
 	indexFname := filepath.Join(testOutputRoot, "bench1_index")

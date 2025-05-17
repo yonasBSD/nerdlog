@@ -1,0 +1,11 @@
+descr: "Initial basic test case"
+logfiles:
+  kind: all_from_dir
+  dir: ../../../input_logfiles/tiny
+cur_year: 2025
+cur_month: 3
+args: [
+  "--max-num-lines", "20",
+  "--from", "2025-03-01-00:00",
+  "--lines-until", "16"
+]
