@@ -55,10 +55,25 @@ type MessageView struct {
 
 	textView    *tview.TextView
 	inputFields []*tview.InputField
+	buttons     []*tview.Button
 	focusers    []tview.Primitive
+
+	// onButtonBlurRevert is needed to support the use case when we need to
+	// change the button's label until it loses its focus. We use it for e.g.
+	// "Copy" -> "Copied" button.
+	onButtonBlurRevert *onButtonBlurRevert
 
 	curWidth  int
 	curHeight int
+}
+
+// onButtonBlurRevert specifies the index and old value of a button (that we
+// need to revert to when the button loses focus).
+type onButtonBlurRevert struct {
+	// index of the button to revert the label of.
+	index int
+	// oldLabel is the label to set.
+	oldLabel string
 }
 
 // getMaxLineLength returns the length of the longest line in the given string.
@@ -217,6 +232,7 @@ func NewMessageView(
 		btn := tview.NewButton(btnLabel).SetSelectedFunc(func() {
 			params.OnButtonPressed(btnLabel, btnIdx)
 		})
+		msgv.buttons = append(msgv.buttons, btn)
 		msgv.focusers = append(msgv.focusers, btn)
 		tabHandler := msgv.getGenericTabHandler(btn)
 		btn.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
@@ -234,6 +250,15 @@ func NewMessageView(
 			}
 
 			return event
+		})
+
+		// Support reverting button label changes when they lose their focus,
+		// like we need to do e.g. on "Copy" -> "Copied".
+		btn.SetBlurFunc(func() {
+			if revert := msgv.onButtonBlurRevert; revert != nil {
+				msgv.buttons[revert.index].SetLabel(revert.oldLabel)
+				msgv.onButtonBlurRevert = nil
+			}
 		})
 
 		// Unless it's the first button, add a 1-char spacing.
@@ -307,6 +332,31 @@ func (msgv *MessageView) SetText(text string, resizeIfNeeded bool) {
 			)
 		}
 	}
+}
+
+// GetText returns the current MessageView text.
+func (msgv *MessageView) GetText(stripAllTags bool) string {
+	return msgv.textView.GetText(stripAllTags)
+}
+
+// SetButtonLabelOpts contains extra options for SetButtonLabel.
+type SetButtonLabelOpts struct {
+	// If RevertOnBlur is true, then once the button loses its focus,
+	// its label will be reverted back.
+	RevertOnBlur bool
+}
+
+// SetButtonLabel updates the label on the button with the given button index.
+// No check is done for whether the given index is valid, so if not, it will panic.
+func (msgv *MessageView) SetButtonLabel(index int, label string, opts SetButtonLabelOpts) {
+	if opts.RevertOnBlur {
+		msgv.onButtonBlurRevert = &onButtonBlurRevert{
+			index:    index,
+			oldLabel: msgv.buttons[index].GetLabel(),
+		}
+	}
+
+	msgv.buttons[index].SetLabel(label)
 }
 
 // getOptimalSize returns optimal width and height for the message box with

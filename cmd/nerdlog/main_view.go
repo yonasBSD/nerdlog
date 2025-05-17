@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dimonomid/nerdlog/clhistory"
+	"github.com/dimonomid/nerdlog/clipboard"
 	"github.com/dimonomid/nerdlog/cmd/nerdlog/ui"
 	"github.com/dimonomid/nerdlog/core"
 	"github.com/dimonomid/nerdlog/log"
@@ -271,6 +272,7 @@ func NewMainView(params *MainViewParams) *MainView {
 						fmt.Sprintf("Resetting the logstreams filter, since the current one '%q' is wrong: %s", mv.lstreamsSpec, err.Error()),
 						&MessageboxParams{
 							BackgroundColor: tcell.ColorDarkRed,
+							CopyButton:      true,
 						},
 					)
 					mv.setLStreams("")
@@ -322,7 +324,9 @@ func NewMainView(params *MainViewParams) *MainView {
 
 				var tmp QueryFull
 				if err := tmp.UnmarshalShellCmd(item.Str); err != nil {
-					mv.showMessagebox("err", "Broken query history", err.Error(), nil)
+					mv.showMessagebox("err", "Broken query history", err.Error(), &MessageboxParams{
+						CopyButton: true,
+					})
 					return nil
 				}
 
@@ -1338,6 +1342,7 @@ func (mv *MainView) showLastQueryDebugInfo() {
 
 	mv.showMessagebox("debug", "Debug info for the last query", text, &MessageboxParams{
 		BackgroundColor: tcell.ColorDarkBlue,
+		CopyButton:      true,
 	})
 }
 
@@ -1669,6 +1674,13 @@ type MessageboxParams struct {
 	OnButtonPressed func(label string, idx int)
 	OnEsc           func()
 
+	// If CopyButton is true, then one more button will be added: "Copy", and when
+	// clicked, the messagebox text will be copied to clipboard.
+	//
+	// If there is no clipboard support for whatever reason, this field is silently
+	// ignored (there will be no Copy button).
+	CopyButton bool
+
 	InputFields []MessageViewInputFieldParams
 
 	// OnInputFieldPressed is called whenever any key is pressed on any of the
@@ -1702,9 +1714,34 @@ func (mv *MainView) showMessagebox(
 		params.Buttons = []string{"OK"}
 	}
 
+	// If the Copy button is requested, but there is no clipboard support, then just
+	// silently refuse to show the Copy button.
+	if params.CopyButton && clipboard.InitErr != nil {
+		params.CopyButton = false
+	}
+
+	if params.CopyButton {
+		params.Buttons = append(params.Buttons, "Copy")
+	}
+
 	if len(params.Buttons) > 0 && params.OnButtonPressed == nil {
 		params.OnButtonPressed = func(label string, idx int) {
 			msgv.Hide()
+		}
+	}
+
+	if params.CopyButton {
+		oldHandler := params.OnButtonPressed
+		params.OnButtonPressed = func(label string, idx int) {
+			if label == "Copy" {
+				clipboard.WriteText([]byte(msgv.GetText(true)))
+				msgv.SetButtonLabel(idx, "Copied", SetButtonLabelOpts{
+					RevertOnBlur: true,
+				})
+				return
+			}
+
+			oldHandler(label, idx)
 		}
 	}
 
@@ -1774,7 +1811,9 @@ func (mv *MainView) showOriginalMsg(msg core.LogMsg) {
 
 	sb.WriteString(tview.Escape(msg.OrigLine))
 
-	mv.showMessagebox("msg", "Message", sb.String(), &MessageboxParams{})
+	mv.showMessagebox("msg", "Message", sb.String(), &MessageboxParams{
+		CopyButton: true,
+	})
 }
 
 func (mv *MainView) showModal(pageName string, primitive tview.Primitive, width, height int, focus bool) {
@@ -1913,7 +1952,8 @@ func (mv *MainView) handleQueryError(err error) {
 			"Log query error",
 			err.Error(),
 			&MessageboxParams{
-				Buttons: []string{"OK", "Details"},
+				Buttons:    []string{"OK", "Details"},
+				CopyButton: true,
 				OnButtonPressed: func(label string, idx int) {
 					// Whatever button the user pressed, we hide the dialog. Keep in mind
 					// it needs to happen _before_ we call makeOverlayVisible() below.
@@ -1950,6 +1990,7 @@ func (mv *MainView) handleQueryError(err error) {
 		// In all other errors, open a regular dialog.
 		mv.showMessagebox("err", "Log query error", err.Error(), &MessageboxParams{
 			BackgroundColor: tcell.ColorDarkRed,
+			CopyButton:      true,
 		})
 	}
 }
@@ -1958,12 +1999,14 @@ func (mv *MainView) handleQueryError(err error) {
 func (mv *MainView) handleBootstrapError(err error) {
 	mv.showMessagebox("err", "Bootstrap error", err.Error(), &MessageboxParams{
 		BackgroundColor: tcell.ColorDarkRed,
+		CopyButton:      true,
 	})
 }
 
 func (mv *MainView) handleBootstrapWarning(err error) {
 	mv.showMessagebox("err", "Bootstrap warning", err.Error(), &MessageboxParams{
 		BackgroundColor: tcell.ColorDarkOrchid,
+		CopyButton:      true,
 	})
 }
 
@@ -1996,6 +2039,7 @@ func (mv *MainView) handleDataRequest(dataReq *core.ShellConnDataRequest) {
 			mv.hideModal(pageNameMessage+msgID, true)
 		},
 		BackgroundColor: tcell.ColorDarkGreen,
+		CopyButton:      true,
 	})
 }
 

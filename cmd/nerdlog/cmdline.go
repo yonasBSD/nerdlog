@@ -29,6 +29,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 
 		app.mainView.showMessagebox("err", "Help", sb.String(), &MessageboxParams{
 			BackgroundColor: tcell.ColorDarkBlue,
+			CopyButton:      true,
 		})
 
 	case "time":
@@ -204,6 +205,7 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 	case "version", "about":
 		app.mainView.showMessagebox("version", "Version", version.VersionFullDescr(), &MessageboxParams{
 			BackgroundColor: tcell.ColorDarkBlue,
+			CopyButton:      true,
 		})
 
 	default:
