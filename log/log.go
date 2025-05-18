@@ -25,8 +25,13 @@ var logFile *os.File
 var logFileMtx sync.Mutex
 
 // printf prints a formatted message to the log file ~/.nerdlog.log
-func printf(format string, a ...interface{}) {
-	w := writer()
+func printf(toStdout bool, format string, a ...interface{}) {
+	var w io.Writer
+	if toStdout {
+		w = os.Stdout
+	} else {
+		w = writer()
+	}
 
 	fmt.Fprintf(w, "%s: ", time.Now().Format("2006-01-02T15:04:05.999"))
 
@@ -60,6 +65,8 @@ func writer() io.Writer {
 
 type Logger struct {
 	minLevel LogLevel
+
+	toStdout bool
 
 	namespace string
 	context   map[string]string
@@ -95,6 +102,14 @@ func (l *Logger) WithNamespaceAppended(n string) *Logger {
 	return &newLogger
 }
 
+func (l *Logger) WithStdout(toStdout bool) *Logger {
+	l = l.thisOrDefault()
+
+	newLogger := *l
+	newLogger.toStdout = toStdout
+	return &newLogger
+}
+
 func (l *Logger) Verbose3f(format string, a ...interface{}) {
 	l.Printf(Verbose3, format, a...)
 }
@@ -127,8 +142,8 @@ func (l *Logger) Printf(level LogLevel, format string, a ...interface{}) {
 	}
 
 	if l.namespace != "" {
-		printf("[%s] %s", l.namespace, fmt.Sprintf(format, a...))
+		printf(l.toStdout, "[%s] %s", l.namespace, fmt.Sprintf(format, a...))
 	} else {
-		printf("%s", l.namespace, fmt.Sprintf(format, a...))
+		printf(l.toStdout, "%s", l.namespace, fmt.Sprintf(format, a...))
 	}
 }
