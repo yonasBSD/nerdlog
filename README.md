@@ -49,9 +49,8 @@ overall direction, you can read it in the article:
 Originally hacked together in 2022 to replace painfully slow Splunk setups.
 Revisited in 2025 to clean it up to a certain extent, and open source it.
 
-Tested on various Linux distros, FreeBSD and Windows (only the client app can
-run on Windows though, we can't get logs from Windows hosts). Should work on
-MacOS too, however I didn't test it myself (let me know if you did).
+Tested on various Linux distros, FreeBSD, MacOS and Windows (only the client
+app can run on Windows though, we can't get logs from Windows hosts).
 
 It's still kinda in a proof-of-concept stage though. Implemented as fast as
 possible, spaghetti code abounds, could be covered with more tests, more

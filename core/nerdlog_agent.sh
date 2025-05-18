@@ -1098,10 +1098,11 @@ function printIndexLine(outfile, timestr, linenr, bytenr) {
 # Now we can use those vars $my_result, $my_linenr and $my_bytenr
 function get_linenr_and_bytenr_from_index() { # {{{
   "$awk_binary" -F"\t" '
-    BEGIN { isFirstIdx = 1; }
+    BEGIN { isFirstIdx = 1; printed = 0; }
     $1 == "idx" {
       if ("'$1'" == $2) {
         print "found " $3 " " $4;
+        printed = 1;
         exit
       } else if ("'$1'" < $2) {
         if (isFirstIdx) {
@@ -1109,12 +1110,17 @@ function get_linenr_and_bytenr_from_index() { # {{{
         } else {
           print "found " $3 " " $4;
         }
+        printed = 1;
         exit
       } else {
         isFirstIdx = 0;
       }
     }
-    END { print "after"; exit }
+    END {
+      if (!printed) {
+        print "after";
+      }
+    }
   ' $indexfile
 } # }}}
 
