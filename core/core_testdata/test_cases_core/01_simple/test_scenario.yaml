@@ -1,0 +1,54 @@
+descr: ""
+current_time: "2025-03-12T10:58:00Z"
+manager_params:
+  config_log_streams:
+    testhost-1:
+      log_files:
+        kind: all_from_dir
+        dir: ../../input_logfiles/small_mar
+      options:
+        shell_init:
+          - 'export TZ=UTC'
+  initial_lstreams: "testhost-1"
+  client_id: "core-test-runner"
+test_steps:
+
+  - descr: "initial query"
+    query:
+      params:
+        max_num_lines: 8
+        from: "2025-03-12T10:00:00Z"
+        to: ""
+        pattern: ""
+        load_earlier: false
+      want: want_log_resp_01_initial.txt
+
+  - descr: "load more"
+    query:
+      params:
+        max_num_lines: 8
+        from: "2025-03-12T10:00:00Z"
+        to: ""
+        pattern: ""
+        load_earlier: true
+      want: want_log_resp_02_load_more.txt
+
+  - descr: "load more"
+    query:
+      params:
+        max_num_lines: 8
+        from: "2025-03-12T10:00:00Z"
+        to: ""
+        pattern: ""
+        load_earlier: true
+      want: want_log_resp_03_load_more.txt
+
+  - descr: "try to load more: same result"
+    query:
+      params:
+        max_num_lines: 8
+        from: "2025-03-12T10:00:00Z"
+        to: ""
+        pattern: ""
+        load_earlier: true
+      want: want_log_resp_03_load_more.txt

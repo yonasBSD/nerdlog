@@ -1,0 +1,64 @@
+descr: "Dealing with duplicate messages, messages with the same timestamp, or the same second in the timestamp, without pattern"
+current_time: "2025-03-12T10:58:00Z"
+manager_params:
+  config_log_streams:
+    testhost-1:
+      log_files:
+        kind: journalctl
+        journalctl_data_file: ../../input_journalctl/small_mar/journalctl_data_small_mar.txt
+      options:
+        shell_init:
+          - 'export TZ=UTC'
+  initial_lstreams: "testhost-1"
+  client_id: "core-test-runner"
+test_steps:
+
+  - descr: "initial query"
+    query:
+      params:
+        max_num_lines: 8
+        from: "2025-03-11T19:00:00Z"
+        to:   ""
+        pattern: '/syslog/'
+        load_earlier: false
+      want: want_log_resp_01_initial.txt
+
+  - descr: "load more"
+    query:
+      params:
+        max_num_lines: 8
+        from: "2025-03-11T19:00:00Z"
+        to:   ""
+        pattern: '/syslog/'
+        load_earlier: true
+      want: want_log_resp_02_load_more.txt
+
+  - descr: "load more"
+    query:
+      params:
+        max_num_lines: 8
+        from: "2025-03-11T19:00:00Z"
+        to:   ""
+        pattern: '/syslog/'
+        load_earlier: true
+      want: want_log_resp_03_load_more.txt
+
+  - descr: "load more"
+    query:
+      params:
+        max_num_lines: 8
+        from: "2025-03-11T19:00:00Z"
+        to:   ""
+        pattern: '/syslog/'
+        load_earlier: true
+      want: want_log_resp_04_load_more.txt
+
+  - descr: "load more"
+    query:
+      params:
+        max_num_lines: 8
+        from: "2025-03-11T19:00:00Z"
+        to:   ""
+        pattern: '/syslog/'
+        load_earlier: true
+      want: want_log_resp_05_load_more.txt

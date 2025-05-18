@@ -4,7 +4,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 # Define the paths for both directory trees
 tests_output_root_dir="/tmp/nerdlog_agent_test_output"
-tests_input_root_dir="${SCRIPT_DIR}/../core/nerdlog_agent_testdata/test_cases"
+tests_input_root_dir="${SCRIPT_DIR}/../core/core_testdata/test_cases_agent"
 
 # Convert tests_output_root_dir to absolute path for consistency
 tests_output_root_dir=$(realpath "$tests_output_root_dir")

@@ -1,0 +1,81 @@
+NumMsgsTotal: 48
+LoadedEarlier: false
+Num errors: 0
+
+Num MinuteStats: 27
+- 2025-03-12-09-05: 1
+- 2025-03-12-09-09: 1
+- 2025-03-12-09-15: 2
+- 2025-03-12-09-22: 1
+- 2025-03-12-09-31: 1
+- 2025-03-12-09-33: 1
+- 2025-03-12-09-42: 3
+- 2025-03-12-09-52: 1
+- 2025-03-12-10-01: 1
+- 2025-03-12-10-03: 1
+- 2025-03-12-10-10: 9
+- 2025-03-12-10-14: 1
+- 2025-03-12-10-16: 2
+- 2025-03-12-10-19: 1
+- 2025-03-12-10-27: 1
+- 2025-03-12-10-32: 1
+- 2025-03-12-10-38: 1
+- 2025-03-12-10-42: 2
+- 2025-03-12-10-43: 1
+- 2025-03-12-10-44: 1
+- 2025-03-12-10-45: 1
+- 2025-03-12-10-50: 1
+- 2025-03-12-10-52: 1
+- 2025-03-12-10-53: 1
+- 2025-03-12-10-56: 8
+- 2025-03-12-10-57: 1
+- 2025-03-12-10-58: 2
+
+Num Logs: 6
+- 2025-03-12T10:56:29.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile,000399,000399,erro,<err> User account enabled
+  context: {"hostname":"myhost","lstream":"testhost-dense","pid":"8322","program":"authpriv"}
+  orig: Mar 12 10:56:29 myhost authpriv[8322]: <err> User account enabled
+- 2025-03-12T10:56:44.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile,000400,000400,erro,<err> Invalid input detected
+  context: {"hostname":"myhost","lstream":"testhost-dense","pid":"5654","program":"auth"}
+  orig: Mar 12 10:56:44 myhost auth[5654]: <err> Invalid input detected
+- 2025-03-12T10:56:46.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-1/logfile,000766,001053,----,<alert> Memory leak detected
+  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3690","program":"cron"}
+  orig: Mar 12 10:56:46 myhost cron[3690]: <alert> Memory leak detected
+- 2025-03-12T10:57:56.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile,000401,000401,info,<info> Cache update completed
+  context: {"hostname":"myhost","lstream":"testhost-dense","pid":"2811","program":"authpriv"}
+  orig: Mar 12 10:57:56 myhost authpriv[2811]: <info> Cache update completed
+- 2025-03-12T10:58:09.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile,000402,000402,----,<alert> File checksum mismatch
+  context: {"hostname":"myhost","lstream":"testhost-dense","pid":"1292","program":"lpr"}
+  orig: Mar 12 10:58:09 myhost lpr[1292]: <alert> File checksum mismatch
+- 2025-03-12T10:58:09.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile,000403,000403,warn,<warning> System health check failed
+  context: {"hostname":"myhost","lstream":"testhost-dense","pid":"2970","program":"uucp"}
+  orig: Mar 12 10:58:09 myhost uucp[2970]: <warning> System health check failed
+
+DebugInfo:
+{
+  "testhost-1": {
+    "AgentStdout": null,
+    "AgentStderr": [
+      "debug:index file doesn't exist or is empty, gonna refresh it",
+      "debug:the from 2025-03-12-09:00 is found: 1022 (67792)",
+      "debug:the to 2025-03-12-11:00 isn't found, will use the end",
+      "debug:Getting logs from offset 48636 until the end of latest /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-1/logfile.",
+      "debug:Command to filter logs by time range:",
+      "debug: bash -c 'tail -c +48636 /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-1/logfile'",
+      "debug:Filtered out 0 from 32 lines"
+    ]
+  },
+  "testhost-dense": {
+    "AgentStdout": null,
+    "AgentStderr": [
+      "debug:prev logfile /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile.1 doesn't exist, using a dummy empty file /tmp/nerdlog-empty-file",
+      "debug:index file doesn't exist or is empty, gonna refresh it",
+      "debug:the from 2025-03-12-09:00 is found: 388 (25562)",
+      "debug:the to 2025-03-12-11:00 isn't found, will use the end",
+      "debug:Getting logs from offset 25562 until the end of latest /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile.",
+      "debug:Command to filter logs by time range:",
+      "debug: bash -c 'tail -c +25562 /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile'",
+      "debug:Filtered out 0 from 16 lines"
+    ]
+  }
+}
