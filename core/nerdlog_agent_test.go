@@ -437,15 +437,39 @@ func provisionLogFiles(resolved *resolvedLogFiles, testOutputDir, repoRoot strin
 			}
 		}
 	} else if resolved.journalctlDataFile != "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			panic(err)
+		srcJournalctlMockDir := filepath.Join(repoRoot, "cmd", "journalctl_mock")
+		srcJournalctlMockShFname := filepath.Join(srcJournalctlMockDir, "journalctl_mock.sh")
+		srcJournalctlMockGoFname := filepath.Join(srcJournalctlMockDir, "journalctl_mock.go")
+		srcJournalctlMockGoModFname := filepath.Join(srcJournalctlMockDir, "go.mod")
+		srcJournalctlMockGoSumFname := filepath.Join(srcJournalctlMockDir, "go.sum")
+
+		tgtJournalctlMockDir := filepath.Join(testOutputDir, "journalctl_mock")
+		tgtJournalctlMockShFname := filepath.Join(tgtJournalctlMockDir, "journalctl_mock.sh")
+		tgtJournalctlMockGoFname := filepath.Join(tgtJournalctlMockDir, "journalctl_mock.go")
+		tgtJournalctlMockGoModFname := filepath.Join(tgtJournalctlMockDir, "go.mod")
+		tgtJournalctlMockGoSumFname := filepath.Join(tgtJournalctlMockDir, "go.sum")
+
+		if err := os.MkdirAll(tgtJournalctlMockDir, 0755); err != nil {
+			return nil, errors.Errorf("unable to create journalctl_mock output dir %s: %s", tgtJournalctlMockDir, err.Error())
 		}
 
-		journalctlMockFname := filepath.Join(repoRoot, "cmd", "journalctl_mock", "journalctl_mock.sh")
-		journalctlMockFname, err = filepath.Rel(cwd, journalctlMockFname)
-		if err != nil {
-			panic(err)
+		if err := copyFile(srcJournalctlMockShFname, tgtJournalctlMockShFname); err != nil {
+			return nil, errors.Annotatef(err, "copying from %s to %s", srcJournalctlMockShFname, tgtJournalctlMockShFname)
+		}
+		if err := os.Chmod(tgtJournalctlMockShFname, 0755); err != nil {
+			return nil, errors.Annotatef(err, "changing permissions for journalctl mock %s", tgtJournalctlMockShFname)
+		}
+
+		if err := copyFile(srcJournalctlMockGoFname, tgtJournalctlMockGoFname); err != nil {
+			return nil, errors.Annotatef(err, "copying from %s to %s", srcJournalctlMockGoFname, tgtJournalctlMockGoFname)
+		}
+
+		if err := copyFile(srcJournalctlMockGoModFname, tgtJournalctlMockGoModFname); err != nil {
+			return nil, errors.Annotatef(err, "copying from %s to %s", srcJournalctlMockGoModFname, tgtJournalctlMockGoModFname)
+		}
+
+		if err := copyFile(srcJournalctlMockGoSumFname, tgtJournalctlMockGoSumFname); err != nil {
+			return nil, errors.Annotatef(err, "copying from %s to %s", srcJournalctlMockGoSumFname, tgtJournalctlMockGoSumFname)
 		}
 
 		// Special case for the journalctl, no need to copy any files.
@@ -453,7 +477,7 @@ func provisionLogFiles(resolved *resolvedLogFiles, testOutputDir, repoRoot strin
 		logfilePrev = "journalctl"
 		extraEnv = append(
 			extraEnv,
-			fmt.Sprintf("NERDLOG_JOURNALCTL_MOCK=%s", journalctlMockFname),
+			fmt.Sprintf("NERDLOG_JOURNALCTL_MOCK=%s", tgtJournalctlMockShFname),
 			fmt.Sprintf("NERDLOG_JOURNALCTL_MOCK_DATA=%s", resolved.journalctlDataFile),
 		)
 	} else {

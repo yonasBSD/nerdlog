@@ -2,4 +2,5 @@
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
-go run "${SCRIPT_DIR}" "$@"
+cd ${SCRIPT_DIR}
+go run ./journalctl_mock.go "$@"
