@@ -58,7 +58,6 @@ DebugInfo:
     "AgentStderr": [
       "debug:index file doesn't exist or is empty, gonna refresh it",
       "debug:the from 2025-03-12-09:00 is found: 1022 (67792)",
-      "debug:the to 2025-03-12-11:00 isn't found, will use the end",
       "debug:Getting logs from offset 48636 until the end of latest /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-1/logfile.",
       "debug:Command to filter logs by time range:",
       "debug: bash -c 'tail -c +48636 /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-1/logfile'",
@@ -71,7 +70,6 @@ DebugInfo:
       "debug:prev logfile /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile.1 doesn't exist, using a dummy empty file /tmp/nerdlog-empty-file",
       "debug:index file doesn't exist or is empty, gonna refresh it",
       "debug:the from 2025-03-12-09:00 is found: 388 (25562)",
-      "debug:the to 2025-03-12-11:00 isn't found, will use the end",
       "debug:Getting logs from offset 25562 until the end of latest /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile.",
       "debug:Command to filter logs by time range:",
       "debug: bash -c 'tail -c +25562 /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile'",

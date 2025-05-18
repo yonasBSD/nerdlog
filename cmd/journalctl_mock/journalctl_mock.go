@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -74,12 +76,27 @@ func loadLogEntries(path string) ([]LogEntry, error) {
 }
 
 func main() {
+	sigs := make(chan os.Signal, 1)
+
+	// Notify for SIGPIPE
+	signal.Notify(sigs, syscall.SIGPIPE)
+
+	go func() {
+		for sig := range sigs {
+			if sig == syscall.SIGPIPE {
+				// Exit silently with 141
+				os.Exit(128 + int(syscall.SIGPIPE))
+			}
+		}
+	}()
+
 	var (
-		output  string
-		quiet   bool
-		since   string
-		until   string
-		reverse bool
+		output   string
+		quiet    bool
+		since    string
+		until    string
+		reverse  bool
+		numLines int
 	)
 
 	pflag.StringVar(&output, "output", "", "Set output format")
@@ -87,6 +104,7 @@ func main() {
 	pflag.StringVar(&since, "since", "", "Show entries not older than the specified time")
 	pflag.StringVar(&until, "until", "", "Show entries not newer than the specified time")
 	pflag.BoolVar(&reverse, "reverse", false, "Show newest entries first")
+	pflag.IntVarP(&numLines, "lines", "n", -1, "Max number of lines to print")
 	pflag.Parse()
 
 	if output != "short-iso-precise" {
@@ -147,7 +165,11 @@ func main() {
 	}
 
 	// Print
-	for _, e := range filtered {
+	for i, e := range filtered {
+		if numLines >= 0 && i >= numLines {
+			break
+		}
+
 		fmt.Println(e.Text)
 	}
 }

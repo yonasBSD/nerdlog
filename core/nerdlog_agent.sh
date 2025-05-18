@@ -398,9 +398,14 @@ fi
 # create an empty file and pretend that it's an empty log file.
 if [ ! -e "$logfile_prev" ] && [[ "$logfile_prev" != "${SPECIAL_FILENAME_JOURNALCTL}" ]]; then
   echo "debug:prev logfile $logfile_prev doesn't exist, using a dummy empty file /tmp/nerdlog-empty-file" 1>&2
+  # TODO: instead of using the same file /tmp/nerdlog-empty-file , maybe
+  # generate the name based on the index filename, to make the tests more
+  # self-contained.
   logfile_prev="/tmp/nerdlog-empty-file"
-  rm -f $logfile_prev || exit 1
-  touch $logfile_prev || exit 1
+  if [ ! -f "$logfile_prev" ] || [ -s "$logfile_prev" ]; then
+    rm -f $logfile_prev || exit 1
+    touch $logfile_prev || exit 1
+  fi
 
   # For stable output in tests, also update the creation/modification time of
   # that file to be the same as the first log file. It's not portable though
@@ -469,7 +474,7 @@ case "${command}" in
       fi
     else
       # We need to use journalctl, check if it's executable
-      if ! command -v journalctl > /dev/null 2>&1; then
+      if ! command -v "$journalctl_binary" > /dev/null 2>&1; then
         echo "error:journalctl is not found" 1>&2
         exit 1
       fi
@@ -485,7 +490,7 @@ case "${command}" in
       fi
 
       # And print one line for the timestamp format autodetection.
-      last_line="$(journalctl $JOURNALCTL_FORMAT_FLAG --quiet -n 1)" || exit 1
+      last_line="$($journalctl_binary $JOURNALCTL_FORMAT_FLAG --quiet -n 1)" || exit 1
       echo "example_log_line:$last_line"
     fi
 
@@ -1138,7 +1143,7 @@ if [[ "$from" != "" || "$to" != "" ]]; then
     logfile_prev_stored_modtime="$(get_prevlog_modtime_from_index)"
     logfile_prev_cur_modtile=$(get_file_modtime $logfile_prev)
     if [[ "$logfile_prev_stored_modtime" != "$logfile_prev_cur_modtile" ]]; then
-      echo "debug:logfile has changed: stored '$logfile_prev_stored_modtime', actual '$logfile_prev_cur_modtile', deleting index file" 1>&2
+      echo "debug:prev logfile $logfile_prev has changed: stored '$logfile_prev_stored_modtime', actual '$logfile_prev_cur_modtile', deleting index file" 1>&2
       rm -f $indexfile || exit 1
     fi
 

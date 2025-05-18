@@ -25,7 +25,6 @@ test_steps:
       params:
         max_num_lines: 5
         from: "2025-03-12T09:00:00Z"
-        to:   "2025-03-12T11:00:00Z"
         pattern: ""
         load_earlier: false
       want: want_log_resp_01_initial.txt
@@ -35,7 +34,6 @@ test_steps:
       params:
         max_num_lines: 5
         from: "2025-03-12T09:00:00Z"
-        to:   "2025-03-12T11:00:00Z"
         pattern: ""
         load_earlier: true
       want: want_log_resp_02_load_more.txt
@@ -45,7 +43,6 @@ test_steps:
       params:
         max_num_lines: 5
         from: "2025-03-12T09:00:00Z"
-        to:   "2025-03-12T11:00:00Z"
         pattern: ""
         load_earlier: true
       want: want_log_resp_03_load_more.txt
@@ -55,7 +52,6 @@ test_steps:
       params:
         max_num_lines: 5
         from: "2025-03-12T09:00:00Z"
-        to:   "2025-03-12T11:00:00Z"
         pattern: ""
         load_earlier: true
       want: want_log_resp_04_load_more.txt

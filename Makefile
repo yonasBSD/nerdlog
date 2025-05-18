@@ -31,8 +31,13 @@ install:
 	$(INSTALL) $(INSTALL_FLAGS) -D bin/nerdlog $(BINDIR)/nerdlog
 
 test:
-	# The tests run rather slow so we use "-v -p 1" so that we get the unbuffered
-	# output.
+	@# This step is needed to make sure that we don't get extra output like
+	@# "go: downloading github.com/spf13/pflag v1.0.6" when running journalctl_mock,
+	@# since it ends up in the debug output from the script which we then compare
+	@# with the expected output.
+	cd cmd/journalctl_mock && go mod download
+	@# The tests run rather slow so we use "-v -p 1" so that we get the unbuffered
+	@# output.
 	go test ./... -count 1 -v -p 1
 
 bench:
