@@ -43,9 +43,6 @@ jobs:
             (cd cmd/journalctl_mock && go mod download)
             make test
 
-  # TODO: run tests on macos-latest as well. For now it's not implemented due
-  # to issues, see e.g.
-  # https://github.com/dimonomid/nerdlog/actions/runs/15097173410/job/42433388408
   test-macos:
     name: Run Tests (MacOS)
     runs-on: macos-latest
