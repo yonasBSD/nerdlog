@@ -39,9 +39,7 @@ jobs:
           prepare: |
             pkg install -y go git bash gawk
 
-          run: |
-            (cd cmd/journalctl_mock && go mod download)
-            make test
+          run: make test
 
   test-macos:
     name: Run Tests (MacOS)
@@ -54,7 +52,7 @@ jobs:
         with:
           go-version: stable
 
-      - name: Install deps (macOS)
+      - name: Install deps
         run: |
           brew update
           brew install gawk
