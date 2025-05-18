@@ -22,6 +22,27 @@ jobs:
       - name: Run tests
         run: make test
 
+  test-freebsd:
+    name: Run Tests (FreeBSD)
+    # Sadly GitHub doesn't support FreeBSD runners natively, so we
+    # run Ubuntu and then start FreeBSD VM.
+    # See https://github.com/vmactions/freebsd-vm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run tests in FreeBSD VM
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg install -y go git bash gawk
+
+          run: |
+            (cd cmd/journalctl_mock && go mod download)
+            make test
+
   ## TODO: run tests on macos-latest as well. For now it's not implemented due
   ## to issues, see e.g.
   ## https://github.com/dimonomid/nerdlog/actions/runs/15097173410/job/42433388408
