@@ -135,6 +135,25 @@ A note on security: allowing sudo without a password is of course a massive secu
 
 To make it more secure, it's technically possible to provision the host(s) by uploading that agent script manually under e.g. `/usr/local/bin`, owned by root, and then make it possible in Nerdlog to use that script instead of uploading a new one every time. It's not yet supported in Nerdlog, since manual provisioning like that means some maintenance burden every time nerdlog is updated, or every time we need to read logs from a new host, so I'm not sure if it's worth. Let me know if you actually need it for your use case, and I can hopefully make it happen.
 
+### Setting extra env vars or executing arbitrary init commands
+
+One more extra option for a logstream is `shell_init`, which is an array of arbitrary shell commands. Can be used for setting extra env vars like `export TZ=UTC`, or whatever else.
+
+Usage is as follows:
+
+```
+log_streams:
+  myhost-01:
+    # ... Potentially any other configuration for the logstream
+    options:
+      shell_init:
+        - 'export TZ=UTC'
+        - 'export FOO=bar'
+        - 'some other command || exit 1'
+```
+
+If a command exits with non-zero code (like we do in the example above with `exit 1`), the whole bootstrapping is failed.
+
 ## Query
 
 A Nerdlog query consists of 3 primary components and 1 extra:

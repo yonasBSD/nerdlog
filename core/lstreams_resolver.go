@@ -74,6 +74,14 @@ type ConfigLogStreamShellTransport struct {
 
 type LogStreamOptions struct {
 	SudoMode SudoMode
+
+	// ShellInit can contain arbitrary shell commands which will be executed
+	// right after connecting to the host. A common use case is setting
+	// custom env vars for tests, like: "export TZ=America/New_York", but
+	// might be useful outside of tests as well.
+	//
+	// If something goes wrong and we want to fail the bootstrap, use "exit 1".
+	ShellInit []string
 }
 
 // SudoMode can be used to configure nerdlog to read log files with "sudo -n".
@@ -474,6 +482,10 @@ func expandFromLogStreamsConfig(
 
 			if lsCopy.options.SudoMode == "" {
 				lsCopy.options.SudoMode = matchedItem.Options.EffectiveSudoMode()
+			}
+
+			if lsCopy.options.ShellInit == nil {
+				lsCopy.options.ShellInit = matchedItem.Options.ShellInit
 			}
 
 			if len(lsCopy.logFiles) == 0 {

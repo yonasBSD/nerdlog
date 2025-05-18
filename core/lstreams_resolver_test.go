@@ -76,6 +76,15 @@ var testConfigLogStreams1 = ConfigLogStreams(map[string]ConfigLogStream{
 	"realhost.com": ConfigLogStream{
 		User: "user-from-nerdlog-config",
 	},
+
+	"my-with-shell-init": ConfigLogStream{
+		Hostname: "host-with-shell-init.com",
+		Options: ConfigLogStreamOptions{
+			ShellInit: []string{
+				"export TZ=UTC",
+			},
+		},
+	},
 })
 
 type resolverTestCase struct {
@@ -1318,6 +1327,46 @@ func TestLStreamsResolverLocalhost(t *testing.T) {
 						},
 					},
 					LogFiles: []string{"auto", "auto"},
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runResolverTestCase(t, tt)
+		})
+	}
+}
+
+func TestLStreamsResolverShellInit(t *testing.T) {
+	tests := []resolverTestCase{
+		{
+			name:   "simple ",
+			osUser: "osuser",
+
+			configLogStreams: testConfigLogStreams1,
+			sshConfig:        testSSHConfig1,
+
+			input: "my-with-shell-init",
+
+			wantStreams: map[string]LogStream{
+				"my-with-shell-init": {
+					Name: "my-with-shell-init",
+					Transport: ConfigLogStreamShellTransport{
+						SSH: &ConfigLogStreamShellTransportSSH{
+							Host: ConfigHost{
+								Addr: "host-with-shell-init.com:22",
+								User: "osuser",
+							},
+						},
+					},
+					LogFiles: []string{"auto", "auto"},
+					Options: LogStreamOptions{
+						ShellInit: []string{
+							"export TZ=UTC",
+						},
+					},
 				},
 			},
 		},

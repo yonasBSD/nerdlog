@@ -969,7 +969,15 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		// for localhost, it's not; so setting it explicitly.
 		stdinBuf.Write([]byte("cd\n"))
 
+		// Execute whatever arbitrary init commands.
+		for _, cmd := range lsc.params.LogStream.Options.ShellInit {
+			lsc.params.Logger.Verbose3f("Running shell init command: %s", cmd)
+			stdinBuf.Write([]byte(cmd))
+			stdinBuf.Write([]byte("\n"))
+		}
+
 		stdinBuf.Write([]byte("("))
+
 		stdinBuf.Write([]byte("  cat <<- 'EOF' > " + lsc.getLStreamNerdlogAgentPath() + "\n" + nerdlogAgentSh + "EOF\n"))
 		stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
 
