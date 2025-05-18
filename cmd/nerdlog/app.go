@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimonomid/clock"
 	"github.com/dimonomid/nerdlog/blhistory"
 	"github.com/dimonomid/nerdlog/clhistory"
 	"github.com/dimonomid/nerdlog/core"
@@ -353,6 +354,8 @@ func (app *nerdlogApp) initLStreamsManager(
 		ClientID: envUser,
 
 		UpdatesCh: updatesCh,
+
+		Clock: clock.New(),
 	})
 
 	return nil

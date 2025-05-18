@@ -14,6 +14,7 @@ import (
 
 	"github.com/juju/errors"
 
+	"github.com/dimonomid/clock"
 	"github.com/dimonomid/nerdlog/log"
 )
 
@@ -220,6 +221,8 @@ type LStreamClientParams struct {
 	ClientID string
 
 	UpdatesCh chan<- *LStreamClientUpdate
+
+	Clock clock.Clock
 }
 
 // createTransport creates a shell transport accordingly to the provided
@@ -261,6 +264,12 @@ func createTransport(
 }
 
 func NewLStreamClient(params LStreamClientParams) *LStreamClient {
+	if params.Clock == nil {
+		// For details on why not default to the real clock:
+		// https://dmitryfrank.com/articles/mocking_time_in_go#caveat_with_defaulting_to_real_clock
+		panic("Clock is nil")
+	}
+
 	params.Logger = params.Logger.WithNamespaceAppended(
 		fmt.Sprintf("LSClient_%s", params.LogStream.Name),
 	)
@@ -409,13 +418,13 @@ func (lsc *LStreamClient) run() {
 						continue
 					}
 
-					connectAfter = time.Now().Add(2 * time.Second)
+					connectAfter = lsc.params.Clock.Now().Add(2 * time.Second)
 					continue
 				}
 
 				lsc.numConnAttempts = 0
 
-				lastUpdTime = time.Now()
+				lastUpdTime = lsc.params.Clock.Now()
 
 				stdoutLinesCh := make(chan string, 32)
 				stderrLinesCh := make(chan string, 32)
@@ -463,7 +472,7 @@ func (lsc *LStreamClient) run() {
 
 			lsc.params.Logger.Verbose3f("Got stdout line(%s): %s", lsc.params.LogStream.Name, line)
 
-			lastUpdTime = time.Now()
+			lastUpdTime = lsc.params.Clock.Now()
 
 			switch lsc.state {
 			case LStreamClientStateConnectedBusy:
@@ -545,7 +554,7 @@ func (lsc *LStreamClient) run() {
 							continue
 						}
 
-						t = InferYear(t)
+						t = InferYear(lsc.params.Clock.Now(), t)
 						t = t.UTC()
 
 						n, err := strconv.Atoi(parts[1])
@@ -671,7 +680,7 @@ func (lsc *LStreamClient) run() {
 
 			lsc.params.Logger.Verbose3f("Got stderr line(%s): %s", lsc.params.LogStream.Name, line)
 
-			lastUpdTime = time.Now()
+			lastUpdTime = lsc.params.Clock.Now()
 
 			// NOTE: the "p:" lines (process-related) are here in stderr, because
 			// stdout is gzipped and thus we don't have any partial results (we get
@@ -988,6 +997,8 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 			parts = append(parts, "sudo", "-n")
 		}
 
+		parts = append(parts, lsc.getTimeEnvVars()...)
+
 		parts = append(
 			parts,
 			"bash", shellQuote(lsc.getLStreamNerdlogAgentPath()),
@@ -1031,6 +1042,8 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		if lsc.params.LogStream.Options.SudoMode == SudoModeFull {
 			parts = append(parts, "sudo", "-n")
 		}
+
+		parts = append(parts, lsc.getTimeEnvVars()...)
 
 		parts = append(
 			parts,
@@ -1110,6 +1123,23 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 	stdinBuf.Write([]byte(fmt.Sprintf("echo 'command_done:%d' 1>&2\n", cmdCtx.idx)))
 
 	lsc.changeState(LStreamClientStateConnectedBusy)
+}
+
+// getTimeEnvVars is a helper to get time-related env vars to be passed to the
+// agent script: CUR_YEAR and CUR_MONTH, which will affect the year-inferring
+// logic.
+//
+// Outside of tests it's not actually necessary to pass these env vars, since
+// the agent script will just use the actual time then; but for simplicity, and
+// to make the tested code closer to the actual code, we always pass them when
+// calling agent script.
+func (lsc *LStreamClient) getTimeEnvVars() []string {
+	now := lsc.params.Clock.Now()
+
+	return []string{
+		fmt.Sprintf("CUR_YEAR=%d", now.Year()),
+		fmt.Sprintf("CUR_MONTH=%.2d", now.Month()),
+	}
 }
 
 func roundUpToNextSecond(t time.Time) time.Time {
@@ -1311,9 +1341,7 @@ func (lsc *LStreamClient) handleCommandResultsIfDone(cmdCtx *lstreamCmdCtx) {
 //
 // Most of the time it just uses the current year, but on the year boundary
 // it can return previous or next year.
-func InferYear(t time.Time) time.Time {
-	now := time.Now()
-
+func InferYear(now, t time.Time) time.Time {
 	// If month of the syslog being parsed is the same as the current month, just
 	// use the current year.
 	if now.Month() == t.Month() {
@@ -1434,7 +1462,7 @@ func (lsc *LStreamClient) parseLogMsgTimestamp(logMsg *LogMsg) error {
 	//}
 
 	if t.Year() == 0 {
-		t = InferYear(t)
+		t = InferYear(lsc.params.Clock.Now(), t)
 	}
 	t = t.UTC()
 

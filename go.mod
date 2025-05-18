@@ -3,6 +3,7 @@ module github.com/dimonomid/nerdlog
 go 1.17
 
 require (
+	github.com/dimonomid/clock v0.0.0-20250112175642-cbee01fcea40
 	github.com/dimonomid/ssh_config v0.0.1
 	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
 	github.com/gobwas/glob v0.2.3

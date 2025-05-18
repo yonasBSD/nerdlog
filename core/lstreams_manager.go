@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dimonomid/clock"
 	"github.com/dimonomid/ssh_config"
 	"github.com/juju/errors"
 
@@ -83,9 +84,17 @@ type LStreamsManagerParams struct {
 	ClientID string
 
 	UpdatesCh chan<- LStreamsManagerUpdate
+
+	Clock clock.Clock
 }
 
 func NewLStreamsManager(params LStreamsManagerParams) *LStreamsManager {
+	if params.Clock == nil {
+		// For details on why not default to the real clock:
+		// https://dmitryfrank.com/articles/mocking_time_in_go#caveat_with_defaulting_to_real_clock
+		panic("Clock is nil")
+	}
+
 	params.Logger = params.Logger.WithNamespaceAppended("LSMan")
 
 	lsman := &LStreamsManager{
@@ -158,7 +167,7 @@ func (lsman *LStreamsManager) updateHAs() {
 		delete(lsman.lscConnDetails, key)
 		delete(lsman.lscBusyStages, key)
 
-		keyNew := fmt.Sprintf("OLD_%s_%s", randomString(4), key)
+		keyNew := fmt.Sprintf("OLD_%s_%s", lsman.randomString(4), key)
 		lsman.lscPendingTeardown[keyNew] += 1
 		oldHA.Close(keyNew)
 	}
@@ -177,6 +186,7 @@ func (lsman *LStreamsManager) updateHAs() {
 			Logger:    lsman.params.Logger,
 			ClientID:  lsman.params.ClientID, //fmt.Sprintf("%s-%d", lsman.params.ClientID, rand.Int()),
 			UpdatesCh: lsman.lstreamUpdatesCh,
+			Clock:     lsman.params.Clock,
 		})
 		lsman.lscs[key] = lsc
 		lsman.lscStates[key] = LStreamClientStateDisconnected
@@ -331,7 +341,7 @@ func (lsman *LStreamsManager) run() {
 
 				lsman.curQueryLogsCtx = &manQueryLogsCtx{
 					req:       req.queryLogs,
-					startTime: time.Now(),
+					startTime: lsman.params.Clock.Now(),
 					resps:     make(map[string]*LogResp, len(lsman.lscs)),
 					errs:      map[string]error{},
 				}
@@ -848,10 +858,10 @@ func (lsman *LStreamsManager) mergeLogRespsAndSend() {
 	lsman.sendLogRespUpdate(ret)
 }
 
-func randomString(length int) string {
+func (lsman *LStreamsManager) randomString(length int) string {
 	const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-	rand.Seed(time.Now().UnixNano()) // Seed once per call
+	rand.Seed(lsman.params.Clock.Now().UnixNano()) // Seed once per call
 	prefix := make([]byte, length)
 	for i := range prefix {
 		prefix[i] = charset[rand.Intn(len(charset))]

@@ -78,7 +78,7 @@ func parseAndInferTimeOrDur(timezone *time.Location, layout, s string) (TimeOrDu
 	}
 
 	if t.IsAbsolute() {
-		t.Time = core.InferYear(t.Time)
+		t.Time = core.InferYear(time.Now(), t.Time)
 	}
 
 	return t, nil
