@@ -43,27 +43,27 @@ jobs:
             (cd cmd/journalctl_mock && go mod download)
             make test
 
-  ## TODO: run tests on macos-latest as well. For now it's not implemented due
-  ## to issues, see e.g.
-  ## https://github.com/dimonomid/nerdlog/actions/runs/15097173410/job/42433388408
-  #test-ubuntu:
-    #name: Run Tests (Ubuntu)
-    #runs-on: ubuntu-latest
-    #steps:
-      #- name: Checkout code
-        #uses: actions/checkout@v4
-      #- name: Set up Go
-        #uses: actions/setup-go@v5
-        #with:
-          #go-version: stable
+  # TODO: run tests on macos-latest as well. For now it's not implemented due
+  # to issues, see e.g.
+  # https://github.com/dimonomid/nerdlog/actions/runs/15097173410/job/42433388408
+  test-macos:
+    name: Run Tests (MacOS)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
 
-      #- name: Install deps (macOS)
-        #run: |
-          #brew update
-          #brew install gawk
+      - name: Install deps (macOS)
+        run: |
+          brew update
+          brew install gawk
 
-      #- name: Run tests
-        #run: make test
+      - name: Run tests
+        run: make test
 
   release-please:
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
