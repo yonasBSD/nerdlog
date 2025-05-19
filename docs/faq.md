@@ -2,9 +2,12 @@
 
 ## Why the patterns are in awk syntax?
 
-Because, at least in the current implementation, it's the simplest and most efficient way to implement filtering. As you remember from the "How it works" section above, after cutting the logs outside of the requested time range, we do the filtering, generate timeline histogram data, and print the last N log lines, keeping track of where they were in the original file (so that in the UI we can point the user at that line, if they want to). All this is done using an awk script in a single pass, and obviously it's easier to have filtering as part of the same awk script.
+Two main reasons:
 
-## Why does Nerdlog default to log files instead of `journalctl`?
+* At least in the current implementation, it's the simplest and most efficient way to implement filtering. As you remember from the [How it works](./how_it_works.md) section, after cutting off the logs outside of the requested time range, we do the filtering, generate timeline histogram data, and print the last N log lines, keeping track of where they were in the original file (so that in the UI we can point the user at that line, if they want to). All this processing is done using an awk script in a single pass, and obviously it's easier and more efficient to have filtering as part of the same awk script.
+* Awk patterns are very convenient in that they can be combined with boolean operators, like `/foo/ && !/bar/ && (/this/ || /that/)`, so we can write complex queries while keeping them very readable. No other tools that I know of (`grep`, `ag`, `rg` etc) come close to this.
+
+## Why default to log files instead of `journalctl`?
 
 Because `journalctl` has some major drawbacks comparing to plain log files:
 
@@ -12,7 +15,7 @@ Because `journalctl` has some major drawbacks comparing to plain log files:
 - It's less reliable (can miss some logs), [see this comment](https://github.com/dimonomid/nerdlog/issues/7#issuecomment-2820521885) for details;
 - Since it's another layer of complexity, it can have [bugs like this one](https://github.com/systemd/systemd/issues/37468), which cause very confusing behavior.
 
-My opinion in general (unrelated to Nerdlog specifically) is that `journalctl` creates more problems than it solves; it's a great example of the general trend in the industry to overcomplicate everything. We should learn to keep things simple.
+My opinion in general (unrelated to Nerdlog specifically) is that `journalctl` creates more problems than it solves; it's a great example of the general trend in the industry to overcomplicate everything. We should learn to keep things simple, because reliable systems are simple systems.
 
 ## How is it better than lnav?
 

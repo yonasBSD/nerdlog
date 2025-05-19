@@ -66,6 +66,8 @@ As the tests run, the outputs are written to `/tmp/nerdlog_core_test_output`.
 
 Arguably, these core tests could potentially replace the agent tests, because they cover the agent too; however agent tests drill down in more agent-specific details, and rewriting the equivalent in core tests might be tricky, so there are no plans to do that.
 
+And the same about the environment applies here: just like agent tests, core tests rely on a few tools from your environment.
+
 ### Updating expected outputs
 
 Since agent and core tests specify exact expected outputs, it means that when we change the format of these outputs in some way, even change some debug print, we need to update the affected test cases as well. There is a convenient helper for that:
