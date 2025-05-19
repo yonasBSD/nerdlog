@@ -149,10 +149,8 @@ log_streams:
       shell_init:
         - 'export TZ=UTC'
         - 'export FOO=bar'
-        - 'some other command || exit 1'
+        - 'some other command'
 ```
-
-If a command exits with non-zero code (like we do in the example above with `exit 1`), the whole bootstrapping is failed.
 
 ## Query
 

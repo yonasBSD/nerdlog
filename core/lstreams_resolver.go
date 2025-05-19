@@ -79,8 +79,6 @@ type LogStreamOptions struct {
 	// right after connecting to the host. A common use case is setting
 	// custom env vars for tests, like: "export TZ=America/New_York", but
 	// might be useful outside of tests as well.
-	//
-	// If something goes wrong and we want to fail the bootstrap, use "exit 1".
 	ShellInit []string
 }
 
