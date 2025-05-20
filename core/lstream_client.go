@@ -348,6 +348,10 @@ func (lsc *LStreamClient) changeState(newState LStreamClientState) {
 
 	switch lsc.state {
 	case LStreamClientStateConnecting:
+		// Forget whatever queued command we might have.
+		lsc.cmdQueue = nil
+
+		// Initiate new connection
 		lsc.numConnAttempts++
 		lsc.connectUpdCh = make(chan ShellConnUpdate, 1)
 		lsc.transport.Connect(lsc.connectUpdCh)
@@ -406,6 +410,7 @@ func (lsc *LStreamClient) run() {
 				// The connection has either succeeded or failed.
 
 				if res.Err != nil {
+					lsc.params.Logger.Errorf("Shell connection failed: %s", res.Err.Error())
 					lsc.sendUpdate(&LStreamClientUpdate{
 						ConnDetails: &ConnDetails{
 							Err: fmt.Sprintf("attempt %d: %s", lsc.numConnAttempts, res.Err.Error()),
@@ -421,6 +426,8 @@ func (lsc *LStreamClient) run() {
 					connectAfter = lsc.params.Clock.Now().Add(2 * time.Second)
 					continue
 				}
+
+				lsc.params.Logger.Infof("Shell connection succeeded, starting bootstrap")
 
 				lsc.numConnAttempts = 0
 
@@ -966,6 +973,8 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 
 	switch {
 	case cmdCtx.cmd.bootstrap != nil:
+		lsc.params.Logger.Verbose3f("Starting command: bootstrap %+v", cmdCtx.cmd.bootstrap)
+
 		cmdCtx.bootstrapCtx = &lstreamCmdCtxBootstrap{}
 
 		stdinBuf := lsc.conn.conn.Stdin()
@@ -1018,6 +1027,7 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		stdinBuf.Write([]byte("echo exit_code:$?\n"))
 
 	case cmdCtx.cmd.ping != nil:
+		lsc.params.Logger.Verbose3f("Starting command: ping %+v", cmdCtx.cmd.ping)
 		cmdCtx.pingCtx = &lstreamCmdCtxPing{}
 
 		cmd := "whoami\n"
@@ -1026,6 +1036,7 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		stdinBuf.Write([]byte("echo exit_code:$?\n"))
 
 	case cmdCtx.cmd.queryLogs != nil:
+		lsc.params.Logger.Verbose3f("Starting command: queryLogs %+v", cmdCtx.cmd.queryLogs)
 		cmdCtx.queryLogsCtx = &lstreamCmdCtxQueryLogs{
 			Resp: &LogResp{
 				MinuteStats: map[int64]MinuteStatsItem{},
@@ -1179,6 +1190,7 @@ func filepathToId(p string) string {
 func (lsc *LStreamClient) checkIfDisconnected() {
 	if lsc.conn.stderrLinesCh == nil && lsc.conn.stdoutLinesCh == nil {
 		// We're fully disconnected
+		lsc.params.Logger.Verbose3f("Fully disconnected")
 		lsc.changeState(LStreamClientStateDisconnected)
 
 		if lsc.tearingDown {
