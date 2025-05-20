@@ -128,7 +128,7 @@ func (st *ShellTransportSSH) doConnect(
 		return res
 	}
 
-	err = sshSession.Shell()
+	err = sshSession.Start("/bin/sh")
 	if err != nil {
 		res.Err = errors.Annotatef(err, conf.Descr)
 		return res

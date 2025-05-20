@@ -47,7 +47,7 @@ func (s *ShellTransportLocal) doConnect(
 
 	// Start the local shell command
 	// TODO: make it configurable; e.g. it likely won't work on Windows
-	cmd := exec.Command("/usr/bin/env", "bash")
+	cmd := exec.Command("/bin/sh")
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		res.Err = errors.Annotatef(err, "getting stdin pipe")
