@@ -997,7 +997,7 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		stdinBuf.Write([]byte("("))
 
 		stdinBuf.Write([]byte("  cat <<- 'EOF' > " + lsc.getLStreamNerdlogAgentPath() + "\n" + nerdlogAgentSh + "EOF\n"))
-		stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
+		stdinBuf.Write([]byte("  if [ $? -ne 0 ]; then echo 'bootstrap failed'; exit 1; fi\n"))
 
 		var parts []string
 
@@ -1020,7 +1020,7 @@ func (lsc *LStreamClient) startCmd(cmd lstreamCmd) {
 		}
 
 		stdinBuf.Write([]byte(strings.Join(parts, " ") + "\n"))
-		stdinBuf.Write([]byte("  if [[ $? != 0 ]]; then echo 'bootstrap failed'; exit 1; fi\n"))
+		stdinBuf.Write([]byte("  if [ $? -ne 0 ]; then echo 'bootstrap failed'; exit 1; fi\n"))
 
 		stdinBuf.Write([]byte("  echo 'bootstrap ok'\n"))
 		stdinBuf.Write([]byte(")\n"))
