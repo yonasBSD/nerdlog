@@ -50,7 +50,7 @@ test:
 # changes look legit, commit them.
 update-test-expectations:
 	rm -rf /tmp/nerdlog_agent_test_output /tmp/nerdlog_core_test_output
-	NERDLOG_AGENT_TEST_SKIP_INDEX_UP=1 make test
+	-NERDLOG_AGENT_TEST_SKIP_INDEX_UP=1 make test
 	bash util/copy_agent_test_results.sh
 	bash util/copy_core_test_results.sh
 
