@@ -37,7 +37,7 @@ jobs:
         with:
           usesh: true
           prepare: |
-            pkg install -y go git bash gawk
+            pkg install -y go git bash gawk tmux
 
           run: |
             # Without it, git doesn't like to work with this repo:
@@ -61,7 +61,7 @@ jobs:
       - name: Install deps
         run: |
           brew update
-          brew install gawk
+          brew install gawk tmux
 
       - name: Run tests
         run: make test

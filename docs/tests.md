@@ -16,11 +16,12 @@ NERDLOG_AGENT_TEST_SKIP_INDEX_UP=1 make test
 
 ## Details
 
-There are 3 kinds of tests:
+There are 4 kinds of tests:
 
 - Regular Go unit tests
 - Agent script tests
 - Core tests
+- End-to-end tests
 
 Let's talk about them in more detail:
 
@@ -76,15 +77,25 @@ NERDLOG_CORE_TEST_HOSTNAME='127.0.0.1' make test ARGS='-run TestCoreScenarios'
 
 Which causes tests to establish an actual ssh connection, and thus we cover the `ShellTransportSSH` as well. For this to work for you locally, you obviously need to have an ssh server running locally, and you need to be able to `ssh 127.0.0.1` without a password via ssh agent.
 
+### End-to-end tests
+
+Those run the final `nerdlog` binary, capture the actual TUI screen snapshots using `tmux`, and compare them with the expected output.
+
+They run as a Go test func `TestE2EScenarios` (in `../cmd/nerdlog/e2e_test.go`), but the actual test cases are defined under `../cmd/nerdlog/e2e_testdata` in various `test_scenario.yaml` files.
+
+As the tests run, the outputs are written to `/tmp/nerdlog_e2e_test_output`.
+
+These tests don't go into much details, but they provide a good end-to-end smoke test to make sure we don't break things in some silly way.
+
 ### Updating expected outputs
 
-Since agent and core tests specify exact expected outputs, it means that when we change the format of these outputs in some way, even change some debug print, we need to update the affected test cases as well. There is a convenient helper for that:
+Since all tests here except unit tests specify the exact expected outputs, it means that when we change the format of these outputs in some way, even change some debug print, we need to update the affected test cases as well. There is a convenient helper for that:
 
 ```
 make update-test-expectations
 ```
 
-It will run all the tests, and copy the actual outputs from `/tmp/nerdlog_agent_test_output` and `/tmp/nerdlog_core_test_output` to the repository.
+It will run all the tests, and copy the actual outputs from `/tmp/nerdlog_agent_test_output`, `/tmp/nerdlog_core_test_output` and `/tmp/nerdlog_e2e_test_output` to the repository.
 
 After that, it's your job to examine the output `git diff` carefully, and if all the changes in the expected outputs look legit, commit them.
 

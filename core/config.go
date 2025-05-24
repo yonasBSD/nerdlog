@@ -39,17 +39,17 @@ type ConfigLogStream struct {
 type ConfigLogStreamOptions struct {
 	// Sudo is a shortcut for SudoMode: if Sudo is true, it's an equivalent of
 	// setting SudoMode to SudoModeFull.
-	Sudo bool `yaml:"sudo"`
+	Sudo bool `yaml:"sudo,omitempty"`
 
 	// SudoMode can be used to configure nerdlog to read log files with "sudo -n".
 	// See constants for the SudoMode type for more details.
-	SudoMode SudoMode `yaml:"sudo_mode"`
+	SudoMode SudoMode `yaml:"sudo_mode,omitempty"`
 
 	// ShellInit can contain arbitrary shell commands which will be executed
 	// right after connecting to the host. A common use case is setting
 	// custom env vars for tests, like: "export TZ=America/New_York", but
 	// might be useful outside of tests as well.
-	ShellInit []string `yaml:"shell_init"`
+	ShellInit []string `yaml:"shell_init,omitempty"`
 }
 
 func (lss ConfigLogStreams) Keys() []string {

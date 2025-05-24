@@ -1,0 +1,56 @@
+descr: ""
+
+scenario_params:
+  config_log_streams:
+    testhost-01:
+      log_files:
+        kind: all_from_dir
+        dir: ../../input_logfiles/small_mar
+      options:
+        shell_init:
+          - 'export TZ=UTC'
+  terminal_size:
+    x: 110
+    y: 30
+
+test_steps:
+
+  - descr: "start up"
+    send_keys: [
+        'TZ=UTC',
+        ' ${NERDLOG_BINARY}',
+        ' --lstreams-config ${NERDLOG_LOGSTREAMS_CONFIG_FILE}',
+        ' --cmdhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/cmd_history',
+        ' --queryhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/query_history',
+        'C-m'
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_01_initial.txt
+
+  - descr: "execute query"
+    send_keys: [
+        'C-u',
+        'Mar9 15:00 to Mar12 11:00',
+
+        # Logstreams
+        'Tab',
+        'C-u',
+        'testhost-01',
+
+        # Pattern: leave empty
+        'Tab',
+        'C-u',
+
+        # Select fields
+        'Tab',
+        'C-u',
+        'time STICKY, lstream, message, *',
+
+        # Enter
+        'C-m'
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_02_executed_query.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'

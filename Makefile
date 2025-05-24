@@ -53,6 +53,7 @@ update-test-expectations:
 	-NERDLOG_AGENT_TEST_SKIP_INDEX_UP=1 make test
 	bash util/copy_agent_test_results.sh
 	bash util/copy_core_test_results.sh
+	bash util/copy_e2e_test_results.sh
 
 bench:
 	# The -run=^$ is needed to avoid running the regular tests as well.
