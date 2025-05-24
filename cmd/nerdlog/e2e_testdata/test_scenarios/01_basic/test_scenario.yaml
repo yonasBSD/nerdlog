@@ -22,7 +22,7 @@ test_steps:
         ' --lstreams-config ${NERDLOG_LOGSTREAMS_CONFIG_FILE}',
         ' --cmdhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/cmd_history',
         ' --queryhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/query_history',
-        'C-m'
+        'C-m',
       ]
     want_screen_snapshot:
       snapshot: want_screen_01_initial.txt
@@ -47,10 +47,83 @@ test_steps:
         'time STICKY, lstream, message, *',
 
         # Enter
-        'C-m'
+        'C-m',
       ]
     want_screen_snapshot:
       snapshot: want_screen_02_executed_query.txt
       substitutions:
         - pattern:     'Query took: .{1,10}'
           replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "execute query with some pattern"
+    send_keys: [
+        'i',
+        '/error/',
+
+        # Enter
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_03_executed_query_with_pattern_1.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "execute query with another pattern"
+    send_keys: [
+        'C-u',
+        '/warn/',
+
+        # Enter
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_04_executed_query_with_pattern_2.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "exit nerdlog"
+    send_keys: [
+        'C-c',
+      ]
+    want_screen_contains:
+      substring: "Have a nice day."
+
+      # I don't know why, but on FreeBSD, hitting Ctrl+C doesn't actually exit
+      # TUI right away: we have to wait a little bit, and hit some other key again.
+      # This happens in real life and in tests as well, so we have to have this
+      # workaround here, by sending Ctrl+C until it works.
+      periodic_send_keys:
+        send_keys: [ 'C-c' ]
+        period: "100ms"
+
+  - descr: "start nerdlog again, expect the last query details to be prepopulated"
+    send_keys: [
+        'TZ=UTC',
+        ' ${NERDLOG_BINARY}',
+        ' --lstreams-config ${NERDLOG_LOGSTREAMS_CONFIG_FILE}',
+        ' --cmdhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/cmd_history',
+        ' --queryhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/query_history',
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_05_after_restart.txt
+
+  - descr: "hit Ctrl+K, get the previous query"
+    send_keys: [
+        'C-k',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_06_previous_query.txt
+
+  - descr: "execute it, get the same results as before"
+    send_keys: [
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_07_again_query_with_pattern_1.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+

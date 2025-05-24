@@ -52,10 +52,13 @@ type E2ETestStep struct {
 	// Descr is a human-readable step description
 	Descr string `yaml:"descr"`
 
+	DelayBefore time.Duration `yaml:"delay_before"`
+
 	// SendKeys will be passed verbatim to "tmux send-keys"
 	SendKeys []string `yaml:"send_keys"`
 
 	WantScreenSnapshot *WantScreenSnapshot `yaml:"want_screen_snapshot"`
+	WantScreenContains *WantScreenContains `yaml:"want_screen_contains"`
 }
 
 type WantScreenSnapshot struct {
@@ -65,6 +68,19 @@ type WantScreenSnapshot struct {
 	// Substitutions defines which substitutions we need to make to the snapshot
 	// before comparing it.
 	Substitutions []SnapshotSubstitution `yaml:"substitutions"`
+}
+
+type WantScreenContains struct {
+	// Substring is the substring to look for on the screen.
+	Substring string `yaml:"substring"`
+
+	// If PeriodicSendKeys is not nil, we'll send some keys periodically.
+	PeriodicSendKeys *PeriodSendKeys `yaml:"periodic_send_keys"`
+}
+
+type PeriodSendKeys struct {
+	SendKeys []string      `yaml:"send_keys"`
+	Period   time.Duration `yaml:"period"`
 }
 
 type SnapshotSubstitution struct {
@@ -182,6 +198,11 @@ func runE2ETestScenario(t *testing.T, tsCtx *e2eTestScenarioContext) error {
 
 		assertArgs := []interface{}{"test case %s", stepSID}
 
+		if step.DelayBefore > 0 {
+			fmt.Printf("Sleeping %s...\n", step.DelayBefore)
+			time.Sleep(step.DelayBefore)
+		}
+
 		if len(step.SendKeys) > 0 {
 			if err := e2eTH.tmuxSendKeys(step.SendKeys...); err != nil {
 				return errors.Trace(err)
@@ -212,6 +233,20 @@ func runE2ETestScenario(t *testing.T, tsCtx *e2eTestScenarioContext) error {
 				fmt.Printf("Got an error: %s\n", err.Error())
 			} else {
 				fmt.Printf("Snapshots matched\n")
+			}
+		}
+
+		if wantContains := step.WantScreenContains; wantContains != nil {
+			gotSnapshotFname := filepath.Join(stepOutputDir, "got_snapshot_nonexact.txt")
+			timeout := 5 * time.Second // TODO: we might want specify it in the step.
+			if err := e2eTH.waitForScreenContains(
+				wantContains,
+				gotSnapshotFname,
+				timeout,
+			); err != nil {
+				return errors.Trace(err)
+			} else {
+				fmt.Printf("Snapshot contains %s\n", wantContains.Substring)
 			}
 		}
 
@@ -387,6 +422,47 @@ func (e2eTH *E2ETestHelper) waitForSnapshot(
 	}
 
 	return errors.Errorf("snapshot data is not equal")
+}
+
+// waitForScreenContains keeps checking tmux snapshot, and returns nil once
+// it contains the given substr
+func (e2eTH *E2ETestHelper) waitForScreenContains(
+	wantScreenContains *WantScreenContains,
+	gotSnapshotFname string,
+	timeout time.Duration,
+) error {
+	start := time.Now()
+	lastSendKeys := time.Now()
+	for time.Since(start) < timeout {
+		if err := e2eTH.tmuxCapturePane(gotSnapshotFname, nil); err != nil {
+			return errors.Trace(err)
+		}
+
+		gotData, err := os.ReadFile(gotSnapshotFname)
+		if err != nil {
+			return errors.Annotatef(err, "reading actual snapshot data from %s", gotSnapshotFname)
+		}
+
+		if strings.Contains(string(gotData), wantScreenContains.Substring) {
+			return nil
+		}
+
+		time.Sleep(100 * time.Millisecond)
+		if wantScreenContains.PeriodicSendKeys != nil {
+			psk := wantScreenContains.PeriodicSendKeys
+			if time.Since(lastSendKeys) >= psk.Period {
+				fmt.Printf("Sending periodic keys: %+v\n", psk.SendKeys)
+				lastSendKeys = time.Now()
+
+				if err := e2eTH.tmuxSendKeys(psk.SendKeys...); err != nil {
+					return errors.Trace(err)
+				}
+			}
+		}
+
+	}
+
+	return errors.Errorf("snapshot never contained %s", wantScreenContains.Substring)
 }
 
 func (e2eTH *E2ETestHelper) tmuxSendKeys(keys ...string) error {

@@ -1,0 +1,30 @@
+awk pattern:                                                                             last 1h  Edit   Menu
+
+
+
+
+  ╔═══════════════════════════════════════════Edit query params═══════════════════════════════════════════╗
+  ║                                                                                                       ║
+ti║ Query history:  Back <Ctrl+K>  and  Forth <Ctrl+J>                                                    ║
+  ║                                                                                                       ║
+  ║ Time range in the format "<time>[ to <time>]", where <time> is either absolute like "Mar27 12:00"     ║
+  ║ or relative like "-2h30m" (relative to current time). If the "to" part is omitted,                    ║
+  ║ current time is used.                                                                                 ║
+  ║ Mar9 15:00 to Mar12 11:00                                                                       (UTC) ║
+  ║                                                                                                       ║
+  ║ Logstreams. Comma-separated strings in the format "[user@]myserver.com[:port[:/path/to/logfile]]"     ║
+  ║ Examples: "user@myserver.com", or "user@myserver.com:22:/var/log/syslog"                              ║
+  ║ testhost-01                                                                                           ║
+  ║                                                                                                       ║
+  ║ awk pattern. Examples: "/foo bar/", or "( /foo bar/ || /other stuff/ ) && !/baz/"                     ║
+  ║ /error/                                                                                               ║
+  ║                                                                                                       ║
+  ║ Select field expression. Example: "time STICKY, message, lstream, level_name AS level, *".            ║
+  ║ time STICKY, lstream, message, *                                                                Edit  ║
+  ║                                                                                                       ║
+  ╚═══════════════════════════════════════════════════════════════════════════════════════════════════════╝
+
+
+
+idle 🖳 00 🖳 00 🖳 00 |
+

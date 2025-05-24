@@ -1,0 +1,30 @@
+awk pattern: /error/                                             Mar9 15:00 to Mar12 11:00 (68h)  Edit   Menu
+ 10▀
+
+
+
+      ▖▖  ▐▗▐ ▖  ▖ ▖ ▗▗▖   ▙▄ ▗▗▖▖ ▗ ▗        ▖ ▄▖▗▗ ▗  ▖▄  ▗   ▗  ▗ ▖▄▖         ▄▗▐▗▐ ▗▖▌▖▖ ▗  ▗ ▖    ▖
+                 ▝ Mar10           ▝ 12:00           ▝ Mar11           ▝ 12:00           ▝ Mar12       ^
+time (UTC)         lstream     message                                   hostname pid  program
+Mar11 11:34:30.000 testhost-01 <emerg> Unexpected error occurred         myhost   3837 daemon
+Mar11 11:44:43.000 testhost-01 <crit> Disk write error                   myhost   5543 news
+Mar11 18:27:31.000 testhost-01 <debug> Out of memory error               myhost   3107 kern
+Mar11 18:53:59.000 testhost-01 <warning> Out of memory error             myhost   5567 ftp
+Mar11 19:20:06.000 testhost-01 <warning> Application configuration error myhost   340  uucp
+Mar11 20:01:16.000 testhost-01 <info> Database connection error          myhost   3350 mail
+Mar11 20:08:18.000 testhost-01 <debug> Out of memory error               myhost   5731 cron
+Mar11 20:50:28.000 testhost-01 <alert> SMTP server connection error      myhost   2171 auth
+Mar11 21:22:27.000 testhost-01 <crit> SMTP server connection error       myhost   9051 news
+Mar11 21:35:29.000 testhost-01 <debug> Database connection error         myhost   5762 news
+Mar11 22:40:21.000 testhost-01 <err> Out of memory error                 myhost   7364 mail
+Mar11 23:07:27.000 testhost-01 <emerg> Disk write error                  myhost   8592 daemon
+Mar11 23:40:47.000 testhost-01 <notice> Out of memory error              myhost   8037 ftp
+Mar11 23:59:45.000 testhost-01 <alert> Unexpected error occurred         myhost   6224 ftp
+Mar12 00:24:01.000 testhost-01 <notice> Disk write error                 myhost   4078 lpr
+Mar12 01:04:51.000 testhost-01 <info> Database connection error          myhost   4277 cron
+Mar12 02:52:05.000 testhost-01 <warning> Application configuration error myhost   3687 daemon
+Mar12 04:57:16.000 testhost-01 <notice> Out of memory error              myhost   8248 uucp
+Mar12 05:48:41.000 testhost-01 <crit> Application configuration error    myhost   4269 auth
+Mar12 09:05:46.000 testhost-01 <debug> SMTP server connection error      myhost   7290 daemon
+idle 🖳 01 🖳 00 🖳 00 | testhost-01                                                                 59 / 59 / 59
+Query took: XXXXXXXXXX
