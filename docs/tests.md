@@ -56,7 +56,7 @@ These tests run even on platforms without `journalctl` (such as FreeBSD and MacO
 
 ### Core tests
 
-These cover not only the agent script, but also `LStreamClient`, `LStreamsManager`, and all the helpers (`ShellTransportSSH` is not covered yet, though: we use `ShellTransportLocal` in tests). Basically, almost everything in the `../core` package, thus the name.
+These cover not only the agent script, but also `LStreamClient`, `LStreamsManager`, and all the helpers. Basically, almost everything in the `../core` package, thus the name.
 
 They run as a Go test func `TestCoreScenarios` (in `../core/core_test.go`), but the actual test cases are defined under `../core/core_testdata/test_cases_core` in various `test_scenario.yaml` files.
 
@@ -66,7 +66,15 @@ As the tests run, the outputs are written to `/tmp/nerdlog_core_test_output`.
 
 Arguably, these core tests could potentially replace the agent tests, because they cover the agent too; however agent tests drill down in more agent-specific details, and rewriting the equivalent in core tests might be tricky, so there are no plans to do that.
 
-And the same about the environment applies here: just like agent tests, core tests rely on a few tools from your environment.
+And the same note about the environment applies here: just like agent tests, core tests rely on a few tools from your environment.
+
+By default, the hostname `localhost` is being used in these core tests, which means that we use `ShellTransportLocal`. If the env var `NERDLOG_CORE_TEST_HOSTNAME` is set though, then it will be used instead of `localhost`, and on CI we run a separate job setting it to `127.0.0.1`, like this:
+
+```
+NERDLOG_CORE_TEST_HOSTNAME='127.0.0.1' make test ARGS='-run TestCoreScenarios'
+```
+
+Which causes tests to establish an actual ssh connection, and thus we cover the `ShellTransportSSH` as well. For this to work for you locally, you obviously need to have an ssh server running locally, and you need to be able to `ssh 127.0.0.1` without a password via ssh agent.
 
 ### Updating expected outputs
 

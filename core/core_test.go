@@ -262,8 +262,19 @@ func newLStreamsManagerTestHelper(
 			options.ShellInit = append(options.ShellInit, fmt.Sprintf("export %s", envVar))
 		}
 
+		// Find out the hostname: normally we use just `localhost`, which means
+		// we'll use ShellTransportLocal, but it can be overridden with the
+		// NERDLOG_CORE_TEST_HOSTNAME env var. Keep in mind that only `localhost`
+		// bypasses ssh; so e.g. "127.0.0.1" will use ShellTransportSSH, and we can
+		// take advantage of that to cover the ssh transport in tests. Obviously,
+		// for that the ssh server needs to be running locally.
+		hostname := os.Getenv("NERDLOG_CORE_TEST_HOSTNAME")
+		if hostname == "" {
+			hostname = "localhost"
+		}
+
 		cfgLogStreams[lstreamName] = ConfigLogStream{
-			Hostname: "localhost",
+			Hostname: hostname,
 			LogFiles: []string{
 				provisioned.logfileLast,
 				provisioned.logfilePrev,
