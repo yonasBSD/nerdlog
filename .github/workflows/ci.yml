@@ -39,7 +39,12 @@ jobs:
           prepare: |
             pkg install -y go git bash gawk
 
-          run: make test
+          run: |
+            # Without it, git doesn't like to work with this repo:
+            #   fatal: detected dubious ownership in repository at '....'
+            # So here we work it around by marking the directory as safe.
+            git config --global --add safe.directory "${PWD}"
+            make test
 
   test-macos:
     name: Run Tests (MacOS)
