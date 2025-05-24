@@ -41,8 +41,8 @@ Num Logs: 18
 - 2025-03-12T10:44:55.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile,000391,000391,erro,<emerg> Disk usage critical
   context: {"hostname":"myhost","lstream":"testhost-dense","pid":"4353","program":"kern"}
   orig: Mar 12 10:44:55 myhost kern[4353]: <emerg> Disk usage critical
-- 2025-03-12T10:45:36.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-1/logfile,000764,001051,erro,<err> Service request queued
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"6125","program":"lpr"}
+- 2025-03-12T10:45:36.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-2/logfile,000764,001051,erro,<err> Service request queued
+  context: {"hostname":"myhost","lstream":"testhost-2","pid":"6125","program":"lpr"}
   orig: Mar 12 10:45:36 myhost lpr[6125]: <err> Service request queued
 - 2025-03-12T10:50:11.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile,000392,000392,erro,<err> Cache update completed
   context: {"hostname":"myhost","lstream":"testhost-dense","pid":"8812","program":"kern"}
@@ -50,8 +50,8 @@ Num Logs: 18
 - 2025-03-12T10:52:01.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile,000393,000393,----,<notice> User session ended
   context: {"hostname":"myhost","lstream":"testhost-dense","pid":"8154","program":"daemon"}
   orig: Mar 12 10:52:01 myhost daemon[8154]: <notice> User session ended
-- 2025-03-12T10:53:36.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-1/logfile,000765,001052,warn,<warning> Configuration reload successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"4422","program":"ftp"}
+- 2025-03-12T10:53:36.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-2/logfile,000765,001052,warn,<warning> Configuration reload successful
+  context: {"hostname":"myhost","lstream":"testhost-2","pid":"4422","program":"ftp"}
   orig: Mar 12 10:53:36 myhost ftp[4422]: <warning> Configuration reload successful
 - 2025-03-12T10:56:25.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile,000394,000394,erro,<err> Disk format completed
   context: {"hostname":"myhost","lstream":"testhost-dense","pid":"2232","program":"ftp"}
@@ -74,8 +74,8 @@ Num Logs: 18
 - 2025-03-12T10:56:44.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile,000400,000400,erro,<err> Invalid input detected
   context: {"hostname":"myhost","lstream":"testhost-dense","pid":"5654","program":"auth"}
   orig: Mar 12 10:56:44 myhost auth[5654]: <err> Invalid input detected
-- 2025-03-12T10:56:46.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-1/logfile,000766,001053,----,<alert> Memory leak detected
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3690","program":"cron"}
+- 2025-03-12T10:56:46.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-2/logfile,000766,001053,----,<alert> Memory leak detected
+  context: {"hostname":"myhost","lstream":"testhost-2","pid":"3690","program":"cron"}
   orig: Mar 12 10:56:46 myhost cron[3690]: <alert> Memory leak detected
 - 2025-03-12T10:57:56.000000000Z,F,/tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-dense/logfile,000401,000401,info,<info> Cache update completed
   context: {"hostname":"myhost","lstream":"testhost-dense","pid":"2811","program":"authpriv"}
@@ -89,12 +89,12 @@ Num Logs: 18
 
 DebugInfo:
 {
-  "testhost-1": {
+  "testhost-2": {
     "AgentStdout": null,
     "AgentStderr": [
-      "debug:Getting logs from offset 48636 until the end of latest /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-1/logfile.",
+      "debug:Getting logs from offset 48636 until the end of latest /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-2/logfile.",
       "debug:Command to filter logs by time range:",
-      "debug: bash -c 'tail -c +48636 /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-1/logfile'",
+      "debug: bash -c 'tail -c +48636 /tmp/nerdlog_core_test_output/02_two_logstreams/lstreams/testhost-2/logfile'",
       "debug:Filtered out 0 from 32 lines"
     ]
   },

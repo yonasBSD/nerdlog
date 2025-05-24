@@ -18,61 +18,61 @@ Num MinuteStats: 12
 
 Num Logs: 16
 - 2025-03-12T10:10:05.608677000Z,F,journalctl,000000,000000,----,<notice> System clock synchronized
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3500","program":"authpriv"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"3500","program":"authpriv"}
   orig: 2025-03-12T10:10:05.608677+00:00 myhost authpriv[3500]: <notice> System clock synchronized
 - 2025-03-12T10:10:10.799867000Z,F,journalctl,000000,000000,----,<notice> Database query failed
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3500","program":"authpriv"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"3500","program":"authpriv"}
   orig: 2025-03-12T10:10:10.799867+00:00 myhost authpriv[3500]: <notice> Database query failed
 - 2025-03-12T10:10:12.504896000Z,F,journalctl,000000,000000,----,<notice> System clock synchronized
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3500","program":"authpriv"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"3500","program":"authpriv"}
   orig: 2025-03-12T10:10:12.504896+00:00 myhost authpriv[3500]: <notice> System clock synchronized
 - 2025-03-12T10:10:15.421705000Z,F,journalctl,000000,000000,----,<notice> System clock synchronized
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3500","program":"authpriv"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"3500","program":"authpriv"}
   orig: 2025-03-12T10:10:15.421705+00:00 myhost authpriv[3500]: <notice> System clock synchronized
 - 2025-03-12T10:10:15.421705000Z,F,journalctl,000000,000000,----,<notice> System clock synchronized
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3500","program":"authpriv"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"3500","program":"authpriv"}
   orig: 2025-03-12T10:10:15.421705+00:00 myhost authpriv[3500]: <notice> System clock synchronized
 - 2025-03-12T10:10:15.893737000Z,F,journalctl,000000,000000,----,<notice> System clock synchronized
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3500","program":"authpriv"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"3500","program":"authpriv"}
   orig: 2025-03-12T10:10:15.893737+00:00 myhost authpriv[3500]: <notice> System clock synchronized
 - 2025-03-12T10:14:06.831226000Z,F,journalctl,000000,000000,warn,<warning> User session ended
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"173","program":"mail"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"173","program":"mail"}
   orig: 2025-03-12T10:14:06.831226+00:00 myhost mail[173]: <warning> User session ended
 - 2025-03-12T10:16:00.397135000Z,F,journalctl,000000,000000,----,<emerg> User session started
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"8866","program":"ftp"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"8866","program":"ftp"}
   orig: 2025-03-12T10:16:00.397135+00:00 myhost ftp[8866]: <emerg> User session started
 - 2025-03-12T10:16:59.046801000Z,F,journalctl,000000,000000,----,<notice> Timeout occurred
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3281","program":"cron"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"3281","program":"cron"}
   orig: 2025-03-12T10:16:59.046801+00:00 myhost cron[3281]: <notice> Timeout occurred
 - 2025-03-12T10:19:44.391047000Z,F,journalctl,000000,000000,----,<alert> User session timed out
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3462","program":"user"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"3462","program":"user"}
   orig: 2025-03-12T10:19:44.391047+00:00 myhost user[3462]: <alert> User session timed out
 - 2025-03-12T10:27:16.042641000Z,F,journalctl,000000,000000,----,<alert> New update available
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"8396","program":"mail"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"8396","program":"mail"}
   orig: 2025-03-12T10:27:16.042641+00:00 myhost mail[8396]: <alert> New update available
 - 2025-03-12T10:32:05.914551000Z,F,journalctl,000000,000000,----,<emerg> System clock synchronized
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"6387","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"6387","program":"syslog"}
   orig: 2025-03-12T10:32:05.914551+00:00 myhost syslog[6387]: <emerg> System clock synchronized
 - 2025-03-12T10:38:23.923715000Z,F,journalctl,000000,000000,debg,<debug> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"1783","program":"auth"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"1783","program":"auth"}
   orig: 2025-03-12T10:38:23.923715+00:00 myhost auth[1783]: <debug> User login successful
 - 2025-03-12T10:45:36.685915000Z,F,journalctl,000000,000000,erro,<err> Service request queued
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"6125","program":"lpr"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"6125","program":"lpr"}
   orig: 2025-03-12T10:45:36.685915+00:00 myhost lpr[6125]: <err> Service request queued
 - 2025-03-12T10:53:36.765789000Z,F,journalctl,000000,000000,warn,<warning> Configuration reload successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"4422","program":"ftp"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"4422","program":"ftp"}
   orig: 2025-03-12T10:53:36.765789+00:00 myhost ftp[4422]: <warning> Configuration reload successful
 - 2025-03-12T10:56:46.922355000Z,F,journalctl,000000,000000,----,<alert> Memory leak detected
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3690","program":"cron"}
+  context: {"hostname":"myhost","lstream":"testhost-50","pid":"3690","program":"cron"}
   orig: 2025-03-12T10:56:46.922355+00:00 myhost cron[3690]: <alert> Memory leak detected
 
 DebugInfo:
 {
-  "testhost-1": {
+  "testhost-50": {
     "AgentStdout": null,
     "AgentStderr": [
       "debug:Command to filter logs by time range:",
-      "debug: /tmp/nerdlog_core_test_output/50_journalctl_simple/lstreams/testhost-1/journalctl_mock/journalctl_mock.sh --output=short-iso-precise --quiet --reverse --since \"2025-03-12 10:00:00\" --until \"2025-03-12 10:17:00\"",
+      "debug: /tmp/nerdlog_core_test_output/50_journalctl_simple/lstreams/testhost-50/journalctl_mock/journalctl_mock.sh --output=short-iso-precise --quiet --reverse --since \"2025-03-12 10:00:00\" --until \"2025-03-12 10:17:00\"",
       "debug:Skipped 1 latest lines",
       "debug:Exiting early after collecting 8 lines",
       "debug:Filtered out 0 from 9 lines"

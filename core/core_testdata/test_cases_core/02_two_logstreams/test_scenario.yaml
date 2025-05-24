@@ -2,7 +2,7 @@ descr: "Get logs from two logstreams which advance at different pace, and the ou
 current_time: "2025-03-12T10:58:00Z"
 manager_params:
   config_log_streams:
-    testhost-1:
+    testhost-2:
       log_files:
         kind: all_from_dir
         dir: ../../input_logfiles/small_mar

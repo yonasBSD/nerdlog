@@ -2,14 +2,14 @@ descr: "Dealing with duplicate messages, messages with the same timestamp, or th
 current_time: "2025-03-12T10:58:00Z"
 manager_params:
   config_log_streams:
-    testhost-1:
+    testhost-51:
       log_files:
         kind: journalctl
         journalctl_data_file: ../../input_journalctl/small_mar/journalctl_data_small_mar.txt
       options:
         shell_init:
           - 'export TZ=UTC'
-  initial_lstreams: "testhost-1"
+  initial_lstreams: "testhost-51"
   client_id: "core-test-runner"
 test_steps:
 

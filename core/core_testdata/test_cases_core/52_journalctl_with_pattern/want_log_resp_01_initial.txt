@@ -30,37 +30,37 @@ Num MinuteStats: 24
 
 Num Logs: 8
 - 2025-03-12T06:43:44.989604000Z,F,journalctl,000000,000000,debg,<debug> Process crashed
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"8935","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"8935","program":"syslog"}
   orig: 2025-03-12T06:43:44.989604+00:00 myhost syslog[8935]: <debug> Process crashed
 - 2025-03-12T07:13:36.458567000Z,F,journalctl,000000,000000,----,<notice> API response received
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"5592","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"5592","program":"syslog"}
   orig: 2025-03-12T07:13:36.458567+00:00 myhost syslog[5592]: <notice> API response received
 - 2025-03-12T08:11:21.685750000Z,F,journalctl,000000,000000,erro,<err> Memory leak detected
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3165","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"3165","program":"syslog"}
   orig: 2025-03-12T08:11:21.685750+00:00 myhost syslog[3165]: <err> Memory leak detected
 - 2025-03-12T08:58:34.473924000Z,F,journalctl,000000,000000,warn,<warning> Network interface down
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"4528","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"4528","program":"syslog"}
   orig: 2025-03-12T08:58:34.473924+00:00 myhost syslog[4528]: <warning> Network interface down
 - 2025-03-12T08:58:34.649292000Z,F,journalctl,000000,000000,----,<alert> Service request completed
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"7205","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"7205","program":"syslog"}
   orig: 2025-03-12T08:58:34.649292+00:00 myhost syslog[7205]: <alert> Service request completed
 - 2025-03-12T09:42:46.479968000Z,F,journalctl,000000,000000,info,<info> Database query failed
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"2812","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"2812","program":"syslog"}
   orig: 2025-03-12T09:42:46.479968+00:00 myhost syslog[2812]: <info> Database query failed
 - 2025-03-12T10:03:46.316638000Z,F,journalctl,000000,000000,info,<info> Database query failed
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"2812","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"2812","program":"syslog"}
   orig: 2025-03-12T10:03:46.316638+00:00 myhost syslog[2812]: <info> Database query failed
 - 2025-03-12T10:32:05.914551000Z,F,journalctl,000000,000000,----,<emerg> System clock synchronized
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"6387","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"6387","program":"syslog"}
   orig: 2025-03-12T10:32:05.914551+00:00 myhost syslog[6387]: <emerg> System clock synchronized
 
 DebugInfo:
 {
-  "testhost-1": {
+  "testhost-52": {
     "AgentStdout": null,
     "AgentStderr": [
       "debug:Command to filter logs by time range:",
-      "debug: /tmp/nerdlog_core_test_output/52_journalctl_with_pattern/lstreams/testhost-1/journalctl_mock/journalctl_mock.sh --output=short-iso-precise --quiet --reverse --since \"2025-03-11 19:00:00\"",
+      "debug: /tmp/nerdlog_core_test_output/52_journalctl_with_pattern/lstreams/testhost-52/journalctl_mock/journalctl_mock.sh --output=short-iso-precise --quiet --reverse --since \"2025-03-11 19:00:00\"",
       "debug:Filtered out 211 from 236 lines"
     ]
   }

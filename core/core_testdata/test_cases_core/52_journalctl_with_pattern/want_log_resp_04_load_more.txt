@@ -30,88 +30,88 @@ Num MinuteStats: 24
 
 Num Logs: 25
 - 2025-03-11T19:20:06.816982000Z,F,journalctl,000000,000000,erro,<warning> Error handling request
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"8539","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"8539","program":"syslog"}
   orig: 2025-03-11T19:20:06.816982+00:00 myhost syslog[8539]: <warning> Error handling request
 - 2025-03-11T19:25:07.372865000Z,F,journalctl,000000,000000,----,<alert> Server stopped unexpectedly
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"5974","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"5974","program":"syslog"}
   orig: 2025-03-11T19:25:07.372865+00:00 myhost syslog[5974]: <alert> Server stopped unexpectedly
 - 2025-03-11T20:38:49.226409000Z,F,journalctl,000000,000000,erro,<crit> High CPU usage detected
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"8476","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"8476","program":"syslog"}
   orig: 2025-03-11T20:38:49.226409+00:00 myhost syslog[8476]: <crit> High CPU usage detected
 - 2025-03-11T21:24:23.850335000Z,F,journalctl,000000,000000,erro,<info> Error handling request
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"8510","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"8510","program":"syslog"}
   orig: 2025-03-11T21:24:23.850335+00:00 myhost syslog[8510]: <info> Error handling request
 - 2025-03-11T21:33:10.240741000Z,F,journalctl,000000,000000,erro,<err> System clock synchronized
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"2830","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"2830","program":"syslog"}
   orig: 2025-03-11T21:33:10.240741+00:00 myhost syslog[2830]: <err> System clock synchronized
 - 2025-03-11T21:52:41.700265000Z,F,journalctl,000000,000000,warn,<warning> Security alert raised
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"138","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"138","program":"syslog"}
   orig: 2025-03-11T21:52:41.700265+00:00 myhost syslog[138]: <warning> Security alert raised
 - 2025-03-11T23:21:39.948252000Z,F,journalctl,000000,000000,erro,<crit> File download started
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"1007","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"1007","program":"syslog"}
   orig: 2025-03-11T23:21:39.948252+00:00 myhost syslog[1007]: <crit> File download started
 - 2025-03-11T23:50:03.795064000Z,F,journalctl,000000,000000,----,<alert> System reboot required
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"757","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"757","program":"syslog"}
   orig: 2025-03-11T23:50:03.795064+00:00 myhost syslog[757]: <alert> System reboot required
 - 2025-03-12T00:19:37.942813000Z,F,journalctl,000000,000000,erro,<err> File download failed
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"5003","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"5003","program":"syslog"}
   orig: 2025-03-12T00:19:37.942813+00:00 myhost syslog[5003]: <err> File download failed
 - 2025-03-12T00:24:01.159774000Z,F,journalctl,000000,000000,erro,<info> Error handling request
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"6388","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"6388","program":"syslog"}
   orig: 2025-03-12T00:24:01.159774+00:00 myhost syslog[6388]: <info> Error handling request
 - 2025-03-12T00:29:30.261894000Z,F,journalctl,000000,000000,----,<alert> Configuration updated
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"695","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"695","program":"syslog"}
   orig: 2025-03-12T00:29:30.261894+00:00 myhost syslog[695]: <alert> Configuration updated
 - 2025-03-12T00:31:22.418865000Z,F,journalctl,000000,000000,info,<info> Disk space low
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"2693","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"2693","program":"syslog"}
   orig: 2025-03-12T00:31:22.418865+00:00 myhost syslog[2693]: <info> Disk space low
 - 2025-03-12T01:08:18.626343000Z,F,journalctl,000000,000000,warn,<warning> Kernel panic
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"4317","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"4317","program":"syslog"}
   orig: 2025-03-12T01:08:18.626343+00:00 myhost syslog[4317]: <warning> Kernel panic
 - 2025-03-12T01:52:14.845523000Z,F,journalctl,000000,000000,----,<notice> File system full
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"7863","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"7863","program":"syslog"}
   orig: 2025-03-12T01:52:14.845523+00:00 myhost syslog[7863]: <notice> File system full
 - 2025-03-12T01:54:11.621202000Z,F,journalctl,000000,000000,debg,<debug> Security alert raised
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"7404","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"7404","program":"syslog"}
   orig: 2025-03-12T01:54:11.621202+00:00 myhost syslog[7404]: <debug> Security alert raised
 - 2025-03-12T03:45:50.356593000Z,F,journalctl,000000,000000,warn,<warning> User permissions updated
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"1720","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"1720","program":"syslog"}
   orig: 2025-03-12T03:45:50.356593+00:00 myhost syslog[1720]: <warning> User permissions updated
 - 2025-03-12T06:35:07.821680000Z,F,journalctl,000000,000000,debg,<debug> Service unavailable
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3522","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"3522","program":"syslog"}
   orig: 2025-03-12T06:35:07.821680+00:00 myhost syslog[3522]: <debug> Service unavailable
 - 2025-03-12T06:43:44.989604000Z,F,journalctl,000000,000000,debg,<debug> Process crashed
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"8935","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"8935","program":"syslog"}
   orig: 2025-03-12T06:43:44.989604+00:00 myhost syslog[8935]: <debug> Process crashed
 - 2025-03-12T07:13:36.458567000Z,F,journalctl,000000,000000,----,<notice> API response received
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"5592","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"5592","program":"syslog"}
   orig: 2025-03-12T07:13:36.458567+00:00 myhost syslog[5592]: <notice> API response received
 - 2025-03-12T08:11:21.685750000Z,F,journalctl,000000,000000,erro,<err> Memory leak detected
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3165","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"3165","program":"syslog"}
   orig: 2025-03-12T08:11:21.685750+00:00 myhost syslog[3165]: <err> Memory leak detected
 - 2025-03-12T08:58:34.473924000Z,F,journalctl,000000,000000,warn,<warning> Network interface down
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"4528","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"4528","program":"syslog"}
   orig: 2025-03-12T08:58:34.473924+00:00 myhost syslog[4528]: <warning> Network interface down
 - 2025-03-12T08:58:34.649292000Z,F,journalctl,000000,000000,----,<alert> Service request completed
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"7205","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"7205","program":"syslog"}
   orig: 2025-03-12T08:58:34.649292+00:00 myhost syslog[7205]: <alert> Service request completed
 - 2025-03-12T09:42:46.479968000Z,F,journalctl,000000,000000,info,<info> Database query failed
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"2812","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"2812","program":"syslog"}
   orig: 2025-03-12T09:42:46.479968+00:00 myhost syslog[2812]: <info> Database query failed
 - 2025-03-12T10:03:46.316638000Z,F,journalctl,000000,000000,info,<info> Database query failed
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"2812","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"2812","program":"syslog"}
   orig: 2025-03-12T10:03:46.316638+00:00 myhost syslog[2812]: <info> Database query failed
 - 2025-03-12T10:32:05.914551000Z,F,journalctl,000000,000000,----,<emerg> System clock synchronized
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"6387","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-52","pid":"6387","program":"syslog"}
   orig: 2025-03-12T10:32:05.914551+00:00 myhost syslog[6387]: <emerg> System clock synchronized
 
 DebugInfo:
 {
-  "testhost-1": {
+  "testhost-52": {
     "AgentStdout": null,
     "AgentStderr": [
       "debug:Command to filter logs by time range:",
-      "debug: /tmp/nerdlog_core_test_output/52_journalctl_with_pattern/lstreams/testhost-1/journalctl_mock/journalctl_mock.sh --output=short-iso-precise --quiet --reverse --since \"2025-03-11 19:00:00\" --until \"2025-03-11 19:25:08\"",
+      "debug: /tmp/nerdlog_core_test_output/52_journalctl_with_pattern/lstreams/testhost-52/journalctl_mock/journalctl_mock.sh --output=short-iso-precise --quiet --reverse --since \"2025-03-11 19:00:00\" --until \"2025-03-11 19:25:08\"",
       "debug:Skipped 1 latest lines",
       "debug:Filtered out 4 from 6 lines"
     ]

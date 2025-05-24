@@ -34,121 +34,121 @@ Num MinuteStats: 28
 
 Num Logs: 36
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:51.923879000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:51.923879+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.117747000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.117747+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:49:52.963482000Z,F,journalctl,000000,000000,----,<emerg> User login successful
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"581","program":"syslog"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"581","program":"syslog"}
   orig: 2025-03-10T11:49:52.963482+00:00 myhost syslog[581]: <emerg> User login successful
 - 2025-03-10T11:58:51.697531000Z,F,journalctl,000000,000000,----,<emerg> File download started
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"3860","program":"cron"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"3860","program":"cron"}
   orig: 2025-03-10T11:58:51.697531+00:00 myhost cron[3860]: <emerg> File download started
 - 2025-03-10T12:07:19.984563000Z,F,journalctl,000000,000000,warn,<warning> Scheduled task executed
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"8011","program":"cron"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"8011","program":"cron"}
   orig: 2025-03-10T12:07:19.984563+00:00 myhost cron[8011]: <warning> Scheduled task executed
 - 2025-03-10T12:14:29.136085000Z,F,journalctl,000000,000000,erro,<debug> Database connection error
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"1100","program":"auth"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"1100","program":"auth"}
   orig: 2025-03-10T12:14:29.136085+00:00 myhost auth[1100]: <debug> Database connection error
 - 2025-03-10T12:23:53.207715000Z,F,journalctl,000000,000000,erro,<crit> IP address conflict detected
-  context: {"hostname":"myhost","lstream":"testhost-1","pid":"8595","program":"lpr"}
+  context: {"hostname":"myhost","lstream":"testhost-51","pid":"8595","program":"lpr"}
   orig: 2025-03-10T12:23:53.207715+00:00 myhost lpr[8595]: <crit> IP address conflict detected
 
 DebugInfo:
 {
-  "testhost-1": {
+  "testhost-51": {
     "AgentStdout": null,
     "AgentStderr": [
       "debug:Command to filter logs by time range:",
-      "debug: /tmp/nerdlog_core_test_output/51_journalctl_dupes_no_pattern/lstreams/testhost-1/journalctl_mock/journalctl_mock.sh --output=short-iso-precise --quiet --reverse --since \"2025-03-10 10:00:00\" --until \"2025-03-10 11:49:52\"",
+      "debug: /tmp/nerdlog_core_test_output/51_journalctl_dupes_no_pattern/lstreams/testhost-51/journalctl_mock/journalctl_mock.sh --output=short-iso-precise --quiet --reverse --since \"2025-03-10 10:00:00\" --until \"2025-03-10 11:49:52\"",
       "debug:Skipped 8 latest lines",
       "debug:Exiting early after collecting 8 lines",
       "debug:Filtered out 0 from 16 lines"
