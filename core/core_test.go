@@ -43,7 +43,7 @@ type CoreTestScenarioManagerParams struct {
 
 // CoreTestConfigLogStream converts to ConfigLogStream (from config.go)
 type CoreTestConfigLogStream struct {
-	LogFiles TestCaseLogfiles `yaml:"log_files"`
+	LogFiles testutils.TestCaseLogfiles `yaml:"log_files"`
 
 	Options ConfigLogStreamOptions `yaml:"options"`
 }
@@ -107,7 +107,7 @@ func TestCoreScenarios(t *testing.T) {
 		t.Fatalf("unable to create core test output root dir %s: %s", coreTestOutputRoot, err.Error())
 	}
 
-	testScenarioDirs, err := getTestCaseDirs(testScenariosDir, coreTestScenarioYamlFname)
+	testScenarioDirs, err := testutils.GetTestCaseDirs(testScenariosDir, coreTestScenarioYamlFname)
 	if err != nil {
 		panic(err)
 	}
@@ -238,7 +238,7 @@ func newLStreamsManagerTestHelper(
 
 	cfgLogStreams := make(ConfigLogStreams, len(params.ConfigLogStreams))
 	for lstreamName, testCfg := range params.ConfigLogStreams {
-		resolved, err := resolveLogfiles(tsCtx.testScenarioDir, &testCfg.LogFiles)
+		resolved, err := testutils.ResolveLogfiles(tsCtx.testScenarioDir, &testCfg.LogFiles)
 		if err != nil {
 			return nil, errors.Annotatef(err, "resolving logfiles")
 		}
@@ -248,7 +248,7 @@ func newLStreamsManagerTestHelper(
 			return nil, errors.Annotatef(err, "creating lstream dir %s", lstreamName)
 		}
 
-		provisioned, err := provisionLogFiles(
+		provisioned, err := testutils.ProvisionLogFiles(
 			resolved,
 			testOutputLstreamDir,
 			tsCtx.repoRoot,
@@ -258,7 +258,7 @@ func newLStreamsManagerTestHelper(
 		}
 
 		options := testCfg.Options
-		for _, envVar := range provisioned.extraEnv {
+		for _, envVar := range provisioned.ExtraEnv {
 			options.ShellInit = append(options.ShellInit, fmt.Sprintf("export %s", envVar))
 		}
 
@@ -276,8 +276,8 @@ func newLStreamsManagerTestHelper(
 		cfgLogStreams[lstreamName] = ConfigLogStream{
 			Hostname: hostname,
 			LogFiles: []string{
-				provisioned.logfileLast,
-				provisioned.logfilePrev,
+				provisioned.LogfileLast,
+				provisioned.LogfilePrev,
 			},
 			Options: options,
 		}
