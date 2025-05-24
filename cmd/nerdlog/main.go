@@ -33,13 +33,16 @@ func main() {
 	var (
 		flagVersion = pflag.BoolP("version", "v", false, "Print version info and exit")
 
-		flagTime        = pflag.StringP("time", "t", "", "Time range in the same format as accepted by the UI. Examples: '1h', 'Mar27 12:00'")
-		flagLStreams    = pflag.StringP("lstreams", "h", "", "Logstreams to connect to, as comma-separated glob patterns, e.g. 'foo-*,bar-*'")
-		flagQuery       = pflag.StringP("pattern", "p", "", "Initial awk pattern to use")
-		flagSelectQuery = pflag.StringP("selquery", "s", "", "SELECT-like query to specify which fields to show, like 'time STICKY, message, lstream, level_name AS level, *'")
-		flagLogLevel    = pflag.String("loglevel", "error", "This is NOT about the logs that nerdlog fetches from the remote servers, it's rather about nerdlog's own log. Valid values are: error, warning, info, verbose1, verbose2 or verbose3")
-		flagSSHConfig   = pflag.String("ssh-config", filepath.Join(homeDir, ".ssh", "config"), "ssh config file to use; set to an empty string to disable reading ssh config")
-		flagSSHKeys     = pflag.StringSlice("ssh-key", defaultSSHKeys, "ssh keys to use; only the first existing file will be used")
+		flagTime             = pflag.StringP("time", "t", "", "Time range in the same format as accepted by the UI. Examples: '1h', 'Mar27 12:00'")
+		flagLStreamsConfig   = pflag.String("lstreams-config", filepath.Join(homeDir, ".config", "nerdlog", "logstreams.yaml"), "logstreams config file to use; set to an empty string to disable reading logstreams config")
+		flagCmdHistoryFile   = pflag.String("cmdhistory-file", filepath.Join(homeDir, ".nerdlog_history"), "Command-line history file")
+		flagQueryHistoryFile = pflag.String("queryhistory-file", filepath.Join(homeDir, ".nerdlog_query_history"), "Query history file")
+		flagLStreams         = pflag.StringP("lstreams", "h", "", "Logstreams to connect to, as comma-separated glob patterns, e.g. 'foo-*,bar-*'")
+		flagQuery            = pflag.StringP("pattern", "p", "", "Initial awk pattern to use")
+		flagSelectQuery      = pflag.StringP("selquery", "s", "", "SELECT-like query to specify which fields to show, like 'time STICKY, message, lstream, level_name AS level, *'")
+		flagLogLevel         = pflag.String("loglevel", "error", "This is NOT about the logs that nerdlog fetches from the remote servers, it's rather about nerdlog's own log. Valid values are: error, warning, info, verbose1, verbose2 or verbose3")
+		flagSSHConfig        = pflag.String("ssh-config", filepath.Join(homeDir, ".ssh", "config"), "ssh config file to use; set to an empty string to disable reading ssh config")
+		flagSSHKeys          = pflag.StringSlice("ssh-key", defaultSSHKeys, "ssh keys to use; only the first existing file will be used")
 
 		flagNoJournalctlAccessWarn = pflag.Bool("no-journalctl-access-warning", false, "Suppress the warning when journalctl is being used by the user who can't read all system logs")
 	)
@@ -52,7 +55,7 @@ func main() {
 	}
 
 	queryCLHistory, err := clhistory.New(clhistory.CLHistoryParams{
-		Filename: filepath.Join(homeDir, ".nerdlog_query_history"),
+		Filename: *flagQueryHistoryFile,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error initializing query history: %s\n", err)
@@ -135,12 +138,14 @@ func main() {
 
 	app, err := newNerdlogApp(
 		nerdlogAppParams{
-			initialQueryData: initialQueryData,
-			connectRightAway: connectRightAway,
-			clipboardInitErr: clipboard.InitErr,
-			logLevel:         logLevel,
-			sshConfigPath:    *flagSSHConfig,
-			sshKeys:          *flagSSHKeys,
+			initialQueryData:     initialQueryData,
+			connectRightAway:     connectRightAway,
+			clipboardInitErr:     clipboard.InitErr,
+			logLevel:             logLevel,
+			sshConfigPath:        *flagSSHConfig,
+			logstreamsConfigPath: *flagLStreamsConfig,
+			cmdHistoryFile:       *flagCmdHistoryFile,
+			sshKeys:              *flagSSHKeys,
 
 			noJournalctlAccessWarn: *flagNoJournalctlAccessWarn,
 		},

@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -56,6 +55,9 @@ type nerdlogAppParams struct {
 	sshConfigPath    string
 	sshKeys          []string
 
+	logstreamsConfigPath string
+	cmdHistoryFile       string
+
 	noJournalctlAccessWarn bool
 }
 
@@ -75,7 +77,7 @@ func newNerdlogApp(
 	}
 
 	cmdLineHistory, err := clhistory.New(clhistory.CLHistoryParams{
-		Filename: filepath.Join(homeDir, ".nerdlog_history"),
+		Filename: params.cmdHistoryFile,
 	})
 	if err != nil {
 		return nil, errors.Annotatef(err, "initializing cmdline history")
@@ -289,15 +291,19 @@ func (app *nerdlogApp) initLStreamsManager(
 	envUser := os.Getenv("USER")
 
 	var logstreamsCfg core.ConfigLogStreams
-	logstreamsCfgPath := filepath.Join(homeDir, ".config", "nerdlog", "logstreams.yaml")
-	_, statErr := os.Stat(logstreamsCfgPath)
-	if statErr == nil {
-		appLogstreamsCfg, err := LoadLogstreamsConfigFromFile(logstreamsCfgPath)
+	if params.logstreamsConfigPath != "" {
+		appLogstreamsCfg, err := LoadLogstreamsConfigFromFile(params.logstreamsConfigPath)
 		if err != nil {
-			return errors.Trace(err)
+			if !os.IsNotExist(errors.Cause(err)) {
+				return errors.Annotatef(
+					err,
+					"reading logstreams config from %s (path is configurable via --lstreams-config)",
+					params.logstreamsConfigPath,
+				)
+			}
+		} else {
+			logstreamsCfg = appLogstreamsCfg.LogStreams
 		}
-
-		logstreamsCfg = appLogstreamsCfg.LogStreams
 	}
 
 	var sshConfig *ssh_config.Config
