@@ -5,12 +5,12 @@ go 1.17
 require (
 	github.com/dimonomid/clock v0.0.0-20250112175642-cbee01fcea40
 	github.com/dimonomid/ssh_config v0.0.1
-	github.com/gdamore/tcell/v2 v2.4.1-0.20210905002822-f057f0a857a1
+	github.com/gdamore/tcell/v2 v2.6.0
 	github.com/gobwas/glob v0.2.3
 	github.com/juju/errors v0.0.0-20220324005906-d8c5072c94ab
-	github.com/mattn/go-runewidth v0.0.13
-	github.com/rivo/tview v0.0.0-20220307222120-9994674d60a8
-	github.com/rivo/uniseg v0.2.0
+	github.com/mattn/go-runewidth v0.0.14
+	github.com/rivo/tview v0.0.0-20230530133550-8bd761dda819
+	github.com/rivo/uniseg v0.4.3
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.1
 	golang.design/x/clipboard v0.7.0

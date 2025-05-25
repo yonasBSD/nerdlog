@@ -263,6 +263,22 @@ func (d *DropDown) GetFieldWidth() int {
 	return fieldWidth
 }
 
+// GetFieldHeight returns this primitive's field height.
+func (d *DropDown) GetFieldHeight() int {
+	return 1
+}
+
+// SetDisabled sets whether or not the item is disabled / read-only.
+// Currently it's a no-op, just to make DropDown satisfy the FormItem interface
+// after updating tview from v0.0.0-20220307222120-9994674d60a8 to
+// v0.0.0-20230530133550-8bd761dda819..
+func (d *DropDown) SetDisabled(disabled bool) tview.FormItem {
+	// TODO: pull in latest code from
+	// https://github.com/rivo/tview/blob/master/dropdown.go, and apply my own
+	// additions on top as needed.
+	return d
+}
+
 // AddOption adds a new selectable option to this drop-down. The "selected"
 // callback is called when this option was selected. It may be nil.
 func (d *DropDown) AddOption(text string, selected func()) *DropDown {
