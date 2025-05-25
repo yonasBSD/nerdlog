@@ -1,125 +1,12 @@
-name: ci
+name: ci-release
 
 on:
-  push: # Run on push to any branch
+  push:
+    branches:
+      - master
 
 jobs:
-  test-ubuntu:
-    name: Tests (Ubuntu)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-
-      - name: Install deps
-        run: |
-          sudo apt install -y libx11-dev
-
-      - name: Run tests
-        run: make test
-
-  test-freebsd:
-    name: Tests (FreeBSD)
-    # Sadly GitHub doesn't support FreeBSD runners natively, so we
-    # run Ubuntu and then start FreeBSD VM.
-    # See https://github.com/vmactions/freebsd-vm
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run tests in FreeBSD VM
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          prepare: |
-            pkg install -y go git bash gawk tmux
-
-          run: |
-            # Without it, git doesn't like to work with this repo:
-            #   fatal: detected dubious ownership in repository at '....'
-            # So here we work it around by marking the directory as safe.
-            git config --global --add safe.directory "${PWD}"
-
-            make test
-
-  test-macos:
-    name: Tests (MacOS)
-    runs-on: macos-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: stable
-
-      - name: Install deps
-        run: |
-          brew update
-          brew install gawk tmux
-
-      - name: Run tests
-        run: make test
-
-  test-ubuntu-ssh:
-    name: Core tests via SSH
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # NOTE: we do NOT use the actions/setup-go@v5 here and just use the
-      # Go version installed by default, because otherwise this newly installed
-      # Go version is only available in the local session, but not available
-      # over ssh, which causes the build cache not to be reused, which renders
-      # our trick to prebuild the journalctl_mock useless (see in Makefile:
-      # cd cmd/journalctl_mock && go build -o /dev/null ), which causes the mock
-      # build to take too long, which causes the tests to time out and fail.
-
-      - name: Install deps
-        run: |
-          sudo apt install -y libx11-dev
-
-      - name: Set up ssh server
-        run: |
-          sudo systemctl start ssh
-          sudo systemctl status ssh
-
-          # Set up the ssh key to be able to ssh 127.0.0.1 without password
-          mkdir -p ~/.ssh
-          ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
-          cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-          chmod 600 ~/.ssh/authorized_keys
-          chmod 700 ~/.ssh
-          ssh-keyscan -H 127.0.0.1 >> ~/.ssh/known_hosts
-
-          # Test it
-          goroot_local="$(go env GOROOT)"
-          goroot_ssh="$(ssh 127.0.0.1 'go env GOROOT')"
-          echo "GOROOT local: $goroot_local"
-          echo "GOROOT ssh:   $goroot_ssh"
-          if [[ "$goroot_local" != "$goroot_ssh" ]]; then
-            echo Error: GOROOT are different, it might cause issues
-            exit 1
-          else
-            echo GOROOT are the same both locally and over ssh, all good
-          fi
-
-      - name: Run core tests using ssh transport
-        run: |
-          # Add the key to agent, since that's what Nerdlog uses
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/id_rsa
-
-          NERDLOG_CORE_TEST_HOSTNAME='127.0.0.1' make test ARGS='-run TestCoreScenarios'
-
   release-please:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     outputs:
       releases_created: ${{ steps.release-please.outputs.releases_created }}
