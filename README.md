@@ -52,11 +52,9 @@ Revisited in 2025 to clean it up to a certain extent, and open source it.
 Tested on various Linux distros, FreeBSD, MacOS and Windows (only the client
 app can run on Windows though, we can't get logs from Windows hosts).
 
-It's still kinda in a proof-of-concept stage though. Implemented as fast as
-possible, spaghetti code abounds, could be covered with more tests, more
-features could be implemented, etc.
+The code still has some traces of the hackathon style here and there, and could be more polished, but overall it matured significantly. There are [decent tests](./docs/tests.md) as well.
 
-But it works. It's pretty usable and surprisingly fast. I've been using it at work and for my personal projects for a few years now, and I consider it ready to be used in the wild on production systems.
+I've been using it at work and for my personal projects for a few years now, and I consider it ready to be used in the wild on production systems.
 
 ## Installation
 
