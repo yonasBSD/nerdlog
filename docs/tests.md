@@ -87,6 +87,8 @@ As the tests run, the outputs are written to `/tmp/nerdlog_e2e_test_output`.
 
 These tests don't go into much details, but they provide a good end-to-end smoke test to make sure we don't break things in some silly way.
 
+By default, `TestE2EScenarios` builds the new `nerdlog` binary to run tests against, but if an env var `NERDLOG_E2E_TEST_NERDLOG_BINARY` is set, then this binary will be used. That's how CI runs end-to-end tests on the prebuilt release binaries.
+
 ### Updating expected outputs
 
 Since all tests here except unit tests specify the exact expected outputs, it means that when we change the format of these outputs in some way, even change some debug print, we need to update the affected test cases as well. There is a convenient helper for that:
