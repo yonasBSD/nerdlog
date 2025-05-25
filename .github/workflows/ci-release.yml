@@ -66,6 +66,10 @@ jobs:
         with:
           go-version: stable
 
+      - name: Install deps
+        run: |
+          sudo apt install -y libx11-dev
+
       - name: Install GitHub CLI
         run: sudo apt install -y gh
 
