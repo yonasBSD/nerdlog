@@ -17,11 +17,8 @@ test_steps:
 
   - descr: "start up"
     send_keys: [
-        'TZ=UTC',
-        ' ${NERDLOG_BINARY}',
-        ' --lstreams-config ${NERDLOG_LOGSTREAMS_CONFIG_FILE}',
-        ' --cmdhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/cmd_history',
-        ' --queryhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/query_history',
+        'NERDLOG_NO_CLIPBOARD=1 TZ=UTC',
+        ' ${NERDLOG_BINARY} --lstreams-config ${NERDLOG_LOGSTREAMS_CONFIG_FILE} --cmdhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/cmd_history --queryhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/query_history',
         'C-m',
       ]
     want_screen_snapshot:
@@ -100,11 +97,8 @@ test_steps:
 
   - descr: "start nerdlog again, expect the last query details to be prepopulated"
     send_keys: [
-        'TZ=UTC',
-        ' ${NERDLOG_BINARY}',
-        ' --lstreams-config ${NERDLOG_LOGSTREAMS_CONFIG_FILE}',
-        ' --cmdhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/cmd_history',
-        ' --queryhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/query_history',
+        'NERDLOG_NO_CLIPBOARD=1 TZ=UTC',
+        ' ${NERDLOG_BINARY} --lstreams-config ${NERDLOG_LOGSTREAMS_CONFIG_FILE} --cmdhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/cmd_history --queryhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/query_history',
         'C-m',
       ]
     want_screen_snapshot:
@@ -123,6 +117,267 @@ test_steps:
       ]
     want_screen_snapshot:
       snapshot: want_screen_07_again_query_with_pattern_1.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "type some nonsense in the input field, don't hit enter yet"
+    send_keys: [
+        'i',
+        'ssdf/dfw//',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_08_nonsense_in_the_input_field_1.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "hit enter with the nonsense in the input field"
+    send_keys: [
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_09_nonsense_in_the_input_field_2.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "hit enter to hide error message, clear input field, submit"
+    send_keys: [
+        # Enter to hide error message
+        'C-m',
+
+        # Ctrl-U to clear pattern input field
+        'C-u',
+
+        # Submit the empty pattern
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_10_empty_query.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "go one page above"
+    send_keys: [
+        # Shift-tab to focus the logs table
+        "\x1b[Z",
+
+        # Ctrl-U to move cursor one page above
+        'C-u',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_11_page_above.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "go a few more pages above"
+    send_keys: [
+        'C-u',
+        'C-u',
+        'C-u',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_12_more_pages_above.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "hit Enter to see the row details"
+    send_keys: [
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_13_row_details.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "show original"
+    send_keys: [
+        # Shift-Tab to focus the "Show original" button
+        #
+        # NOTE: I've no idea why but plain Tab doesn't work here,
+        # tried 'C-i' and "\t" and "\x09" and literal tab character.
+        "\x1b[Z",
+
+        # Hit Enter
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_14_show_original.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "hit Esc to hide original"
+    send_keys: [
+        'C-[',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_15_hide_original.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "hit Esc again to hide row details"
+    send_keys: [
+        'C-[',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_16_hide_row_details.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "hit g to go at the top"
+    send_keys: [
+        'g',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_17_at_the_top.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "hit Enter to load next page"
+    send_keys: [
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_18_load_next_page.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "go a few rows up"
+    send_keys: [
+        'kkk',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_19_a_few_rows_up.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "go to the histogram"
+    send_keys: [
+        "\x1b[Z",
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_20_histogram_focused.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "move cursor left a few jumps and a few single-steps to the right"
+    send_keys: [
+        "bbbblll",
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_21_move_cursor.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "select an area"
+    send_keys: [
+        "vbb",
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_22_select_area.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "extend to the right a bit"
+    send_keys: [
+        "oll",
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_23_extend_area.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "apply selection"
+    send_keys: [
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_24_apply_selection.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "select again, to remove the big spike"
+    send_keys: [
+        'bbvg',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_25_select_again.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "apply selection"
+    send_keys: [
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_26_apply_selection.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "go back"
+    send_keys: [
+        "\x1b[1;3D",
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_27_go_back.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "go back again"
+    send_keys: [
+        "\x1b[1;3D",
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_28_go_back_again.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "go forward"
+    send_keys: [
+        "\x1b[1;3C",
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_29_go_forward.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "go forward again"
+    send_keys: [
+        "\x1b[1;3C",
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_30_go_forward_again.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "try to go forward again: no more"
+    send_keys: [
+        "\x1b[1;3C",
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_31_try_to_go_forward_again.txt
       substitutions:
         - pattern:     'Query took: .{1,10}'
           replacement: 'Query took: XXXXXXXXXX'

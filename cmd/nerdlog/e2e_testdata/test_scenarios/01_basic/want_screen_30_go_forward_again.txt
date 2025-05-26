@@ -1,0 +1,30 @@
+awk pattern:                                                   Mar10 00:00 to Mar10 09:05 (9h5m)  Edit   Menu
+10                                                                                                         (4)
+                                                                                                            █
+      ▄                                                                                         ▄           █
+      █ ▄      ▄  ▄             ▄                    ▄                   ▄        ▄       ▄     █  ▄       █
+█▄ █▄▄█ █▄▄▄ ▄██ ███▄▄ █▄▄█▄█ ▄ █▄ ▄ █▄▄█ ▄▄ ▄▄ ▄ ▄▄ █ █ ▄▄ ▄█▄▄██▄ ▄██▄ █ ▄▄▄▄ █ █▄ ▄▄▄ ██▄ ▄▄ █ ███ ▄▄▄ ▄█
+▘ Mar10                 ▘ 02:00                 ▘ 04:00                 ▘ 06:00                 ▘[Mar10 09:00]
+time (UTC)         lstream     message                                  hostname pid  program
+Mar10 08:02:31.000 testhost-01 <debug> Invalid credentials provided     myhost   3898 mail
+Mar10 08:10:29.000 testhost-01 <alert> Database schema updated          myhost   396  mail
+Mar10 08:12:53.000 testhost-01 <emerg> Cache update completed           myhost   1339 cron
+Mar10 08:18:50.000 testhost-01 <emerg> Server shutting down             myhost   1073 uucp
+Mar10 08:18:50.000 testhost-01 <emerg> Database migration failed        myhost   8110 uucp
+Mar10 08:18:50.000 testhost-01 <notice> API request failed              myhost   8894 uucp
+Mar10 08:23:08.000 testhost-01 <info> Hardware failure detected         myhost   5245 cron
+Mar10 08:23:08.000 testhost-01 <debug> User session ended               myhost   4128 syslog
+Mar10 08:33:01.000 testhost-01 <info> User login successful             myhost   8967 daemon
+Mar10 08:37:17.000 testhost-01 <notice> Configuration reload successful myhost   8976 kern
+Mar10 08:44:22.000 testhost-01 <notice> File system check completed     myhost   3005 syslog
+Mar10 08:50:47.000 testhost-01 <alert> High CPU usage detected          myhost   4707 auth
+Mar10 08:56:14.000 testhost-01 <err> Timeout occurred                   myhost   5364 authpriv
+Mar10 08:56:14.000 testhost-01 <debug> Server stopped unexpectedly      myhost   5413 auth
+Mar10 08:58:38.000 testhost-01 <emerg> SMTP server connection error     myhost   2068 ftp
+Mar10 08:58:38.000 testhost-01 <alert> Maintenance mode enabled         myhost   8577 daemon
+Mar10 09:00:36.000 testhost-01 <err> Timeout occurred                   myhost   3406 ftp
+Mar10 09:02:02.000 testhost-01 <warning> CPU temperature critical       myhost   1893 authpriv
+Mar10 09:02:02.000 testhost-01 <alert> System running low on resources  myhost   424  cron
+Mar10 09:02:02.000 testhost-01 <crit> Cache cleared                     myhost   1827 authpriv
+idle 🖳 01 🖳 00 🖳 00 | testhost-01                                                              132 / 132 / 132
+Query took: XXXXXXXXXX

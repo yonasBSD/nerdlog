@@ -1,0 +1,30 @@
+awk pattern:                                                     Mar9 15:00 to Mar12 11:00 (68h)  Edit   Menu
+ 60▀             ▐█████████████████▐██▌ (total 256)
+                 ▐█████████████████▐██▌
+                 ▐█████████████████▐██▌
+                 ▐█████████████████▐██▌                                                                 ▗
+    ▄▄▄▄▟▟▄▄▄▙▙█▙▛▝▘▀▀▀▀▀▀▀▀▀▘▀ ▀▝▀▝▀▘▗▟▟▄▄▟▄▄▟▟▄▟▙▄▙▄▄▄▄▙▄▄▄▄▄▟▄▙▟▙▙▄▄▄▄▙▄▄▄▄▄▄▄▟▄▄▄▟▄▄▙▙▙▄▙▄▄▄▄▄▄█▄▄▄▄▟▄
+                 ▝▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▌ [Mar10 00:00 - Mar10 14:00 (14h0m)]:00           ▝ Mar12
+time (UTC)         lstream     message                                    hostname pid  program
+Mar11 17:56:13.000 testhost-01 <alert> Configuration applied successfully myhost   5244 user
+Mar11 17:56:13.000 testhost-01 <emerg> System health check completed      myhost   4969 auth
+Mar11 18:03:29.000 testhost-01 <emerg> File download started              myhost   5021 cron
+Mar11 18:03:45.000 testhost-01 <crit> Memory usage high                   myhost   2182 authpriv
+Mar11 18:07:20.000 testhost-01 <notice> Service dependency initialized    myhost   2299 auth
+Mar11 18:14:42.000 testhost-01 <err> User session ended                   myhost   3890 cron
+Mar11 18:19:37.000 testhost-01 <warning> Maintenance mode enabled         myhost   7166 syslog
+Mar11 18:27:31.000 testhost-01 <debug> Out of memory error                myhost   3107 kern
+Mar11 18:35:56.000 testhost-01 <err> Invalid credentials provided         myhost   339  daemon
+Mar11 18:35:56.000 testhost-01 <warning> New device connected             myhost   2975 syslog
+Mar11 18:38:52.000 testhost-01 <info> Service request completed           myhost   4608 user
+Mar11 18:40:41.000 testhost-01 <emerg> System time drift detected         myhost   3122 daemon
+Mar11 18:49:08.000 testhost-01 <warning> Configuration load failed        myhost   366  authpriv
+Mar11 18:52:55.000 testhost-01 <notice> Cache cleared                     myhost   5691 kern
+Mar11 18:52:55.000 testhost-01 <notice> Package installation completed    myhost   4255 kern
+Mar11 18:53:59.000 testhost-01 <warning> Out of memory error              myhost   5567 ftp
+Mar11 18:53:59.000 testhost-01 <notice> Backup restoration completed      myhost   3367 authpriv
+Mar11 18:53:59.000 testhost-01 <alert> Application crash reported         myhost   6515 uucp
+Mar11 19:02:44.000 testhost-01 <emerg> System health check failed         myhost   5794 authpriv
+Mar11 19:02:44.000 testhost-01 <emerg> Data corruption detected           myhost   7866 authpriv
+idle 🖳 01 🖳 00 🖳 00 | testhost-01                                                             247 / 500 / 1053
+Query took: XXXXXXXXXX

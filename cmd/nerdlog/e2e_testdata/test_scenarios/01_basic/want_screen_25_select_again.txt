@@ -1,0 +1,30 @@
+awk pattern:                                                    Mar10 00:00 to Mar10 14:00 (14h)  Edit   Menu
+          60▀██████████████████████████████████████████████████████▌ (total 132)   ▐
+             ██████████████████████████████████████████████████████▌               ▐
+             ██████████████████████████████████████████████████████▌               ▐
+             ██████████████████████████████████████████████████████▌               ▐
+             ▀▛▀▜▀▀▛▀▛▀▀▛▀▀▜▜▀▛▛▀▜▀▛▜▜▀▛▛▛▜▀▀▀▜▀▀▛▛▀▜▜▀▛▀▛▀▛▜▜▀▜▀▜▀▚▖▄▄▖▄▖▖▄▄▗▄▖▄▗▄▟▗▗▖▖▖▄▗▄▗▖▄▄▄
+             ▛▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▘ [Mar10 00:00 - Mar10 09:05 (9h5m)]
+time (UTC)         lstream     message                                 hostname pid  program
+Mar10 12:49:19.000 testhost-01 <crit> Service dependency failure       myhost   7645 ftp
+Mar10 12:57:19.000 testhost-01 <warning> Disk space reclaimed          myhost   3195 kern
+Mar10 12:59:28.000 testhost-01 <info> File system full                 myhost   1742 lpr
+Mar10 13:03:17.000 testhost-01 <alert> User session ended              myhost   1923 auth
+Mar10 13:06:35.000 testhost-01 <debug> Hardware upgrade completed      myhost   2193 ftp
+Mar10 13:15:35.000 testhost-01 <emerg> Database schema updated         myhost   9098 daemon
+Mar10 13:20:54.000 testhost-01 <alert> Configuration reload successful myhost   6551 authpriv
+Mar10 13:20:54.000 testhost-01 <crit> File checksum mismatch           myhost   1165 ftp
+Mar10 13:24:15.000 testhost-01 <warning> Service dependency failure    myhost   3144 kern
+Mar10 13:30:09.000 testhost-01 <alert> Scheduled task failed           myhost   4041 news
+Mar10 13:30:09.000 testhost-01 <alert> User authentication successful  myhost   757  ftp
+Mar10 13:35:38.000 testhost-01 <debug> Database connection error       myhost   7343 ftp
+Mar10 13:39:41.000 testhost-01 <crit> Scheduled task executed          myhost   7601 lpr
+Mar10 13:44:01.000 testhost-01 <notice> Network speed reduced          myhost   1073 cron
+Mar10 13:44:01.000 testhost-01 <warning> Resource utilization warning  myhost   6933 auth
+Mar10 13:44:01.000 testhost-01 <err> Software version updated          myhost   8282 cron
+Mar10 13:46:03.000 testhost-01 <emerg> Firewall rule deleted           myhost   2951 news
+Mar10 13:53:59.000 testhost-01 <warning> IP address conflict detected  myhost   4023 news
+Mar10 13:55:36.000 testhost-01 <err> Authentication failure            myhost   2816 mail
+Mar10 13:56:26.000 testhost-01 <notice> Cache cleared                  myhost   3992 news
+idle 🖳 01 🖳 00 🖳 00 | testhost-01                                                              250 / 250 / 256
+Query took: XXXXXXXXXX

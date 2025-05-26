@@ -5,6 +5,8 @@
 package clipboard
 
 import (
+	"os"
+
 	"github.com/juju/errors"
 	"golang.design/x/clipboard"
 )
@@ -16,6 +18,11 @@ var InitErr error = nil
 // an error, not a panic; therefore we have this wrapper guarded with build
 // flags above.
 func init() {
+	if os.Getenv("NERDLOG_NO_CLIPBOARD") != "" {
+		InitErr = errors.Errorf("clipboard is disabled via NERDLOG_NO_CLIPBOARD env var")
+		return
+	}
+
 	InitErr = errors.Trace(clipboard.Init())
 }
 

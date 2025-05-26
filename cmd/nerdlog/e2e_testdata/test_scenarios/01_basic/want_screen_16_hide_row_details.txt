@@ -1,0 +1,30 @@
+awk pattern:                                                     Mar9 15:00 to Mar12 11:00 (68h)  Edit   Menu
+ 60▀                               ▌
+                                   ▌
+                                   ▌
+                                   ▌                                                                    ▗
+    ▄▄▄▄▟▟▄▄▄▙▙█▙▙▙▟▄▄▄▄▄▄▄▄▄▟▄█▄▙▄▙▄▟▙▟▟▄▄▟▄▄▟▟▄▟▙▄▙▄▄▄▄▙▄▄▄▄▄▟▄▙▟▙▙▄▄▄▄▙▄▄▄▄▄▄▄▟▄▄▄▟▄▄▙▙▙▄▙▄▄▄▄▄▄█▄▄▄▄▟▄
+                 ▝ Mar10           ▝ 12:00           ▝ Mar11           ▝ 12:00           ▝ Mar12  ^
+time (UTC)         lstream     message                                hostname pid  program
+Mar12 05:40:06.000 testhost-01 <err> System performance degraded      myhost   3048 authpriv
+Mar12 05:48:41.000 testhost-01 <crit> Application configuration error myhost   4269 auth
+Mar12 05:58:04.000 testhost-01 <notice> Service request completed     myhost   7572 uucp
+Mar12 06:01:58.000 testhost-01 <info> Firewall rule deleted           myhost   116  uucp
+Mar12 06:11:01.000 testhost-01 <crit> File upload completed           myhost   8299 kern
+Mar12 06:17:46.000 testhost-01 <notice> Permission denied             myhost   6996 authpriv
+Mar12 06:21:31.000 testhost-01 <warning> Disk usage critical          myhost   4466 kern
+Mar12 06:21:31.000 testhost-01 <debug> Service request completed      myhost   7726 mail
+Mar12 06:25:33.000 testhost-01 <alert> Process terminated             myhost   810  auth
+Mar12 06:25:33.000 testhost-01 <info> System health check failed      myhost   8644 news
+Mar12 06:25:33.000 testhost-01 <crit> Update failed                   myhost   7259 user
+Mar12 06:35:07.000 testhost-01 <debug> Service unavailable            myhost   3522 syslog
+Mar12 06:39:54.000 testhost-01 <err> Authentication failure           myhost   558  ftp
+Mar12 06:42:43.000 testhost-01 <alert> Cache cleared                  myhost   8063 kern
+Mar12 06:42:43.000 testhost-01 <emerg> Certificate expiration warning myhost   657  mail
+Mar12 06:43:44.000 testhost-01 <debug> Disk space low                 myhost   5284 ftp
+Mar12 06:43:44.000 testhost-01 <debug> Process crashed                myhost   8935 syslog
+Mar12 06:44:49.000 testhost-01 <debug> Error handling request         myhost   5653 news
+Mar12 06:45:20.000 testhost-01 <alert> Backup restoration completed   myhost   1825 mail
+Mar12 06:52:26.000 testhost-01 <err> File system full                 myhost   5797 auth
+idle 🖳 01 🖳 00 🖳 00 | testhost-01                                                             170 / 250 / 1053
+Query took: XXXXXXXXXX
