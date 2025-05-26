@@ -400,6 +400,8 @@ func (e2eTH *E2ETestHelper) waitForSnapshot(
 		return errors.Annotatef(err, "reading wanted snapshot data from %s", wantSnapshotFname)
 	}
 
+	var lastGotStr string
+
 	start := time.Now()
 	for time.Since(start) < timeout {
 		if err := e2eTH.tmuxCapturePane(gotSnapshotFname, substitutions); err != nil {
@@ -413,6 +415,7 @@ func (e2eTH *E2ETestHelper) waitForSnapshot(
 
 		wantStr := string(wantData)
 		gotStr := string(gotData)
+		lastGotStr = gotStr
 
 		if wantStr == gotStr {
 			return nil
@@ -421,7 +424,7 @@ func (e2eTH *E2ETestHelper) waitForSnapshot(
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	return errors.Errorf("snapshot data is not equal")
+	return errors.Errorf("snapshot data %s is not equal:\n%s", gotSnapshotFname, lastGotStr)
 }
 
 // waitForScreenContains keeps checking tmux snapshot, and returns nil once
