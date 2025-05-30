@@ -118,9 +118,9 @@ And get the same result, because hostname, user and port will come from the SSH 
 
 ### Reading log files with sudo
 
-It is obviously a security risk, so think twice. Using `journalctl` might be a better option.
+Before we begin: it is obviously a security risk, so think twice. If your OS allows reading logs without `sudo`, e.g. by adding the user to the `adm` or `systemd-journal` groups, it might be a better option.
 
-On some systems like OpenSUSE, `/var/log/messages` is owned by `root:root`, so one has to either login as root, or use `sudo`.
+On some systems like OpenSUSE, `/var/log/messages` is owned by `root:root`, so if we want to use log files and not `journalctl`, one has to either login as root, or use `sudo`.
 
 If you want to use `sudo`, then first of all, make sure that the password is not required for your user, and then add `options: {"sudo": true}` to `/etc/logstreams.yaml` for the corresponding logstream, like this:
 
@@ -131,7 +131,7 @@ log_streams:
     options: {"sudo": true}
 ```
 
-A note on security: allowing sudo without a password is of course a massive security issue.
+Another note on security: allowing sudo without a password is of course a massive security issue.
 
 To make it more secure, it's technically possible to provision the host(s) by uploading that agent script manually under e.g. `/usr/local/bin`, owned by root, and then make it possible in Nerdlog to use that script instead of uploading a new one every time. It's not yet supported in Nerdlog, since manual provisioning like that means some maintenance burden every time nerdlog is updated, or every time we need to read logs from a new host, so I'm not sure if it's worth. Let me know if you actually need it for your use case, and I can hopefully make it happen.
 
