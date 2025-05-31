@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/dimonomid/nerdlog/clipboard"
 	"github.com/dimonomid/nerdlog/version"
@@ -83,49 +85,18 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 			return
 		}
 
-		// TODO: implement in a generic way
-
-		setParts := strings.SplitN(parts[1], "=", 2)
-		if len(setParts) == 2 {
-			optName := setParts[0]
-			optValue := setParts[1]
-
-			if opt := OptionMetaByName(optName); opt != nil {
-				var setErr error
-				app.options.Call(func(o *Options) {
-					setErr = opt.Set(o, optValue)
-				})
-
-				if setErr != nil {
-					app.printError(setErr.Error())
-					return
-				}
-
-				return
-			}
-
-			app.printError("Unknown variable " + optName)
-			return
+		setRes, err := app.setOption(parts[1])
+		if err != nil {
+			app.printError(capitalizeFirstRune(err.Error()))
 		}
 
-		if parts[1][len(parts[1])-1] == '?' {
-			optName := parts[1][:len(parts[1])-1]
-
-			if opt := OptionMetaByName(optName); opt != nil {
-				var optValue string
-				app.options.Call(func(o *Options) {
-					optValue = opt.Get(o)
-				})
-
+		if setRes != nil {
+			if setRes.got != nil {
+				optName := setRes.got.optName
+				optValue := setRes.got.optValue
 				app.printMsg(fmt.Sprintf("%s is %s", optName, optValue))
-				return
 			}
-
-			app.printError("Unknown variable " + optName)
-			return
 		}
-
-		app.printError("Invalid set command")
 
 	case "xc", "xclip":
 		qf := app.mainView.getQueryFull()
@@ -224,4 +195,12 @@ func (app *nerdlogApp) unmarshalAndApplyQuery(cmd string, dqp doQueryParams) err
 	}
 
 	return nil
+}
+
+func capitalizeFirstRune(s string) string {
+	r, size := utf8.DecodeRuneInString(s)
+	if r == utf8.RuneError {
+		return s
+	}
+	return string(unicode.ToUpper(r)) + s[size:]
 }

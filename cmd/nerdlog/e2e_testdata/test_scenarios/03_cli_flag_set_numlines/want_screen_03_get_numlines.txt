@@ -26,5 +26,5 @@ Mar12 10:38:23.000 testhost-01 <debug> User login successful             myhost 
 Mar12 10:45:36.000 testhost-01 <err> Service request queued              myhost   6125 lpr
 Mar12 10:53:36.000 testhost-01 <warning> Configuration reload successful myhost   4422 ftp
 Mar12 10:56:46.000 testhost-01 <alert> Memory leak detected              myhost   3690 cron
-idle 🖳 01 🖳 00 🖳 00 | testhost-01                                                           1000 / 1000 / 1053
-Unknown option: something
+idle 🖳 01 🖳 00 🖳 00 | testhost-01                                                             500 / 500 / 1053
+numlines is 500

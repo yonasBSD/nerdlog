@@ -43,6 +43,7 @@ func main() {
 		flagLogLevel         = pflag.String("loglevel", "error", "This is NOT about the logs that nerdlog fetches from the remote servers, it's rather about nerdlog's own log. Valid values are: error, warning, info, verbose1, verbose2 or verbose3")
 		flagSSHConfig        = pflag.String("ssh-config", filepath.Join(homeDir, ".ssh", "config"), "ssh config file to use; set to an empty string to disable reading ssh config")
 		flagSSHKeys          = pflag.StringSlice("ssh-key", defaultSSHKeys, "ssh keys to use; only the first existing file will be used")
+		flagSet              = pflag.StringSlice("set", []string{}, "Initial option values in the form option=value, in the same way you'd specify them for the :set command. This flag can be given multiple times")
 
 		flagNoJournalctlAccessWarn = pflag.Bool("no-journalctl-access-warning", false, "Suppress the warning when journalctl is being used by the user who can't read all system logs")
 	)
@@ -138,6 +139,7 @@ func main() {
 
 	app, err := newNerdlogApp(
 		nerdlogAppParams{
+			initialOptionSets:    *flagSet,
 			initialQueryData:     initialQueryData,
 			connectRightAway:     connectRightAway,
 			clipboardInitErr:     clipboard.InitErr,

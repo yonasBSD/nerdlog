@@ -48,12 +48,16 @@ type nerdlogApp struct {
 }
 
 type nerdlogAppParams struct {
-	initialQueryData QueryFull
-	connectRightAway bool
-	clipboardInitErr error
-	logLevel         log.LogLevel
-	sshConfigPath    string
-	sshKeys          []string
+	// initialOptionSets contains strings like "option=value",
+	// like "numlines=1000", in the same way one would execute them in a ":set"
+	// command.
+	initialOptionSets []string
+	initialQueryData  QueryFull
+	connectRightAway  bool
+	clipboardInitErr  error
+	logLevel          log.LogLevel
+	sshConfigPath     string
+	sshKeys           []string
 
 	logstreamsConfigPath string
 	cmdHistoryFile       string
@@ -153,6 +157,26 @@ func newNerdlogApp(
 	// NOTE: initLStreamsManager has to be called _after_ app.mainView is initialized.
 	if err := app.initLStreamsManager(params, "", homeDir, logger); err != nil {
 		return nil, errors.Trace(err)
+	}
+
+	// Set all the initial options from command line.
+	// NOTE: it has to be done after the LStreamsManager is initialized, but before
+	// we call the applyQueryEditData below, so that if some options affect how
+	// the connection works, then we already have the LStreamsManager to apply it
+	// to, but no connections were made yet.
+	for _, expr := range params.initialOptionSets {
+		setRes, err := app.setOption(expr)
+		if err != nil {
+			return nil, errors.Annotatef(err, "setting options from command line")
+		}
+
+		if setRes != nil {
+			if setRes.got != nil {
+				optName := setRes.got.optName
+				optValue := setRes.got.optValue
+				fmt.Printf("%s is %s\n", optName, optValue)
+			}
+		}
 	}
 
 	if !params.connectRightAway {
@@ -400,6 +424,69 @@ func (app *nerdlogApp) Close() {
 
 func (app *nerdlogApp) Wait() {
 	app.lsman.Wait()
+}
+
+type setOptionResult struct {
+	// If getOptionResult is non-nil, it means the "set" command had the "?" at the
+	// end, so it's actually kind of a get command. This is to mimic Vim behavior.
+	got *getOptionResult
+}
+
+type getOptionResult struct {
+	// optName is the name of the requested option.
+	optName string
+	// optValue si the current value of that option.
+	optValue string
+}
+
+// setOption parses a string like "numlines=123" or "numlines?", applies the
+// result to app options, and if the command was actually to get the current
+// value, then return that.
+func (app *nerdlogApp) setOption(expr string) (*setOptionResult, error) {
+	setParts := strings.SplitN(expr, "=", 2)
+	if len(setParts) == 2 {
+		optName := setParts[0]
+		optValue := setParts[1]
+
+		opt := OptionMetaByName(optName)
+		if opt == nil {
+			return nil, errors.Errorf("unknown option: %s", optName)
+		}
+
+		var setErr error
+		app.options.Call(func(o *Options) {
+			setErr = opt.Set(o, optValue)
+		})
+
+		if setErr != nil {
+			return nil, errors.Annotatef(setErr, "setting '%s' to '%s'", optName, optValue)
+		}
+
+		return &setOptionResult{}, nil
+	}
+
+	if expr[len(expr)-1] == '?' {
+		optName := expr[:len(expr)-1]
+
+		opt := OptionMetaByName(optName)
+		if opt == nil {
+			return nil, errors.Errorf("unknown option: %s", optName)
+		}
+
+		var optValue string
+		app.options.Call(func(o *Options) {
+			optValue = opt.Get(o)
+		})
+
+		return &setOptionResult{
+			got: &getOptionResult{
+				optName:  optName,
+				optValue: optValue,
+			},
+		}, nil
+	}
+
+	return nil, errors.Errorf("invalid set command")
 }
 
 func combineErrors(errs []error) error {
