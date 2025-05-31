@@ -1,0 +1,129 @@
+descr: ""
+
+scenario_params:
+  config_log_streams:
+    testhost-01:
+      log_files:
+        kind: all_from_dir
+        dir: ../../input_logfiles/small_mar
+      options:
+        shell_init:
+          - 'export TZ=UTC'
+  terminal_size:
+    x: 110
+    y: 30
+
+test_steps:
+
+  - descr: "start up"
+    send_keys: [
+        'NERDLOG_NO_CLIPBOARD=1 TZ=UTC',
+        ' ${NERDLOG_BINARY} --lstreams-config ${NERDLOG_LOGSTREAMS_CONFIG_FILE} --cmdhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/cmd_history --queryhistory-file ${NERDLOG_TEST_OUTPUT_DIR}/query_history',
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_01_initial.txt
+
+  - descr: "execute query"
+    send_keys: [
+        'C-u',
+        'Mar9 15:00 to Mar12 11:00',
+
+        # Logstreams
+        'Tab',
+        'C-u',
+        'testhost-01',
+
+        # Pattern: leave empty
+        'Tab',
+        'C-u',
+
+        # Select fields
+        'Tab',
+        'C-u',
+        'time STICKY, lstream, message, *',
+
+        # Enter
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_02_executed_query.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "get current value of numlines"
+    send_keys: [
+        ':set numlines?',
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_03_get_numlines.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "set numlines to 1000"
+    send_keys: [
+        ':set numlines=1000',
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_04_get_numlines.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "get current value of numlines again"
+    send_keys: [
+        ':set numlines?',
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_05_get_numlines.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "refresh and check that we now fetch 1000 lines"
+    send_keys: [
+        'C-r',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_06_executed_query_with_more_lines.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "try updating non-existing option"
+    send_keys: [
+        ':set notanoption=123',
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_07_error_unknown_option.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "try getting value of non-existing option"
+    send_keys: [
+        ':set something?',
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_08_error_unknown_option.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
+
+  - descr: "try setting numlines to invalid value"
+    send_keys: [
+        ':set numlines=foobar',
+        'C-m',
+      ]
+    want_screen_snapshot:
+      snapshot: want_screen_09_error_invalid_value.txt
+      substitutions:
+        - pattern:     'Query took: .{1,10}'
+          replacement: 'Query took: XXXXXXXXXX'
