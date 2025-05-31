@@ -160,7 +160,7 @@ func newNerdlogApp(
 		app.mainView.queryEditView.Show(params.initialQueryData)
 	} else {
 		if err := app.mainView.applyQueryEditData(params.initialQueryData, doQueryParams{}); err != nil {
-			panic(err.Error())
+			return nil, errors.Annotatef(err, "applying query from command line")
 		}
 	}
 
