@@ -22,6 +22,9 @@ const agentTestOutputRoot = "/tmp/nerdlog_agent_test_output"
 const agentTestCaseYamlFname = "test_case.yaml"
 
 type AgentTestCaseYaml struct {
+	// If Disabled is true, the test case is skipped.
+	Disabled bool `yaml:"disabled"`
+
 	Descr    string                     `yaml:"descr"`
 	Logfiles testutils.TestCaseLogfiles `yaml:"logfiles"`
 
@@ -86,6 +89,11 @@ func runAgentTestCase(t *testing.T, nerdlogAgentShFname, testCasesDir, repoRoot,
 	var tc AgentTestCaseYaml
 	if err := yaml.Unmarshal(data, &tc); err != nil {
 		return errors.Annotatef(err, "unmarshaling yaml from %s", testCaseDescrFname)
+	}
+
+	if tc.Disabled {
+		fmt.Printf("WARNING: Skipping %s since it's disabled\n", testName)
+		return nil
 	}
 
 	resolved, err := testutils.ResolveLogfiles(testCaseDir, &tc.Logfiles)

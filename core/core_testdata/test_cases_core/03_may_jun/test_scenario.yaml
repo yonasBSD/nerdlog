@@ -1,0 +1,24 @@
+descr: "Get logs across May and Jun, which means that lexicographically the timestamps reduce with the traditional syslog format"
+current_time: "2025-03-12T10:58:00Z"
+manager_params:
+  config_log_streams:
+    testhost-3:
+      log_files:
+        kind: all_from_dir
+        dir: ../../input_logfiles/small_may_jun
+      options:
+        shell_init:
+          - 'export TZ=UTC'
+  initial_lstreams: "testhost-*"
+  client_id: "core-test-runner"
+test_steps:
+
+  - descr: "initial query spanning across may and jun, which makes"
+    query:
+      params:
+        max_num_lines: 30
+        from: "2025-05-31T23:30:00Z"
+        to:   "2025-06-01T00:30:00Z"
+        pattern: ""
+        load_earlier: false
+      want: want_log_resp_01_initial.txt

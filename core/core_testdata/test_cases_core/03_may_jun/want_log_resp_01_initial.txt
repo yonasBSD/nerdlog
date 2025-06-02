@@ -1,0 +1,85 @@
+NumMsgsTotal: 16
+LoadedEarlier: false
+Num errors: 0
+
+Num MinuteStats: 14
+- 2025-05-31-23-31: 1
+- 2025-05-31-23-33: 1
+- 2025-05-31-23-41: 1
+- 2025-05-31-23-42: 1
+- 2025-05-31-23-43: 1
+- 2025-05-31-23-45: 1
+- 2025-05-31-23-49: 1
+- 2025-05-31-23-50: 1
+- 2025-05-31-23-54: 1
+- 2025-06-01-00-01: 2
+- 2025-06-01-00-08: 1
+- 2025-06-01-00-17: 2
+- 2025-06-01-00-22: 1
+- 2025-06-01-00-29: 1
+
+Num Logs: 16
+- 2025-05-31T23:31:13.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000132,000132,warn,<warning> Scheduled task executed
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"1390","program":"news"}
+  orig: May 31 23:31:13 myhost news[1390]: <warning> Scheduled task executed
+- 2025-05-31T23:33:06.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000133,000133,debg,<debug> Process crashed
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"3943","program":"uucp"}
+  orig: May 31 23:33:06 myhost uucp[3943]: <debug> Process crashed
+- 2025-05-31T23:41:35.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000134,000134,erro,<crit> Process started
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"313","program":"cron"}
+  orig: May 31 23:41:35 myhost cron[313]: <crit> Process started
+- 2025-05-31T23:42:07.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000135,000135,----,<alert> Disk format completed
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"3229","program":"uucp"}
+  orig: May 31 23:42:07 myhost uucp[3229]: <alert> Disk format completed
+- 2025-05-31T23:43:58.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000136,000136,----,<emerg> Insufficient privileges
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"4421","program":"lpr"}
+  orig: May 31 23:43:58 myhost lpr[4421]: <emerg> Insufficient privileges
+- 2025-05-31T23:45:15.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000137,000137,warn,<warning> System time drift detected
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"7029","program":"news"}
+  orig: May 31 23:45:15 myhost news[7029]: <warning> System time drift detected
+- 2025-05-31T23:49:53.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000138,000138,----,<notice> Service started
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"7525","program":"lpr"}
+  orig: May 31 23:49:53 myhost lpr[7525]: <notice> Service started
+- 2025-05-31T23:50:16.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000139,000139,warn,<warning> Disk space reclaimed
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"1351","program":"news"}
+  orig: May 31 23:50:16 myhost news[1351]: <warning> Disk space reclaimed
+- 2025-05-31T23:54:28.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000140,000140,erro,<alert> Database connection error
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"108","program":"kern"}
+  orig: May 31 23:54:28 myhost kern[108]: <alert> Database connection error
+- 2025-06-01T00:01:58.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000141,000141,----,<emerg> API request failed
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"3725","program":"cron"}
+  orig: Jun  1 00:01:58 myhost cron[3725]: <emerg> API request failed
+- 2025-06-01T00:01:58.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000142,000142,----,<emerg> Database migration completed
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"2334","program":"uucp"}
+  orig: Jun  1 00:01:58 myhost uucp[2334]: <emerg> Database migration completed
+- 2025-06-01T00:08:34.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000143,000143,erro,<err> CPU temperature critical
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"3966","program":"lpr"}
+  orig: Jun  1 00:08:34 myhost lpr[3966]: <err> CPU temperature critical
+- 2025-06-01T00:17:17.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000144,000144,----,<alert> Application crash reported
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"3135","program":"user"}
+  orig: Jun  1 00:17:17 myhost user[3135]: <alert> Application crash reported
+- 2025-06-01T00:17:17.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000145,000145,erro,<notice> Error handling request
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"8324","program":"ftp"}
+  orig: Jun  1 00:17:17 myhost ftp[8324]: <notice> Error handling request
+- 2025-06-01T00:22:38.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000146,000146,----,<emerg> Server shutting down
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"864","program":"ftp"}
+  orig: Jun  1 00:22:38 myhost ftp[864]: <emerg> Server shutting down
+- 2025-06-01T00:29:08.000000000Z,F,/tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1,000147,000147,info,<info> Configuration applied successfully
+  context: {"hostname":"myhost","lstream":"testhost-3","pid":"3704","program":"lpr"}
+  orig: Jun  1 00:29:08 myhost lpr[3704]: <info> Configuration applied successfully
+
+DebugInfo:
+{
+  "testhost-3": {
+    "AgentStdout": null,
+    "AgentStderr": [
+      "debug:index file doesn't exist or is empty, gonna refresh it",
+      "debug:the from 2025-05-31-23:30 is found: 132 (8680)",
+      "debug:the to 2025-06-01-00:30 is found: 148 (9734)",
+      "debug:Getting logs from offset 8680, only 1054 bytes, all in the prev /tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1",
+      "debug:Command to filter logs by time range:",
+      "debug: bash -c 'tail -c +8680 /tmp/nerdlog_core_test_output/03_may_jun/lstreams/testhost-3/logfile.1 | head -c 1054'",
+      "debug:Filtered out 0 from 16 lines"
+    ]
+  }
+}

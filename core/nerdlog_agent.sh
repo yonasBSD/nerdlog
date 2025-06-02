@@ -547,19 +547,24 @@ function run_awk_script_logfiles {
   }
   '$awk_pattern'
   {
-    # Account for decreased timestamps.
-    #
-    # NOTE: to make it produce the correct result in all cases, this check
-    # needs to be before the pattern check, but we intentionally avoid doing
-    # that because it slows things down by 5-10% when the pattern filters out
-    # most of the lines, which I think is not worth it to account for this
-    # corner case.
     curMinKey = '"$awktime_minute_key"';
-    if (curMinKey < prevMinKey) {
-      curMinKey = prevMinKey;
-    } else {
-      prevMinKey = curMinKey;
-    }
+
+    ## NOTE: this is disabled for now, until we fix it for the case when the
+    ## timestamp changes from e.g. May to Jun, i.e. in the traditional syslog
+    ## format, it decreases lexicographically.
+    ##
+    ## Account for decreased timestamps.
+    ##
+    ## NOTE: to make it produce the correct result in all cases, this check
+    ## needs to be before the pattern check, but we intentionally avoid doing
+    ## that because it slows things down by 5-10% when the pattern filters out
+    ## most of the lines, which I think is not worth it to account for this
+    ## corner case.
+    #if (curMinKey < prevMinKey) {
+      #curMinKey = prevMinKey;
+    #} else {
+      #prevMinKey = curMinKey;
+    #}
 
     stats[curMinKey]++;
 
