@@ -1,0 +1,5 @@
+[Tue Jun 03 13:45:27.123456 2025] [core:notice] [pid 1234] AH00094: Command line: '/usr/sbin/httpd -D FOREGROUND'
+[Tue Jun 03 13:46:12.789012 2025] [mpm_prefork:notice] [pid 1234] AH00163: Apache/2.4.57 (Fedora) configured -- resuming normal operations
+[Tue Jun 03 13:47:01.987654 2025] [authz_core:error] [pid 1256] [client 192.168.1.101:49721] AH01630: client denied by server configuration: /var/www/html/private
+[Tue Jun 03 13:48:45.543210 2025] [php:error] [pid 1278] [client 192.168.1.101:49802] PHP Fatal error:  Uncaught Error: Call to undefined function mysql_connect() in /var/www/html/index.php:12
+[Tue Jun 03 13:50:00.000123 2025] [ssl:warn] [pid 1234] AH01906: RSA server certificate is a CA certificate (BasicConstraints: CA == TRUE !?)

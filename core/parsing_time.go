@@ -149,6 +149,10 @@ func DetectTimeLayout(logLine string) string {
 		"Mon Jan 2 15:04:05 2006",
 		"02-Jan-2006 15:04:05",
 		"Jan 02 15:04:05",
+
+		// Some variations of Apache HTTP Server logs
+		"[Mon Jan 02 15:04:05.999999 2006]",
+		"[Mon Jan 02 15:04:05 2006]",
 	}
 
 	for _, layout := range knownFormats {

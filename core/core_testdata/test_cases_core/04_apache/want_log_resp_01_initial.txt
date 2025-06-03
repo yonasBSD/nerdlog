@@ -1,0 +1,43 @@
+NumMsgsTotal: 5
+LoadedEarlier: false
+Num errors: 0
+
+Num MinuteStats: 5
+- 2025-06-03-13-45: 1
+- 2025-06-03-13-46: 1
+- 2025-06-03-13-47: 1
+- 2025-06-03-13-48: 1
+- 2025-06-03-13-50: 1
+
+Num Logs: 5
+- 2025-06-03T13:45:27.123456000Z,F,/tmp/nerdlog_core_test_output/04_apache/lstreams/testhost-3/logfile,000001,000001,----,[core:notice] [pid 1234] AH00094: Command line: '/usr/sbin/httpd -D FOREGROUND'
+  context: {"lstream":"testhost-3"}
+  orig: [Tue Jun 03 13:45:27.123456 2025] [core:notice] [pid 1234] AH00094: Command line: '/usr/sbin/httpd -D FOREGROUND'
+- 2025-06-03T13:46:12.789012000Z,F,/tmp/nerdlog_core_test_output/04_apache/lstreams/testhost-3/logfile,000002,000002,----,[mpm_prefork:notice] [pid 1234] AH00163: Apache/2.4.57 (Fedora) configured -- resuming normal operations
+  context: {"lstream":"testhost-3"}
+  orig: [Tue Jun 03 13:46:12.789012 2025] [mpm_prefork:notice] [pid 1234] AH00163: Apache/2.4.57 (Fedora) configured -- resuming normal operations
+- 2025-06-03T13:47:01.987654000Z,F,/tmp/nerdlog_core_test_output/04_apache/lstreams/testhost-3/logfile,000003,000003,erro,[authz_core:error] [pid 1256] [client 192.168.1.101:49721] AH01630: client denied by server configuration: /var/www/html/private
+  context: {"lstream":"testhost-3"}
+  orig: [Tue Jun 03 13:47:01.987654 2025] [authz_core:error] [pid 1256] [client 192.168.1.101:49721] AH01630: client denied by server configuration: /var/www/html/private
+- 2025-06-03T13:48:45.543210000Z,F,/tmp/nerdlog_core_test_output/04_apache/lstreams/testhost-3/logfile,000004,000004,erro,[php:error] [pid 1278] [client 192.168.1.101:49802] PHP Fatal error:  Uncaught Error: Call to undefined function mysql_connect() in /var/www/html/index.php:12
+  context: {"lstream":"testhost-3"}
+  orig: [Tue Jun 03 13:48:45.543210 2025] [php:error] [pid 1278] [client 192.168.1.101:49802] PHP Fatal error:  Uncaught Error: Call to undefined function mysql_connect() in /var/www/html/index.php:12
+- 2025-06-03T13:50:00.000123000Z,F,/tmp/nerdlog_core_test_output/04_apache/lstreams/testhost-3/logfile,000005,000005,warn,[ssl:warn] [pid 1234] AH01906: RSA server certificate is a CA certificate (BasicConstraints: CA == TRUE !?)
+  context: {"lstream":"testhost-3"}
+  orig: [Tue Jun 03 13:50:00.000123 2025] [ssl:warn] [pid 1234] AH01906: RSA server certificate is a CA certificate (BasicConstraints: CA == TRUE !?)
+
+DebugInfo:
+{
+  "testhost-3": {
+    "AgentStdout": null,
+    "AgentStderr": [
+      "debug:prev logfile /tmp/nerdlog_core_test_output/04_apache/lstreams/testhost-3/logfile.1 doesn't exist, using a dummy empty file /tmp/nerdlog-empty-file",
+      "debug:index file doesn't exist or is empty, gonna refresh it",
+      "debug:the to 2025-06-03-14:00 isn't found, will use the end",
+      "debug:Getting logs from the very beginning in prev /tmp/nerdlog-empty-file until the end of latest /tmp/nerdlog_core_test_output/04_apache/lstreams/testhost-3/logfile",
+      "debug:Command to filter logs by time range:",
+      "debug: bash -c 'cat /tmp/nerdlog-empty-file \u0026\u0026 cat /tmp/nerdlog_core_test_output/04_apache/lstreams/testhost-3/logfile'",
+      "debug:Filtered out 0 from 5 lines"
+    ]
+  }
+}
