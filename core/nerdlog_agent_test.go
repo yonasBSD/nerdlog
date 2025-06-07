@@ -2,11 +2,13 @@ package core
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -302,6 +304,10 @@ func runNerdlogAgent(
 		return errors.Annotatef(err, "reading want_stderr")
 	}
 
+	if err := sortStatBucketLinesInFile(stdoutFname); err != nil {
+		return errors.Annotatef(err, "transforming stdout %s using sortStatBucketLinesInFile", stdoutFname)
+	}
+
 	gotStdout, err := os.ReadFile(stdoutFname)
 	if err != nil {
 		return errors.Annotatef(err, "reading %s", stdoutFname)
@@ -316,6 +322,72 @@ func runNerdlogAgent(
 
 	if params.checkStderr {
 		assert.Equal(t, string(wantStderr), string(gotStderr), assertArgs...)
+	}
+
+	return nil
+}
+
+// sortStatBucketLines takes a string representing stdout output from the
+// nerdlog agent script, like this:
+//
+//	logfile:/tmp/nerdlog_agent_test_output/all_existing_logs/01_from_is_set_to_is_set/logfile.1:0
+//	logfile:/tmp/nerdlog_agent_test_output/all_existing_logs/01_from_is_set_to_is_set/logfile:19
+//	s:Mar 10 10:20,2
+//	s:Mar 10 09:39,1
+//	s:Mar 10 09:00,1
+//	s:Mar 10 09:59,1
+//	s:Mar 10 10:32,2
+//	m:34:Mar 10 10:51:01 myhost user[3758]: <crit> System running low on resources
+//	m:35:Mar 10 10:57:37 myhost news[5185]: <alert> Insufficient privileges
+//	exit_code:0
+//
+// And returns the same string, but all the lines starting from "s:" being sorted
+// lexicographically. This is just for better testability.
+func sortStatBucketLines(nerdlogStdout []byte) []byte {
+	scanner := bufio.NewScanner(bytes.NewReader(nerdlogStdout))
+	var out bytes.Buffer
+	var statLines []string
+
+	flushStatLines := func() {
+		if len(statLines) > 0 {
+			sort.Strings(statLines)
+			for _, line := range statLines {
+				out.WriteString(line)
+				out.WriteByte('\n')
+			}
+			statLines = nil
+		}
+	}
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) > 2 && line[:2] == "s:" {
+			statLines = append(statLines, line)
+		} else {
+			flushStatLines()
+			out.WriteString(line)
+			out.WriteByte('\n')
+		}
+	}
+
+	flushStatLines() // in case the input ends with s: lines
+
+	return out.Bytes()
+}
+
+// sortStatBucketLinesInFile reads all file contents using the given filename,
+// transforms it using sortStatBucketLines, and writes back to the same file.
+func sortStatBucketLinesInFile(fname string) error {
+	data, err := os.ReadFile(fname)
+	if err != nil {
+		return errors.Annotatef(err, "reading in sortStatBucketLinesInFile")
+	}
+
+	sorted := sortStatBucketLines(data)
+
+	err = os.WriteFile(fname, sorted, 0644)
+	if err != nil {
+		return errors.Annotatef(err, "writing in sortStatBucketLinesInFile")
 	}
 
 	return nil
