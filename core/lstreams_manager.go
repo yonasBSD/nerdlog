@@ -58,6 +58,8 @@ type LStreamsManager struct {
 	curQueryLogsCtx *manQueryLogsCtx
 
 	curLogs manLogsCtx
+
+	useExternalSSH bool
 }
 
 type LStreamsManagerParams struct {
@@ -76,6 +78,8 @@ type LStreamsManagerParams struct {
 	Logger *log.Logger
 
 	InitialLStreams string
+
+	InitialUseExternalSSH bool
 
 	// ClientID is just an arbitrary string (should be filename-friendly though)
 	// which will be appended to the nerdlog_agent.sh and its index filenames.
@@ -113,6 +117,8 @@ func NewLStreamsManager(params LStreamsManagerParams) *LStreamsManager {
 
 		teardownReqCh: make(chan struct{}, 1),
 		torndownCh:    make(chan struct{}, 1),
+
+		useExternalSSH: params.InitialUseExternalSSH,
 	}
 
 	if err := lsman.setLStreams(params.InitialLStreams); err != nil {
@@ -128,6 +134,41 @@ func NewLStreamsManager(params LStreamsManagerParams) *LStreamsManager {
 	return lsman
 }
 
+func (lsman *LStreamsManager) SetUseExternalSSH(useExternalSSH bool) {
+	resCh := make(chan struct{}, 1)
+
+	lsman.reqCh <- lstreamsManagerReq{
+		setUseExternalSSH: &lstreamsManagerReqSetUseExternalSSH{
+			useExternalSSH: useExternalSSH,
+			resCh:          resCh,
+		},
+	}
+
+	<-resCh
+}
+
+func (lsman *LStreamsManager) setUseExternalSSH(useExternalSSH bool) {
+	// If unchanged, then do nothing.
+	if lsman.useExternalSSH == useExternalSSH {
+		return
+	}
+
+	// Transport mode has changed: remember it, and reconnect using it.
+
+	lsman.useExternalSSH = useExternalSSH
+
+	lstreamsStr := lsman.lstreamsStr
+	lsman.setLStreams("")
+	lsman.updateHAs()
+	lsman.updateLStreamsByState()
+
+	lsman.setLStreams(lstreamsStr)
+	lsman.updateHAs()
+	lsman.updateLStreamsByState()
+
+	lsman.sendStateUpdate()
+}
+
 func (lsman *LStreamsManager) setLStreams(lstreamsStr string) error {
 	u, err := user.Current()
 	if err != nil {
@@ -136,6 +177,8 @@ func (lsman *LStreamsManager) setLStreams(lstreamsStr string) error {
 
 	resolver := NewLStreamsResolver(LStreamsResolverParams{
 		CurOSUser: u.Username,
+
+		UseExternalSSH: lsman.useExternalSSH,
 
 		ConfigLogStreams: lsman.params.ConfigLogStreams,
 		SSHConfig:        lsman.params.SSHConfig,
@@ -289,7 +332,7 @@ func (lsman *LStreamsManager) run() {
 							break
 						}
 
-						if i > 0 {
+						if pendingSB.Len() > 0 {
 							pendingSB.WriteString(", ")
 						}
 
@@ -416,6 +459,14 @@ func (lsman *LStreamsManager) run() {
 				lsman.sendStateUpdate()
 
 				r.resCh <- nil
+
+			case req.setUseExternalSSH != nil:
+				r := req.setUseExternalSSH
+				lsman.params.Logger.Infof("LStreams manager: setting useExternalSSH: %v", r.useExternalSSH)
+
+				lsman.setUseExternalSSH(r.useExternalSSH)
+
+				r.resCh <- struct{}{}
 
 			case req.ping:
 				for _, lsc := range lsman.lscs {
@@ -573,16 +624,22 @@ func (lsman *LStreamsManager) Wait() {
 type lstreamsManagerReq struct {
 	// Exactly one field must be non-nil
 
-	queryLogs   *QueryLogsParams
-	updLStreams *lstreamsManagerReqUpdLStreams
-	ping        bool
-	reconnect   bool
-	disconnect  bool
+	queryLogs         *QueryLogsParams
+	updLStreams       *lstreamsManagerReqUpdLStreams
+	setUseExternalSSH *lstreamsManagerReqSetUseExternalSSH
+	ping              bool
+	reconnect         bool
+	disconnect        bool
 }
 
 type lstreamsManagerReqUpdLStreams struct {
 	logStreamsSpec string
 	resCh          chan<- error
+}
+
+type lstreamsManagerReqSetUseExternalSSH struct {
+	useExternalSSH bool
+	resCh          chan<- struct{}
 }
 
 func (lsman *LStreamsManager) QueryLogs(params QueryLogsParams) {

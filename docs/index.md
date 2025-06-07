@@ -5,6 +5,7 @@ Nerdlog is a fast, remote-first, multi-host TUI log viewer with timeline histogr
 It's laser-focused on being efficient while querying logs from multiple remote machines simultaneously, filtering them by time range and patterns, while also drawing a timeline histogram for quick visual insight.
 
 - [Core concepts](./core_concepts.md)
+- [Options](./options.md)
 - [How it works](./how_it_works.md)
 - [Requirements](./requirements.md)
 - [Limitations](./limitations.md)

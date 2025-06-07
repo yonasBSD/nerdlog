@@ -15,6 +15,20 @@ type Options struct {
 	// MaxNumLines is how many log lines the nerdlog_agent.sh will return at
 	// most. Initially it's set to 250.
 	MaxNumLines int
+
+	TransportMode TransportMode
+}
+
+type TransportMode string
+
+const (
+	TransportModeSSHLib = "ssh-lib"
+	TransportModeSSHBin = "ssh-bin"
+)
+
+var allTransportModes = map[TransportMode]struct{}{
+	TransportModeSSHLib: struct{}{},
+	TransportModeSSHBin: struct{}{},
 }
 
 type OptionsShared struct {
@@ -39,6 +53,12 @@ func (o *OptionsShared) GetMaxNumLines() int {
 	o.mtx.Lock()
 	defer o.mtx.Unlock()
 	return o.options.MaxNumLines
+}
+
+func (o *OptionsShared) GetTransportMode() TransportMode {
+	o.mtx.Lock()
+	defer o.mtx.Unlock()
+	return o.options.TransportMode
 }
 
 func (o *OptionsShared) GetAll() Options {
@@ -99,6 +119,25 @@ var AllOptions = map[string]*OptionMeta{
 	},
 	"numlines": {
 		AliasOf: "maxnumlines",
+	}, // }}}
+	"transport": { // {{{
+		Get: func(o *Options) string {
+			return string(o.TransportMode)
+		},
+		Set: func(o *Options, value string) error {
+			if _, ok := allTransportModes[TransportMode(value)]; !ok {
+				slice := make([]string, 0, len(allTransportModes))
+				for v := range allTransportModes {
+					slice = append(slice, string(v))
+				}
+
+				return errors.Errorf("invalid transport mode %q, valid options are: %+v", value, slice)
+			}
+
+			o.TransportMode = TransportMode(value)
+			return nil
+		},
+		Help: "How to connect to remote hosts",
 	}, // }}}
 }
 

@@ -63,8 +63,10 @@ test_steps:
   # for later. For now just moving this step to be the last one.
   - descr: "check connection state"
     check_state:
-      want_by_hostname:
+      want_by_hostname_and_transport:
         # localhost uses local transport
         localhost: want_conn_info_localhost.txt
-        # 127.0.0.1 uses ssh transport
-        127.0.0.1: want_conn_info_127.0.0.1.txt
+        # 127.0.0.1 with ssh-lib transport
+        127.0.0.1_ssh-lib: want_conn_info_127.0.0.1_sshlib.txt
+        # 127.0.0.1 with ssh-bin transport
+        127.0.0.1_ssh-bin: want_conn_info_127.0.0.1_sshbin.txt

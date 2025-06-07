@@ -1,0 +1,25 @@
+{
+  "NumLStreams": 1,
+  "LStreamsByState": {
+    "connected_idle": {
+      "testhost-1": {}
+    }
+  },
+  "NumConnected": 1,
+  "NoMatchingLStreams": false,
+  "Connected": true,
+  "Busy": false,
+  "ConnDetailsByLStream": {
+    "testhost-1": {
+      "Messages": [
+        "Trying to connect using external command: \"ssh -o 'BatchMode=yes' 127.0.0.1 /bin/sh\"",
+        "Command started, writing \"echo __CONNECTED__\", waiting for it in stdout",
+        "Got the marker, connected successfully"
+      ],
+      "Err": "",
+      "Connected": true
+    }
+  },
+  "BusyStageByLStream": {},
+  "TearingDown": []
+}

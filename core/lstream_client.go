@@ -245,14 +245,28 @@ func createTransport(
 ) ShellTransport {
 	var transport ShellTransport
 
-	if config.SSH != nil {
+	if config.SSHLib != nil {
 		if transport != nil {
 			panic("transport config is ambiguous")
 		}
 
-		transport = NewShellTransportSSH(ShellTransportSSHParams{
+		transport = NewShellTransportSSHLib(ShellTransportSSHLibParams{
 			SSHKeys:     sshKeys,
-			ConnDetails: *config.SSH,
+			ConnDetails: *config.SSHLib,
+
+			Logger: logger,
+		})
+	}
+
+	if config.SSHBin != nil {
+		if transport != nil {
+			panic("transport config is ambiguous")
+		}
+
+		transport = NewShellTransportSSHBin(ShellTransportSSHBinParams{
+			Host: config.SSHBin.Host,
+			User: config.SSHBin.User,
+			Port: config.SSHBin.Port,
 
 			Logger: logger,
 		})

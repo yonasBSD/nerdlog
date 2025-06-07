@@ -15,42 +15,42 @@ import (
 	"golang.org/x/crypto/ssh/agent"
 )
 
-// ShellTransportSSH implements ShellTransport over SSH.
-type ShellTransportSSH struct {
-	params ShellTransportSSHParams
+// ShellTransportSSHLib implements ShellTransport over SSH.
+type ShellTransportSSHLib struct {
+	params ShellTransportSSHLibParams
 }
 
-var _ ShellTransport = &ShellTransportSSH{}
+var _ ShellTransport = &ShellTransportSSHLib{}
 
-func NewShellTransportSSH(params ShellTransportSSHParams) *ShellTransportSSH {
-	params.Logger = params.Logger.WithNamespaceAppended("TransportSSH")
+func NewShellTransportSSHLib(params ShellTransportSSHLibParams) *ShellTransportSSHLib {
+	params.Logger = params.Logger.WithNamespaceAppended("TransportSSHLib")
 
-	return &ShellTransportSSH{
+	return &ShellTransportSSHLib{
 		params: params,
 	}
 }
 
-type ShellTransportSSHParams struct {
+type ShellTransportSSHLibParams struct {
 	// SSHKeys specifies paths to ssh keys to try, in the given order, until
 	// an existing key is found.
 	SSHKeys []string
 
-	ConnDetails ConfigLogStreamShellTransportSSH
+	ConnDetails ConfigLogStreamShellTransportSSHLib
 
 	Logger *log.Logger
 }
 
-func (st *ShellTransportSSH) Connect(resCh chan<- ShellConnUpdate) {
+func (st *ShellTransportSSHLib) Connect(resCh chan<- ShellConnUpdate) {
 	go st.doConnect(resCh)
 }
 
-func (st *ShellTransportSSH) makeDebugInfo(message string) *ShellConnDebugInfo {
+func (st *ShellTransportSSHLib) makeDebugInfo(message string) *ShellConnDebugInfo {
 	return &ShellConnDebugInfo{
 		Message: message,
 	}
 }
 
-func (st *ShellTransportSSH) doConnect(
+func (st *ShellTransportSSHLib) doConnect(
 	resCh chan<- ShellConnUpdate,
 ) (res ShellConnResult) {
 	logger := st.params.Logger
@@ -215,7 +215,7 @@ type AuthMethodWMeta struct {
 	Descr string
 }
 
-func (st *ShellTransportSSH) getClientConfig(resCh chan<- ShellConnUpdate, logger *log.Logger, username string) (*ClientConfigWMeta, error) {
+func (st *ShellTransportSSHLib) getClientConfig(resCh chan<- ShellConnUpdate, logger *log.Logger, username string) (*ClientConfigWMeta, error) {
 	auth, err := st.getSSHAuthMethod(resCh, logger)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -240,7 +240,7 @@ var (
 	sshAuthMethodSharedMtx sync.Mutex
 )
 
-func (st *ShellTransportSSH) getSSHAuthMethod(resCh chan<- ShellConnUpdate, logger *log.Logger) (*AuthMethodWMeta, error) {
+func (st *ShellTransportSSHLib) getSSHAuthMethod(resCh chan<- ShellConnUpdate, logger *log.Logger) (*AuthMethodWMeta, error) {
 	sshAuthMethodSharedMtx.Lock()
 	defer sshAuthMethodSharedMtx.Unlock()
 
@@ -348,7 +348,7 @@ var (
 	jumphostsSharedMtx sync.Mutex
 )
 
-func (st *ShellTransportSSH) getJumphostClient(resCh chan<- ShellConnUpdate, logger *log.Logger, jhConfig *ConfigHost) (*ssh.Client, error) {
+func (st *ShellTransportSSHLib) getJumphostClient(resCh chan<- ShellConnUpdate, logger *log.Logger, jhConfig *ConfigHost) (*ssh.Client, error) {
 	jumphostsSharedMtx.Lock()
 	defer jumphostsSharedMtx.Unlock()
 

@@ -116,4 +116,8 @@ jobs:
           eval "$(ssh-agent -s)"
           ssh-add ~/.ssh/id_rsa
 
+          echo "Running tests with ssh-lib"
           NERDLOG_CORE_TEST_HOSTNAME='127.0.0.1' make test ARGS='-run TestCoreScenarios'
+
+          echo "Running tests with ssh-bin"
+          NERDLOG_CORE_TEST_HOSTNAME='127.0.0.1' NERDLOG_CORE_TEST_TRANSPORT_SSH_BIN=1 make test ARGS='-run TestCoreScenarios'

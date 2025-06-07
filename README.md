@@ -322,16 +322,13 @@ can be done from the Menu too, or using a keyboard shortcut `Alt+Ctrl+R` or
 
 `:version` or `:about` Show version info
 
-`:set option=value` Set option to the new value
-
 `:set option?` Get current value of an option
 
-Currently supported options are:
+`:set option=value` Set option to the new value
 
-- `numlines`: the number of log messages loaded from every logstream on every
-  request. Default: 250.
-- `timezone`: the timezone to format the timestamps on the UI. By default,
-  `Local` is used, but you can specify `UTC` or `America/New_York` etc.
+See the [full list of supported options here](./docs/options.md).
+
+---
 
 `:q[uit]` Quit the app.
 

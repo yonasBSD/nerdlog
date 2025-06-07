@@ -55,6 +55,9 @@ test-all-variations:
 	@# Rerun core tests using "127.0.0.1" as the hostname, which will use ssh
 	@# transport.
 	NERDLOG_CORE_TEST_HOSTNAME=127.0.0.1 make test ARGS='-run TestCoreScenarios'
+	@# Rerun core tests using "127.0.0.1" as the hostname and external ssh bin.
+	NERDLOG_CORE_TEST_HOSTNAME=127.0.0.1 NERDLOG_CORE_TEST_TRANSPORT_SSH_BIN=1 \
+    make test ARGS='-run TestCoreScenarios'
 
 # Run the tests (without the index-up repetitions), and update all the expected
 # outputs in the repo.
@@ -74,6 +77,13 @@ update-test-expectations:
 	@# payloads for that hostname.
 	rm -rf /tmp/nerdlog_core_test_output
 	-NERDLOG_CORE_TEST_HOSTNAME=127.0.0.1 make test ARGS='-run TestCoreScenarios'
+	bash util/copy_core_test_results.sh
+	@# Also run core tests with 127.0.0.1 and ssh-bin, to update host-dependent
+	@# payloads for that hostname.
+	rm -rf /tmp/nerdlog_core_test_output
+	-NERDLOG_CORE_TEST_HOSTNAME=127.0.0.1     \
+    NERDLOG_CORE_TEST_TRANSPORT_SSH_BIN=1   \
+    make test ARGS='-run TestCoreScenarios'
 	bash util/copy_core_test_results.sh
 
 bench:

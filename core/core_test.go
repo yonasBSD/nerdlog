@@ -63,10 +63,16 @@ type CoreTestStep struct {
 }
 
 type CoreTestStepCheckState struct {
-	// WantByHostname is a map from the test hostname (either "localhost",
-	// or overridden by NERDLOG_CORE_TEST_HOSTNAME env var) to the filename
-	// with the expected LStreamsManagerState.
-	WantByHostname map[string]string `yaml:"want_by_hostname"`
+	// WantByHostnameAndTransport is a map from the test hostname-and-transport
+	// string to the filename with the expected LStreamsManagerState.
+	//
+	// The hostname-and-transport string looks like this:
+	//
+	// - "localhost": for localhost, it's just this, since there is only one kind
+	//   of transport
+	// - "127.0.0.1_ssh-lib": for non-localhost hostname without UseExternalSSH
+	// - "127.0.0.1_ssh-bin": for non-localhost hostname with UseExternalSSH
+	WantByHostnameAndTransport map[string]string `yaml:"want_by_hostname_and_transport"`
 }
 
 type CoreTestStepQuery struct {
@@ -195,12 +201,11 @@ func runCoreTestScenario(t *testing.T, tsCtx *coreTestScenarioContext) error {
 				return errors.Annotatef(err, "test step #%d: writing lsm state", i)
 			}
 
-			testHostname := getCoreTestHostname()
-			wantFilename := checkState.WantByHostname[testHostname]
+			hostnameAndTransportKey := manTH.getHostnameAndTransportKey()
+			wantFilename := checkState.WantByHostnameAndTransport[hostnameAndTransportKey]
 
 			if wantFilename == "" {
-				// TODO: maybe we need to fail the tests in this case? not really sure.
-				fmt.Printf("WARNING: no expected lsm state for the hostname %s, skipping that check\n", testHostname)
+				return errors.Errorf("test step #%d: no WantByHostnameAndTransport for %q", i, hostnameAndTransportKey)
 			} else {
 				err = os.WriteFile(filepath.Join(stepOutputDir, "want_lsm_state_filename.txt"), []byte(wantFilename), 0644)
 				if err != nil {
@@ -250,7 +255,9 @@ func runCoreTestScenario(t *testing.T, tsCtx *coreTestScenarioContext) error {
 	}
 
 	fmt.Println("Closing LStreamsManager...")
-	manTH.CloseAndWait()
+	if err := manTH.CloseAndWait(); err != nil {
+		return errors.Trace(err)
+	}
 
 	return nil
 }
@@ -319,6 +326,8 @@ func newLStreamsManagerTestHelper(
 		ClientID:         params.ClientID,
 		UpdatesCh:        updatesCh,
 		Clock:            clockMock,
+
+		InitialUseExternalSSH: os.Getenv("NERDLOG_CORE_TEST_TRANSPORT_SSH_BIN") != "",
 	}
 
 	fmt.Println("Creating LStreamsManager...")
@@ -349,6 +358,21 @@ func getCoreTestHostname() string {
 	}
 
 	return hostname
+}
+
+func (th *LStreamsManagerTestHelper) getHostnameAndTransportKey() string {
+	testHostname := getCoreTestHostname()
+	if testHostname == "localhost" {
+		return testHostname
+	}
+
+	useExternalSSH := th.manager.useExternalSSH
+	transportStr := "ssh-lib"
+	if useExternalSSH {
+		transportStr = "ssh-bin"
+	}
+
+	return fmt.Sprintf("%s_%s", testHostname, transportStr)
 }
 
 func (th *LStreamsManagerTestHelper) run() {
@@ -437,9 +461,22 @@ func (th *LStreamsManagerTestHelper) WaitNextLogResp() (*LogRespTotal, error) {
 	}
 }
 
-func (th *LStreamsManagerTestHelper) CloseAndWait() {
+func (th *LStreamsManagerTestHelper) CloseAndWait() error {
 	th.manager.Close()
-	th.manager.Wait()
+
+	closedCh := make(chan struct{})
+	go func() {
+		th.manager.Wait()
+		close(closedCh)
+	}()
+
+	select {
+	case <-closedCh:
+		// All good
+		return nil
+	case <-time.After(5 * time.Second):
+		return errors.Errorf("timed out waiting for LStreamsManager to close")
+	}
 }
 
 func formatLogResp(logResp *LogRespTotal) string {

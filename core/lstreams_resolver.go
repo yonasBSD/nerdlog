@@ -19,6 +19,11 @@ type LStreamsResolverParams struct {
 	// determining the user for a particular host connection.
 	CurOSUser string
 
+	// If UseExternalSSH is true, we'll use external ssh binary instead of
+	// internal ssh library (i.e. ShellTransportSSHBin instead of
+	// ShellTransportSSHLib).
+	UseExternalSSH bool
+
 	// ConfigLogStreams is the nerdlog-specific config, typically coming from
 	// ~/.config/nerdlog/logstreams.yaml.
 	ConfigLogStreams ConfigLogStreams
@@ -58,9 +63,26 @@ type LogStream struct {
 	Options LogStreamOptions
 }
 
-type ConfigLogStreamShellTransportSSH struct {
+// ConfigLogStreamShellTransportSSHLib contains params for the ssh transport
+// using internal ssh library.
+type ConfigLogStreamShellTransportSSHLib struct {
 	Host     ConfigHost
 	Jumphost *ConfigHost
+}
+
+// ConfigLogStreamShellTransportSSHBin contains params for the ssh transport
+// using external ssh binary.
+type ConfigLogStreamShellTransportSSHBin struct {
+	// Host is just the hostname, like "myserver.com" or an IP address.
+	Host string
+
+	// Port is optional: if present, it'll be passed to the ssh binary using
+	// the -p flag, otherwise the -p flag will not be given at all.
+	Port string
+	// User is optional: if present, the destination param to the ssh binary
+	// will be prefixed with "<user>@", otherwise the destination will be just
+	// the Host.
+	User string
 }
 
 type ConfigLogStreamShellTransportLocalhost struct {
@@ -68,7 +90,8 @@ type ConfigLogStreamShellTransportLocalhost struct {
 }
 
 type ConfigLogStreamShellTransport struct {
-	SSH       *ConfigLogStreamShellTransportSSH
+	SSHLib    *ConfigLogStreamShellTransportSSHLib
+	SSHBin    *ConfigLogStreamShellTransportSSHBin
 	Localhost *ConfigLogStreamShellTransportLocalhost
 }
 
@@ -286,22 +309,50 @@ func (r *LStreamsResolver) parseLogStreamSpecEntry(s string) ([]LogStream, error
 		},
 	}
 
-	lstreams, err = expandFromLogStreamsConfig(lstreams, r.params.ConfigLogStreams)
+	// Expand from nerdlog config.
+	lstreams, err = expandFromLogStreamsConfig(
+		lstreams, r.params.ConfigLogStreams, expandOpts{},
+	)
 	if err != nil {
 		return nil, errors.Annotatef(err, "expanding from nerdlog config")
 	}
 
+	// Expand from ssh config.
 	lsConfigFromSSHConfig, err := sshConfigToLSConfig(r.params.SSHConfig)
 	if err != nil {
 		return nil, errors.Annotatef(err, "parsing ssh config")
 	}
 
-	lstreams, err = expandFromLogStreamsConfig(lstreams, lsConfigFromSSHConfig)
+	lstreams, err = expandFromLogStreamsConfig(
+		lstreams, lsConfigFromSSHConfig, expandOpts{
+			// If using internal ssh library, then expand everything as usual: expand
+			// globs and fill in the missing details. But if using external ssh, then
+			// only expand globs, and leave filling all the missing connection
+			// details up to ssh.
+			skipFillingConnDetails: r.params.UseExternalSSH,
+		},
+	)
 	if err != nil {
 		return nil, errors.Annotatef(err, "expanding from ssh config")
 	}
 
-	lstreams, err = setLogStreamsDefaults(lstreams, r.params.CurOSUser)
+	if !r.params.UseExternalSSH {
+		// We're not using external ssh binary, so also try to fill in the
+		// details from the parsed ssh config, and then from the defaults too.
+
+		lstreams, err = setLogStreamsConnDefaults(lstreams, r.params.CurOSUser)
+		if err != nil {
+			return nil, errors.Annotatef(err, "setting defaults")
+		}
+	} else {
+		// We're using external ssh binary: in this case, we don't fill in the
+		// details from ssh config or from the defaults manually, and instead leave
+		// all this up to the external ssh binary.
+	}
+
+	// Regardless of the external or internal ssh, we still need to fill in
+	// the default logfiles.
+	lstreams, err = setLogStreamsFileDefaults(lstreams)
 	if err != nil {
 		return nil, errors.Annotatef(err, "setting defaults")
 	}
@@ -337,11 +388,28 @@ func (r *LStreamsResolver) parseLogStreamSpecEntry(s string) ([]LogStream, error
 			}
 		} else {
 			// Use ssh
-			transport = ConfigLogStreamShellTransport{
-				SSH: &ConfigLogStreamShellTransportSSH{
-					Host:     ls.host,
-					Jumphost: ls.jumphost,
-				},
+			if !r.params.UseExternalSSH {
+				// Use internal ssh library
+				transport = ConfigLogStreamShellTransport{
+					SSHLib: &ConfigLogStreamShellTransportSSHLib{
+						Host:     ls.host,
+						Jumphost: ls.jumphost,
+					},
+				}
+			} else {
+				// Use external ssh binary
+				parsedAddr, err := parseAddr(ls.host.Addr)
+				if err != nil {
+					return nil, errors.Annotatef(err, "parsing addr %s for external ssh binary", ls.host.Addr)
+				}
+
+				transport = ConfigLogStreamShellTransport{
+					SSHBin: &ConfigLogStreamShellTransportSSHBin{
+						Host: parsedAddr.host,
+						Port: parsedAddr.port,
+						User: ls.host.User,
+					},
+				}
 			}
 		}
 
@@ -409,11 +477,21 @@ type ConfigLogStreamWKey struct {
 	ConfigLogStream
 }
 
+type expandOpts struct {
+	// If skipFillingConnDetails is true, then the connection details (host,
+	// port, username) will not be filled from the config. This must be set to
+	// true when the config was parsed from the ssh config and we're using
+	// external ssh binary: in this case, filling all the missing details should
+	// be left up to the external ssh binary.
+	skipFillingConnDetails bool
+}
+
 // expandFromLogStreamsConfig goes through each of the logstreams, and
 // potentially expands every item as per the provided config.
 func expandFromLogStreamsConfig(
 	logStreams []draftLogStream,
 	lsConfig ConfigLogStreams,
+	opts expandOpts,
 ) ([]draftLogStream, error) {
 	// If there's no config, cut it short.
 	if lsConfig == nil {
@@ -459,24 +537,33 @@ func expandFromLogStreamsConfig(
 			// Always override the name with the key from the config.
 			lsCopy.name = strings.Replace(lsCopy.name, globPattern, matchedItem.Key, -1)
 
-			// Overwrite the host address (since what we've had might be a glob):
-			// either with the Hostname if it's specified explicitly, or if not, then
-			// with the item key.
-			if matchedItem.Hostname != "" {
-				addrCopy.host = matchedItem.Hostname
+			if !opts.skipFillingConnDetails {
+				// Overwrite the host address (since what we've had might be a glob):
+				// either with the Hostname if it's specified explicitly, or if not, then
+				// with the item key.
+				if matchedItem.Hostname != "" {
+					addrCopy.host = matchedItem.Hostname
+				} else {
+					addrCopy.host = matchedItem.Key
+				}
+
+				// Everything else we'll only override if it's not specified already.
+
+				if addrCopy.port == "" {
+					addrCopy.port = matchedItem.Port
+				}
+
+				if lsCopy.host.User == "" {
+					lsCopy.host.User = matchedItem.User
+				}
 			} else {
+				// We're asked to skip filling conn details, so just replace the host
+				// with the matched item's key (because or original host might have
+				// been a glob), and leave the port and user as is.
 				addrCopy.host = matchedItem.Key
 			}
 
-			// Everything else we'll only override if it's not specified already.
-
-			if addrCopy.port == "" {
-				addrCopy.port = matchedItem.Port
-			}
-
-			if lsCopy.host.User == "" {
-				lsCopy.host.User = matchedItem.User
-			}
+			// For non-connection details, override them if not specified already.
 
 			if lsCopy.options.SudoMode == "" {
 				lsCopy.options.SudoMode = matchedItem.Options.EffectiveSudoMode()
@@ -499,10 +586,13 @@ func expandFromLogStreamsConfig(
 	return ret, nil
 }
 
-// setLogStreamsDefaults goes through each of the logstreams, and fills in
-// missing pieces for which it knows the defaults: port 22, user as the current
-// OS user.
-func setLogStreamsDefaults(
+// setLogStreamsConnDefaults goes through each of the logstreams, and fills in
+// missing pieces for which it knows the defaults for how to connect to the
+// hosts: port 22, user as the current OS user.
+//
+// Note that it shouldn't be used when we're utilizing external ssh binary:
+// in this case, we want to leave it all up to the ssh.
+func setLogStreamsConnDefaults(
 	logStreams []draftLogStream,
 	osUser string,
 ) ([]draftLogStream, error) {
@@ -522,6 +612,18 @@ func setLogStreamsDefaults(
 			ls.host.User = osUser
 		}
 
+		ret = append(ret, ls)
+	}
+
+	return ret, nil
+}
+
+// setLogStreamsFileDefaults goes through each of the logstreams, and fills in
+// missing non-connection pieces, such as default log files.
+func setLogStreamsFileDefaults(logStreams []draftLogStream) ([]draftLogStream, error) {
+	ret := make([]draftLogStream, 0, len(logStreams))
+
+	for _, ls := range logStreams {
 		if len(ls.logFiles) == 0 {
 			// Will be autodetected by the agent script.
 			ls.logFiles = append(ls.logFiles, "auto")

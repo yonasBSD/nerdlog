@@ -6,7 +6,7 @@ awk pattern:                                                                    
   ╔═══════════════════════════════════════════Edit query params═══════════════════════════════════════════╗
   ║                                                                                                       ║
 ti║ Query history:  Back <Ctrl+K>  and  Forth <Ctrl+J>                                                    ║
-  ║                                                                                                       ║
+< ║                                                                                                       ║
   ║ Time range in the format "<time>[ to <time>]", where <time> is either absolute like "Mar27 12:00"     ║
   ║ or relative like "-2h30m" (relative to current time). If the "to" part is omitted,                    ║
   ║ current time is used.                                                                                 ║
@@ -26,5 +26,5 @@ ti║ Query history:  Back <Ctrl+K>  and  Forth <Ctrl+J>                        
 
 
 
-idle 🖳 00 🖳 00 🖳 00 |
+idle 🖳 00 🖳 00 🖳 00 |                                                                                        -
 
