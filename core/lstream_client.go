@@ -1648,7 +1648,31 @@ func parseCommandDoneLine(line string, expectedIdx int) (*commandDoneDetails, er
 	}, nil
 }
 
+// requiresShellQuoting returns whether the given string requires to be quoted
+// in a shell.
+func requiresShellQuoting(s string) bool {
+	// Empty string requires quoting
+	if len(s) == 0 {
+		return true
+	}
+
+	for _, r := range s {
+		if !((r >= 'a' && r <= 'z') ||
+			(r >= 'A' && r <= 'Z') ||
+			(r >= '0' && r <= '9') ||
+			r == '_' || r == '.' || r == '/' || r == '-') {
+			return true
+		}
+	}
+
+	return false
+}
+
 func shellQuote(s string) string {
+	if !requiresShellQuoting(s) {
+		return s
+	}
+
 	return fmt.Sprintf("'%s'", strings.Replace(s, "'", "'\"'\"'", -1))
 }
 
