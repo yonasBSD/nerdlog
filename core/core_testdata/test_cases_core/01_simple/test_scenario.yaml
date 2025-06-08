@@ -15,14 +15,6 @@ manager_params:
 
 test_steps:
 
-  - descr: "check state after connection"
-    check_state:
-      want_by_hostname:
-        # localhost uses local transport
-        localhost: want_conn_info_localhost.txt
-        # 127.0.0.1 uses ssh transport
-        127.0.0.1: want_conn_info_127.0.0.1.txt
-
   - descr: "initial query"
     query:
       params:
@@ -62,3 +54,17 @@ test_steps:
         pattern: ""
         load_earlier: true
       want: want_log_resp_03_load_more.txt
+
+  # Ideally this step should be the first one, but then it is a bit flakey
+  # since the test runner doesn't wait for bootstrap (it just waits for connection),
+  # and so by the time we check the state, the state might be busy and not idle.
+  #
+  # Ideally we wait for bootstrap (and check some output from it, too), but that's
+  # for later. For now just moving this step to be the last one.
+  - descr: "check connection state"
+    check_state:
+      want_by_hostname:
+        # localhost uses local transport
+        localhost: want_conn_info_localhost.txt
+        # 127.0.0.1 uses ssh transport
+        127.0.0.1: want_conn_info_127.0.0.1.txt
