@@ -26,8 +26,9 @@ type LStreamsManager struct {
 
 	lscs      map[string]*LStreamClient
 	lscStates map[string]LStreamClientState
-	// lscConnDetails only contains items for lstreams which are in the
-	// LStreamClientStateConnectinConnecting state.
+	// lscConnDetails contains items for all selected lstreams, even after the
+	// connection is done (which is indicated by ConnDetails.Connected being
+	// true).
 	lscConnDetails map[string]ConnDetails
 	// lscBusyStages only contains items for lstreams which are in the
 	// LStreamClientStateConnectedBusy state.
@@ -216,7 +217,9 @@ func (lsman *LStreamsManager) run() {
 					// Maintain lsman.lscConnDetails
 					if upd.State.NewState == LStreamClientStateConnectedIdle ||
 						upd.State.NewState == LStreamClientStateConnectedBusy {
-						delete(lsman.lscConnDetails, upd.Name)
+						cd := lsman.lscConnDetails[upd.Name]
+						cd.Connected = true
+						lsman.lscConnDetails[upd.Name] = cd
 					}
 
 					// Maintain lsman.lscBusyStages

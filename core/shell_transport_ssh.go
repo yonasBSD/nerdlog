@@ -44,6 +44,12 @@ func (st *ShellTransportSSH) Connect(resCh chan<- ShellConnUpdate) {
 	go st.doConnect(resCh)
 }
 
+func (st *ShellTransportSSH) makeDebugInfo(message string) *ShellConnDebugInfo {
+	return &ShellConnDebugInfo{
+		Message: message,
+	}
+}
+
 func (st *ShellTransportSSH) doConnect(
 	resCh chan<- ShellConnUpdate,
 ) (res ShellConnResult) {
@@ -61,12 +67,23 @@ func (st *ShellTransportSSH) doConnect(
 
 	connDetails := st.params.ConnDetails
 
+	resCh <- ShellConnUpdate{
+		DebugInfo: st.makeDebugInfo(fmt.Sprintf(
+			"Trying to connect using internal ssh library to addr: %s, user: %s",
+			connDetails.Host.Addr, connDetails.Host.User,
+		)),
+	}
+
 	var sshClient *ssh.Client
 
 	conf, err := st.getClientConfig(resCh, logger, connDetails.Host.User)
 	if err != nil {
 		res.Err = errors.Annotatef(err, "getting ssh client for %s", connDetails.Host.User)
 		return res
+	}
+
+	resCh <- ShellConnUpdate{
+		DebugInfo: st.makeDebugInfo(fmt.Sprintf("Got client config: %s", conf.Descr)),
 	}
 
 	if connDetails.Jumphost != nil {
@@ -102,6 +119,11 @@ func (st *ShellTransportSSH) doConnect(
 		}
 	}
 
+	shellBin := "/bin/sh"
+
+	resCh <- ShellConnUpdate{
+		DebugInfo: st.makeDebugInfo(fmt.Sprintf("Connected, creating pipes and starting %s", shellBin)),
+	}
 	logger.Infof("Connected to %s", connDetails.Host.Addr)
 
 	sshSession, err := sshClient.NewSession()
@@ -128,7 +150,7 @@ func (st *ShellTransportSSH) doConnect(
 		return res
 	}
 
-	err = sshSession.Start("/bin/sh")
+	err = sshSession.Start(shellBin)
 	if err != nil {
 		res.Err = errors.Annotatef(err, conf.Descr)
 		return res

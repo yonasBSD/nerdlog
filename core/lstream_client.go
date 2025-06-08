@@ -90,6 +90,10 @@ type LStreamClient struct {
 
 	conn *connCtx
 
+	// connDebugMessages contains human-readable messages received from the shell
+	// transport regarding the connection.
+	connDebugMessages []string
+
 	cmdQueue   []lstreamCmd
 	curCmdCtx  *lstreamCmdCtx
 	nextCmdIdx int
@@ -150,8 +154,16 @@ type BusyStage struct {
 }
 
 type ConnDetails struct {
+	// Messages contains human-readable messages received from shell transport
+	// regarding the connection.
+	Messages []string
+
 	// Err is an error message from the last connection attempt.
 	Err string
+
+	// Connected shows whether the connection has already succeeded. Unlike other
+	// fields in this struct, it's set by the LStreamsManager manually.
+	Connected bool
 }
 
 type BootstrapDetails struct {
@@ -350,6 +362,8 @@ func (lsc *LStreamClient) changeState(newState LStreamClientState) {
 	case LStreamClientStateConnecting:
 		// Forget whatever queued command we might have.
 		lsc.cmdQueue = nil
+		// Forget whatever conn debug messages we've accumulated.
+		lsc.connDebugMessages = nil
 
 		// Initiate new connection
 		lsc.numConnAttempts++
@@ -366,6 +380,13 @@ func (lsc *LStreamClient) changeState(newState LStreamClientState) {
 
 	case LStreamClientStateDisconnected:
 		lsc.conn = nil
+	}
+}
+
+func (lsc *LStreamClient) makeConnDetailsMsg(err string) *ConnDetails {
+	return &ConnDetails{
+		Messages: lsc.connDebugMessages,
+		Err:      err,
 	}
 }
 
@@ -400,7 +421,14 @@ func (lsc *LStreamClient) run() {
 	for {
 		select {
 		case upd := <-lsc.connectUpdCh:
-			if dataReq := upd.DataRequest; dataReq != nil {
+			if dbg := upd.DebugInfo; dbg != nil {
+				// Got some debug info about the connection.
+				lsc.connDebugMessages = append(lsc.connDebugMessages, dbg.Message)
+
+				lsc.sendUpdate(&LStreamClientUpdate{
+					ConnDetails: lsc.makeConnDetailsMsg(""),
+				})
+			} else if dataReq := upd.DataRequest; dataReq != nil {
 				// We need some data from the user.
 
 				lsc.sendUpdate(&LStreamClientUpdate{
@@ -412,9 +440,7 @@ func (lsc *LStreamClient) run() {
 				if res.Err != nil {
 					lsc.params.Logger.Errorf("Shell connection failed: %s", res.Err.Error())
 					lsc.sendUpdate(&LStreamClientUpdate{
-						ConnDetails: &ConnDetails{
-							Err: fmt.Sprintf("attempt %d: %s", lsc.numConnAttempts, res.Err.Error()),
-						},
+						ConnDetails: lsc.makeConnDetailsMsg(fmt.Sprintf("attempt %d: %s", lsc.numConnAttempts, res.Err.Error())),
 					})
 
 					lsc.changeState(LStreamClientStateDisconnected)

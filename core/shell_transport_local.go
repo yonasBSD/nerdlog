@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"io"
 	"os/exec"
 
@@ -45,9 +46,17 @@ func (s *ShellTransportLocal) doConnect(
 		}
 	}()
 
-	// Start the local shell command
 	// TODO: make it configurable; e.g. it likely won't work on Windows
-	cmd := exec.Command("/bin/sh")
+	shellBin := "/bin/sh"
+
+	resCh <- ShellConnUpdate{
+		DebugInfo: &ShellConnDebugInfo{
+			Message: fmt.Sprintf("Running local shell %s", shellBin),
+		},
+	}
+
+	// Start the local shell command
+	cmd := exec.Command(shellBin)
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		res.Err = errors.Annotatef(err, "getting stdin pipe")

@@ -7,43 +7,49 @@ type menuItem struct {
 
 var mainMenu = []menuItem{
 	{
-		Title: "Back                 <Alt+Left> ",
+		Title: "Back                  <Alt+Left> ",
 		Handler: func(mv *MainView) {
 			mv.params.OnCmd("back", CmdOpts{Internal: true})
 		},
 	},
 	{
-		Title: "Forward              <Alt+Right>",
+		Title: "Forward               <Alt+Right>",
 		Handler: func(mv *MainView) {
 			mv.params.OnCmd("fwd", CmdOpts{Internal: true})
 		},
 	},
 	{
-		Title: "Refresh              <F5>       ",
+		Title: "Refresh               <F5>       ",
 		Handler: func(mv *MainView) {
 			mv.params.OnCmd("refresh", CmdOpts{Internal: true})
 		},
 	},
 	{
-		Title: "Hard refresh         <Shift+F5> ",
+		Title: "Hard refresh          <Shift+F5> ",
 		Handler: func(mv *MainView) {
 			mv.params.OnCmd("refresh!", CmdOpts{Internal: true})
 		},
 	},
 	{
-		Title: "Copy query command   :xclip     ",
+		Title: "Copy query command    :xclip     ",
 		Handler: func(mv *MainView) {
 			mv.params.OnCmd("xclip", CmdOpts{Internal: true})
 		},
 	},
 	{
-		Title: "Query debug info     :debug     ",
+		Title: "Connection debug info :cdebug    ",
 		Handler: func(mv *MainView) {
-			mv.params.OnCmd("debug", CmdOpts{Internal: true})
+			mv.params.OnCmd("cdebug", CmdOpts{Internal: true})
 		},
 	},
 	{
-		Title: "About                :version   ",
+		Title: "Query debug info      :qdebug    ",
+		Handler: func(mv *MainView) {
+			mv.params.OnCmd("qdebug", CmdOpts{Internal: true})
+		},
+	},
+	{
+		Title: "About                 :version   ",
 		Handler: func(mv *MainView) {
 			mv.params.OnCmd("version", CmdOpts{Internal: true})
 		},

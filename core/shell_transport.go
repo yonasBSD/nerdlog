@@ -27,12 +27,23 @@ type ShellConn interface {
 // ShellConnUpdate contains the update from ssh connection. Exactly one
 // field must be non-nil.
 type ShellConnUpdate struct {
+	// Info contains some debugging info about the connection, typically sent
+	// before trying to connect.
+	DebugInfo *ShellConnDebugInfo
+
 	// DataRequest contains request for additional data from the user.
 	DataRequest *ShellConnDataRequest
 
 	// Result contains the final connection result. After receiving an update
 	// with non-nil Result, there will be no more messages to this channel.
 	Result *ShellConnResult
+}
+
+// ShellConnDebugInfo contains some debugging human-readable info about the
+// connection.
+type ShellConnDebugInfo struct {
+	// Message contains some arbitrary human-readable details about the connection.
+	Message string
 }
 
 // ShellConnResult contains the connection result. If the connection is

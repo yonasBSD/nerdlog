@@ -170,7 +170,10 @@ func (app *nerdlogApp) handleCmd(cmd string) {
 			refreshIndex: true,
 		})
 
-	case "debug":
+	case "conndebug", "cdebug":
+		app.mainView.showConnDebugInfo()
+
+	case "querydebug", "qdebug", "debug":
 		app.mainView.showLastQueryDebugInfo()
 
 	case "version", "about":

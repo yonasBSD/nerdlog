@@ -316,7 +316,9 @@ can be done from the Menu too, or using a keyboard shortcut `Alt+Ctrl+R` or
 
 `:disconnect` Disconnect from all logstreams
 
-`:debug` Show debug info for the last query
+`:conndebug` or `:cdebug` Show debug info for the current logstream connections
+
+`:querydebug` or `:qdebug` or just `:debug` Show debug info for the last query
 
 `:version` or `:about` Show version info
 

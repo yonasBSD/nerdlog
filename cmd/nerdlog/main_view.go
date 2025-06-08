@@ -1036,6 +1036,10 @@ func (mv *MainView) applyHMState(lsmanState *core.LStreamsManagerState) {
 
 		for _, logstream := range logstreams {
 			connDetails := lsmanState.ConnDetailsByLStream[logstream]
+			if connDetails.Err == "" {
+				continue
+			}
+
 			sb.WriteString("\n")
 			sb.WriteString(fmt.Sprintf("%s: %s", logstream, connDetails.Err))
 		}
@@ -1341,6 +1345,61 @@ func (mv *MainView) showLastQueryDebugInfo() {
 	text := mv.getLastQueryDebugInfo()
 
 	mv.showMessagebox("debug", "Debug info for the last query", text, &MessageboxParams{
+		BackgroundColor: tcell.ColorDarkBlue,
+		CopyButton:      true,
+	})
+}
+
+func (mv *MainView) getConnDebugInfo() string {
+	if mv.curHMState == nil {
+		return "-- No connection info --"
+	}
+
+	cdbs := mv.curHMState.ConnDetailsByLStream
+
+	lstreamNames := make([]string, 0, len(cdbs))
+	for lstreamName := range cdbs {
+		lstreamNames = append(lstreamNames, lstreamName)
+	}
+	sort.Strings(lstreamNames)
+
+	var sb strings.Builder
+
+	for _, lstreamName := range lstreamNames {
+		connDetails := cdbs[lstreamName]
+		if len(connDetails.Messages) > 0 {
+			if sb.Len() > 0 {
+				sb.WriteString("\n")
+			}
+
+			sb.WriteString(fmt.Sprintf("%s connection messages:\n", lstreamName))
+			for _, message := range connDetails.Messages {
+				sb.WriteString(message)
+				sb.WriteString("\n")
+			}
+		}
+
+		if connDetails.Err != "" {
+			if sb.Len() > 0 {
+				sb.WriteString("\n")
+			}
+
+			sb.WriteString(fmt.Sprintf("%s connection error: %s\n", lstreamName, connDetails.Err))
+		}
+	}
+
+	ret := sb.String()
+	if ret == "" {
+		ret = "-- No connection info --"
+	}
+
+	return ret
+}
+
+func (mv *MainView) showConnDebugInfo() {
+	text := mv.getConnDebugInfo()
+
+	mv.showMessagebox("conn_debug_info", "Connection debug info", text, &MessageboxParams{
 		BackgroundColor: tcell.ColorDarkBlue,
 		CopyButton:      true,
 	})
