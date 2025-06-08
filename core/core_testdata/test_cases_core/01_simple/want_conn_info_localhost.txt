@@ -1,0 +1,23 @@
+{
+  "NumLStreams": 1,
+  "LStreamsByState": {
+    "connected_idle": {
+      "testhost-1": {}
+    }
+  },
+  "NumConnected": 1,
+  "NoMatchingLStreams": false,
+  "Connected": true,
+  "Busy": false,
+  "ConnDetailsByLStream": {
+    "testhost-1": {
+      "Messages": [
+        "Running local shell /bin/sh"
+      ],
+      "Err": "",
+      "Connected": true
+    }
+  },
+  "BusyStageByLStream": {},
+  "TearingDown": []
+}

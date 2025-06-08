@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/user"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -54,8 +56,17 @@ type CoreTestStep struct {
 
 	// Exactly one of the fields below must be non-nil
 
+	CheckState *CoreTestStepCheckState `yaml:"check_state"`
+
 	// If Query is non-nil, we'll send a query to the LStreamsManager.
 	Query *CoreTestStepQuery `yaml:"query"`
+}
+
+type CoreTestStepCheckState struct {
+	// WantByHostname is a map from the test hostname (either "localhost",
+	// or overridden by NERDLOG_CORE_TEST_HOSTNAME env var) to the filename
+	// with the expected LStreamsManagerState.
+	WantByHostname map[string]string `yaml:"want_by_hostname"`
 }
 
 type CoreTestStepQuery struct {
@@ -167,6 +178,7 @@ func runCoreTestScenario(t *testing.T, tsCtx *coreTestScenarioContext) error {
 	fmt.Println("Waiting connection...")
 	manTH.WaitConnected()
 
+	isFirstQuery := true
 	for i, step := range tc.TestSteps {
 		stepSID := fmt.Sprintf("%.2d_%s", i+1, testutils.Slug(step.Descr))
 		stepOutputDir := filepath.Join(tsCtx.testOutputDir, "steps", stepSID)
@@ -176,11 +188,39 @@ func runCoreTestScenario(t *testing.T, tsCtx *coreTestScenarioContext) error {
 
 		assertArgs := []interface{}{"test case %s", stepSID}
 
-		if query := step.Query; query != nil {
+		if checkState := step.CheckState; checkState != nil {
+			lsmStateStr := formatLSMState(manTH.GetLSMState())
+			err = os.WriteFile(filepath.Join(stepOutputDir, "got_logstreams_manager_state.txt"), []byte(lsmStateStr), 0644)
+			if err != nil {
+				return errors.Annotatef(err, "test step #%d: writing lsm state", i)
+			}
+
+			testHostname := getCoreTestHostname()
+			wantFilename := checkState.WantByHostname[testHostname]
+
+			if wantFilename == "" {
+				// TODO: maybe we need to fail the tests in this case? not really sure.
+				fmt.Printf("WARNING: no expected lsm state for the hostname %s, skipping that check\n", testHostname)
+			} else {
+				err = os.WriteFile(filepath.Join(stepOutputDir, "want_lsm_state_filename.txt"), []byte(wantFilename), 0644)
+				if err != nil {
+					return errors.Annotatef(err, "test step #%d: writing want_lsm_state_filename.txt", i)
+				}
+
+				wantLSMStateFilenameFull := filepath.Join(tsCtx.testScenarioDir, wantFilename)
+				wantLSMState, err := os.ReadFile(wantLSMStateFilenameFull)
+				if err != nil {
+					return errors.Annotatef(err, "test step #%d: reading wanted log resp %s", i, wantLSMStateFilenameFull)
+				}
+
+				assert.Equal(t, string(wantLSMState), lsmStateStr, assertArgs...)
+			}
+		} else if query := step.Query; query != nil {
 			// For reproducibility of the exact same debug output, refresh the index
 			// during the first query in a scenario.
-			if i == 0 {
+			if isFirstQuery {
 				query.Params.RefreshIndex = true
+				isFirstQuery = false
 			}
 
 			logResp, err := manTH.QueryLogs(query.Params)
@@ -225,7 +265,7 @@ type LStreamsManagerTestHelper struct {
 }
 
 type LStreamsManagerTestHelperState struct {
-	connected       bool
+	lsmState        *LStreamsManagerState
 	pendingLogResps []*LogRespTotal
 }
 
@@ -262,19 +302,8 @@ func newLStreamsManagerTestHelper(
 			options.ShellInit = append(options.ShellInit, fmt.Sprintf("export %s", envVar))
 		}
 
-		// Find out the hostname: normally we use just `localhost`, which means
-		// we'll use ShellTransportLocal, but it can be overridden with the
-		// NERDLOG_CORE_TEST_HOSTNAME env var. Keep in mind that only `localhost`
-		// bypasses ssh; so e.g. "127.0.0.1" will use ShellTransportSSH, and we can
-		// take advantage of that to cover the ssh transport in tests. Obviously,
-		// for that the ssh server needs to be running locally.
-		hostname := os.Getenv("NERDLOG_CORE_TEST_HOSTNAME")
-		if hostname == "" {
-			hostname = "localhost"
-		}
-
 		cfgLogStreams[lstreamName] = ConfigLogStream{
-			Hostname: hostname,
+			Hostname: getCoreTestHostname(),
 			LogFiles: []string{
 				provisioned.LogfileLast,
 				provisioned.LogfilePrev,
@@ -306,6 +335,22 @@ func newLStreamsManagerTestHelper(
 	return manTH, nil
 }
 
+// getCoreTestHostname finds out the hostname: normally we use just
+// `localhost`, which means we'll use ShellTransportLocal, but it can be
+// overridden with the NERDLOG_CORE_TEST_HOSTNAME env var. Keep in mind that
+// only `localhost` bypasses ssh; so e.g. "127.0.0.1" will use
+// ShellTransportSSH, and we can take advantage of that to cover the ssh
+// transport in tests. Obviously, for that the ssh server needs to be running
+// locally.
+func getCoreTestHostname() string {
+	hostname := os.Getenv("NERDLOG_CORE_TEST_HOSTNAME")
+	if hostname == "" {
+		hostname = "localhost"
+	}
+
+	return hostname
+}
+
 func (th *LStreamsManagerTestHelper) run() {
 	for upd := range th.updatesCh {
 		th.applyUpdate(upd)
@@ -320,7 +365,7 @@ func (th *LStreamsManagerTestHelper) applyUpdate(upd LStreamsManagerUpdate) {
 	defer th.stateMtx.Unlock()
 
 	if upd.State != nil {
-		th.state.connected = upd.State.Connected
+		th.state.lsmState = upd.State
 	} else if upd.LogResp != nil {
 		th.state.pendingLogResps = append(th.state.pendingLogResps, upd.LogResp)
 	}
@@ -330,7 +375,7 @@ func (th *LStreamsManagerTestHelper) isConnected() bool {
 	th.stateMtx.Lock()
 	defer th.stateMtx.Unlock()
 
-	return th.state.connected
+	return th.state.lsmState != nil && th.state.lsmState.Connected
 }
 
 func (th *LStreamsManagerTestHelper) nextLogResp() *LogRespTotal {
@@ -368,6 +413,10 @@ func (th *LStreamsManagerTestHelper) QueryLogs(params CoreTestStepQueryParams) (
 	th.manager.QueryLogs(params.RealParams())
 
 	return th.WaitNextLogResp()
+}
+
+func (th *LStreamsManagerTestHelper) GetLSMState() *LStreamsManagerState {
+	return th.state.lsmState
 }
 
 func (th *LStreamsManagerTestHelper) WaitNextLogResp() (*LogRespTotal, error) {
@@ -416,6 +465,30 @@ func formatLogResp(logResp *LogRespTotal) string {
 	sb.WriteString(fmt.Sprintf("DebugInfo:\n%s", debugInfoData))
 
 	return sb.String()
+}
+
+func formatLSMState(lsmState *LStreamsManagerState) string {
+	data, _ := json.MarshalIndent(lsmState, "", "  ")
+	str := string(data)
+
+	// We also need to replace the OS username in the payload with a static
+	// placeholder, since it can be different.
+	str = maskOSUser(str)
+
+	return str
+}
+
+// maskOSUser returns a string with all occurrences of the current OS user
+// replaced with "__TEST_OS_USER__".
+func maskOSUser(s string) string {
+	u, err := user.Current()
+	if err != nil {
+		// Can't determine the user, return the input unchanged
+		return s
+	}
+
+	re := regexp.MustCompile(`\b` + regexp.QuoteMeta(u.Username) + `\b`)
+	return re.ReplaceAllString(s, "__TEST_OS_USER__")
 }
 
 func printMinuteStats(w io.Writer, stats map[int64]MinuteStatsItem) {

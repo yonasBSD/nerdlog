@@ -11,7 +11,17 @@ manager_params:
           - 'export TZ=UTC'
   initial_lstreams: "testhost-1"
   client_id: "core-test-runner"
+
+
 test_steps:
+
+  - descr: "check state after connection"
+    check_state:
+      want_by_hostname:
+        # localhost uses local transport
+        localhost: want_conn_info_localhost.txt
+        # 127.0.0.1 uses ssh transport
+        127.0.0.1: want_conn_info_127.0.0.1.txt
 
   - descr: "initial query"
     query:

@@ -32,6 +32,23 @@ for scenario_output_dir in "$tests_output_root_dir"/*; do
       #echo "Copying $step_output_dir/got_log_resp.txt -> $target_want_filename"
       echo -n .
       cp "$step_output_dir/got_log_resp.txt" "$target_want_filename"
+    elif [ -e "$step_output_dir/got_logstreams_manager_state.txt" ]; then
+      # This is a lstreams manager state check step, so copy the query output
+      want_filename_ptr="$step_output_dir/want_lsm_state_filename.txt"
+      if ! [ -e "$want_filename_ptr" ]; then
+        exit 1
+      fi
+      want_filename="$(cat $want_filename_ptr)"
+
+      target_want_filename="$scenario_input_dir/$want_filename"
+      if ! [ -e "$target_want_filename" ]; then
+        echo "warn: $target_want_filename does not exist, skipping" 1>&2
+        continue
+      fi
+
+      #echo "Copying $step_output_dir/got_logstreams_manager_state.txt -> $target_want_filename"
+      echo -n .
+      cp "$step_output_dir/got_logstreams_manager_state.txt" "$target_want_filename"
     fi
   done
 done

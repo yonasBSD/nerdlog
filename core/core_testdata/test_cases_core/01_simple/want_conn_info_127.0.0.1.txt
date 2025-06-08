@@ -1,0 +1,25 @@
+{
+  "NumLStreams": 1,
+  "LStreamsByState": {
+    "connected_idle": {
+      "testhost-1": {}
+    }
+  },
+  "NumConnected": 1,
+  "NoMatchingLStreams": false,
+  "Connected": true,
+  "Busy": false,
+  "ConnDetailsByLStream": {
+    "testhost-1": {
+      "Messages": [
+        "Trying to connect using internal ssh library to addr: 127.0.0.1:22, user: __TEST_OS_USER__",
+        "Got client config: using ssh-agent",
+        "Connected, creating pipes and starting /bin/sh"
+      ],
+      "Err": "",
+      "Connected": true
+    }
+  },
+  "BusyStageByLStream": {},
+  "TearingDown": []
+}
